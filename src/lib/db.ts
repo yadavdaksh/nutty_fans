@@ -25,13 +25,19 @@ export interface CreatorProfile {
   userId: string;
   bio: string;
   coverImageURL?: string;
-  subscriptionPrice: number;
+  subscriptionTiers: {
+    name: string;
+    price: string;
+    description: string;
+    benefits: string[];
+  }[];
   subscriberCount: number;
   categories: string[];
   socialLinks: {
     instagram?: string;
     twitter?: string;
     website?: string;
+    youtube?: string;
   };
 }
 
@@ -81,6 +87,7 @@ export const createCreatorProfile = async (userId: string, data: Partial<Creator
   await setDoc(creatorRef, {
     userId,
     subscriberCount: 0,
+    subscriptionTiers: [], // Default empty
     ...data,
   }, { merge: true });
 

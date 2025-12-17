@@ -75,15 +75,7 @@ export default function Header() {
                 >
               Discover
             </Link>
-                <Link 
-                  href="/cart" 
-                  className={`text-[15.1px] leading-6 font-normal transition-colors ${
-                    pathname === '/cart' ? 'text-[#101828]' : 'text-[#4a5565] hover:text-[#101828]'
-                  }`}
-                  style={{ fontFamily: 'Inter, sans-serif' }}
-                >
-                  Cart
-                </Link>
+
                 <Link 
                   href="/messages" 
                   className={`text-[15.1px] leading-6 font-normal transition-colors ${

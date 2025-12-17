@@ -5,13 +5,8 @@ import { usePathname } from 'next/navigation';
 import { Twitter, Instagram, Youtube, Facebook } from 'lucide-react';
 
 export default function Footer() {
-  const pathname = usePathname();
-  const isSidebarPage = pathname?.startsWith('/dashboard') || 
-                       pathname?.startsWith('/profile') || 
-                       pathname?.startsWith('/settings');
-
   return (
-    <footer className={`bg-gray-50 border-t border-gray-200 mt-auto transition-all ${isSidebarPage ? 'lg:ml-[276px]' : ''}`}>
+    <footer className="bg-gray-50 border-t border-gray-200 mt-auto transition-all">
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Section */}

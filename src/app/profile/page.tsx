@@ -3,7 +3,8 @@
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
-import { useState } from 'react';
+import { getCreatorProfile, CreatorProfile } from '@/lib/db';
+import { useEffect, useState } from 'react';
 import { 
   Check, 
   MessageSquare, 
@@ -13,8 +14,19 @@ import {
 import Link from 'next/link';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('posts');
+  const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user && userProfile?.role === 'creator') {
+        const profile = await getCreatorProfile(user.uid);
+        if (profile) setCreatorProfile(profile);
+      }
+    };
+    fetchProfile();
+  }, [user, userProfile]);
 
   const tabs = [
     { id: 'posts', label: 'Posts' },
@@ -22,47 +34,28 @@ export default function ProfilePage() {
     { id: 'photos', label: 'Photos' },
   ];
 
-  const subscriptionTiers = [
+  // Fallback if no real tiers found
+  const defaultTiers = [
     {
       name: 'Basic',
-      price: 9.99,
-      icon: '✨',
-      gradient: 'from-[#155dfc] to-[#0092b8]',
-      features: [
-        'Access to basic content',
-        'Monthly live Q&A',
-        'Community access',
-        'Behind-the-scenes content',
-      ],
+      price: '9.99',
+      benefits: ['Access to basic content', 'Monthly live Q&A'],
     },
     {
       name: 'Premium',
-      price: 19.99,
-      icon: '✨',
-      gradient: 'from-[#9810fa] to-[#e60076]',
-      features: [
-        'Everything in Basic',
-        'Exclusive premium content',
-        'Weekly live sessions',
-        'Direct messaging',
-        'Early access to new content',
-      ],
-      popular: true,
+      price: '19.99',
+      benefits: ['Everything in Basic', 'Exclusive premium content'],
     },
-    {
+     {
       name: 'VIP',
-      price: 49.99,
-      icon: '✨',
-      gradient: 'from-[#f54900] to-[#e7000b]',
-      features: [
-        'Everything in Premium',
-        '1-on-1 monthly video call',
-        'Custom content requests',
-        'Priority support',
-        'Exclusive merchandise',
-      ],
+      price: '49.99',
+      benefits: ['Everything in Premium', '1-on-1 monthly video call'],
     },
   ];
+
+  const tiersToDisplay = creatorProfile?.subscriptionTiers && creatorProfile.subscriptionTiers.length > 0
+    ? creatorProfile.subscriptionTiers
+    : defaultTiers;
 
   // Mock content data
   const content = [
@@ -78,7 +71,7 @@ export default function ProfilePage() {
     <ProtectedRoute>
       <div className="flex min-h-[calc(100vh-65px)] bg-[#f9fafb]">
         <Sidebar />
-        <div className="flex-1 ml-[276px] bg-gray-50">
+        <div className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'} bg-gray-50`}>
           {/* Banner */}
           <div className="relative h-[240px] bg-gradient-to-br from-[#9810fa] via-[#e60076] to-[#f54900] overflow-hidden">
             <div className="absolute inset-0 opacity-50 mix-blend-overlay">
@@ -153,10 +146,7 @@ export default function ProfilePage() {
             {/* Bio Section */}
             <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6 mb-6">
               <p className="text-base leading-6 font-normal text-[#364153] whitespace-pre-line" style={{ fontFamily: 'Inter, sans-serif' }}>
-                {`️‍♀️ Certified personal trainer & nutrition coach`}
-                {`\n💪 Helping you transform your body and mindset`}
-                {`\n🎯 Custom workout plans, meal prep guides, and daily motivation`}
-                {`\n📍 Los Angeles, CA`}
+                {creatorProfile?.bio || `️‍♀️ Certified personal trainer & nutrition coach\n💪 Helping you transform your body and mindset\n🎯 Custom workout plans, meal prep guides, and daily motivation\n📍 Los Angeles, CA`}
               </p>
             </div>
 
@@ -166,20 +156,13 @@ export default function ProfilePage() {
                 Subscription Tiers
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {subscriptionTiers.map((tier, index) => (
+                {tiersToDisplay.map((tier, index) => (
                   <div
                     key={index}
-                    className={`bg-white border rounded-[14px] p-6 relative ${
-                      tier.popular ? 'border-2 border-[#9810fa]' : 'border-[#e5e7eb]'
-                    }`}
+                    className={`bg-white border rounded-[14px] p-6 relative border-[#e5e7eb]`}
                   >
-                    {tier.popular && (
-                      <div className="absolute top-0 right-0 bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white text-xs font-normal px-3 py-1 rounded-bl-lg rounded-tr-[14px]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                        POPULAR
-                      </div>
-                    )}
-                    <div className={`w-12 h-12 rounded-[14px] bg-gradient-to-br ${tier.gradient} flex items-center justify-center mb-4`}>
-                      <span className="text-2xl">{tier.icon}</span>
+                    <div className={`w-12 h-12 rounded-[14px] bg-gradient-to-br from-[#9810fa] to-[#e60076] flex items-center justify-center mb-4`}>
+                      <span className="text-2xl">✨</span>
                     </div>
                     <h3 className="text-base font-normal text-[#101828] mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
                       {tier.name}
@@ -193,21 +176,17 @@ export default function ProfilePage() {
                       </span>
                     </div>
                     <ul className="space-y-3 mb-6">
-                      {tier.features.map((feature, idx) => (
+                      {(tier as any).benefits?.map((benefit: string, idx: number) => (
                         <li key={idx} className="flex items-start gap-2">
                           <Check className="w-5 h-5 text-[#9810fa] flex-shrink-0 mt-0.5" />
                           <span className="text-sm font-normal text-[#364153]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                            {feature}
+                            {benefit}
                           </span>
                         </li>
                       ))}
                     </ul>
                     <button
-                      className={`w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
-                        tier.popular
-                          ? 'bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white hover:opacity-90'
-                          : 'bg-white border border-[rgba(0,0,0,0.1)] text-[#0a0a0a] hover:bg-gray-50'
-                      }`}
+                      className={`w-full py-2 rounded-lg text-sm font-semibold transition-colors bg-white border border-[rgba(0,0,0,0.1)] text-[#0a0a0a] hover:bg-gray-50`}
                       style={{ fontFamily: 'Inter, sans-serif' }}
                     >
                       Subscribe Now

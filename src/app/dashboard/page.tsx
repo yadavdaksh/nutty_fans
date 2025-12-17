@@ -43,7 +43,9 @@ export default function DashboardPage() {
 
   // Mock data for analytics (replace with real data later)
   const stats = {
-    totalEarnings: creatorProfile?.subscriptionPrice ? (creatorProfile.subscriptionPrice * (creatorProfile.subscriberCount || 0)) : 12458,
+    totalEarnings: creatorProfile?.subscriptionTiers?.[0]?.price 
+      ? (parseFloat(creatorProfile.subscriptionTiers[0].price) * (creatorProfile.subscriberCount || 0)) 
+      : 12458,
     earningsGrowth: 12.5,
     subscribers: creatorProfile?.subscriberCount || 1284,
     subscriberGrowth: 8.2,
@@ -117,7 +119,7 @@ export default function DashboardPage() {
     <ProtectedRoute>
       <div className="flex min-h-[calc(100vh-65px)] bg-[#f9fafb]">
         <Sidebar />
-        <div className="flex-1 ml-[276px]">
+        <div className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'}`}>
           <div className="px-[55px] py-8">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">

@@ -22,11 +22,12 @@ import {
   Smartphone,
   Mail,
   Instagram,
-  Twitter
+  Twitter,
+  LogOut
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, userProfile, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
     username: '@creativepro',
@@ -107,7 +108,7 @@ export default function SettingsPage() {
     <ProtectedRoute>
       <div className="flex min-h-[calc(100vh-65px)] bg-gradient-to-br from-[#faf5ff] via-[#fdf2f8] to-[#eff6ff]">
         <Sidebar />
-        <div className="flex-1 ml-[276px]">
+        <div className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'}`}>
           <div className="px-[200.5px] py-8">
             {/* Header */}
             <div className="mb-8">
@@ -415,6 +416,25 @@ export default function SettingsPage() {
                         </div>
                          <button className="text-sm font-semibold text-[#475467] hover:text-[#101828] cursor-pointer" style={{ fontFamily: 'Inter, sans-serif' }}>Disconnect</button>
                       </div>
+                    </div>
+                  </div>
+                  <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6">
+                    <h3 className="text-lg font-semibold text-[#101828] mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>
+                      Session
+                    </h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-[#344054]" style={{ fontFamily: 'Inter, sans-serif' }}>Log Out</p>
+                        <p className="text-sm text-[#475467]" style={{ fontFamily: 'Inter, sans-serif' }}>Sign out of your account on this device</p>
+                      </div>
+                      <button 
+                        onClick={() => signOut()}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-[#344054] hover:bg-gray-50 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"
+                        style={{ fontFamily: 'Inter, sans-serif' }}
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Log Out
+                      </button>
                     </div>
                   </div>
                 </div>
