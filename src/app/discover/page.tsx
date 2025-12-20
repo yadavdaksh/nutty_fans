@@ -1,24 +1,15 @@
 'use client';
 
 import Sidebar from '@/components/Sidebar';
-import { Search, Filter, Check } from 'lucide-react';
-import Image from 'next/image';
+import Link from 'next/link';
+import { Search, Filter, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-
-const CREATORS = [
-  { id: 1, name: 'Sarah Johnson', handle: '@sarahjfitness', followers: '128K', price: '$9.99/mo', category: 'Fitness', image: 'https://i.pravatar.cc/150?u=sarah' },
-  { id: 2, name: 'Sarah Johnson', handle: '@sarahjfitness', followers: '128K', price: '$9.99/mo', category: 'Fitness', image: 'https://i.pravatar.cc/150?u=sarah' },
-  { id: 3, name: 'Sarah Johnson', handle: '@sarahjfitness', followers: '128K', price: '$9.99/mo', category: 'Fitness', image: 'https://i.pravatar.cc/150?u=sarah' },
-  { id: 4, name: 'Sarah Johnson', handle: '@sarahjfitness', followers: '128K', price: '$9.99/mo', category: 'Fitness', image: 'https://i.pravatar.cc/150?u=sarah' },
-  { id: 5, name: 'Sarah Johnson', handle: '@sarahjfitness', followers: '128K', price: '$9.99/mo', category: 'Fitness', image: 'https://i.pravatar.cc/150?u=sarah' },
-  { id: 6, name: 'Sarah Johnson', handle: '@sarahjfitness', followers: '128K', price: '$9.99/mo', category: 'Fitness', image: 'https://i.pravatar.cc/150?u=sarah' },
-  { id: 7, name: 'Sarah Johnson', handle: '@sarahjfitness', followers: '128K', price: '$9.99/mo', category: 'Fitness', image: 'https://i.pravatar.cc/150?u=sarah' },
-  { id: 8, name: 'Sarah Johnson', handle: '@sarahjfitness', followers: '128K', price: '$9.99/mo', category: 'Fitness', image: 'https://i.pravatar.cc/150?u=sarah' },
-  { id: 9, name: 'Sarah Johnson', handle: '@sarahjfitness', followers: '128K', price: '$9.99/mo', category: 'Fitness', image: 'https://i.pravatar.cc/150?u=sarah' },
-];
+import { useCreators } from '@/hooks/useCreators';
 
 export default function DiscoverPage() {
   const { userProfile } = useAuth();
+  const { creators, loading, error } = useCreators();
+
   return (
     <div className="flex min-h-screen bg-[#fdfbfd]" style={{ fontFamily: 'Inter, sans-serif' }}>
       <Sidebar />
@@ -47,55 +38,89 @@ export default function DiscoverPage() {
             </button>
           </div>
 
+          {/* Loading State */}
+          {loading && (
+            <div className="flex justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="text-center py-20 text-red-500">
+              Error loading creators: {error}
+            </div>
+          )}
+
           {/* Creators Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {CREATORS.map((creator, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group">
-                {/* Cover Gradient */}
-                <div className="h-32 bg-gradient-to-r from-[#9810fa] to-[#e60076]"></div>
-                
-                <div className="px-6 pb-6 relative">
-                  {/* Avatar */}
-                  <div className="w-20 h-20 rounded-full border-4 border-white absolute -top-10 bg-white">
-                    <img 
-                      src={creator.image} 
-                      alt={creator.name} 
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  </div>
-
-                  {/* Content */}
-                  <div className="pt-12">
-                     <div className="flex items-center gap-2 mb-1">
-                       <h3 className="font-semibold text-lg text-[#101828]">{creator.name}</h3>
-                       <Check className="w-4 h-4 text-[#e60076]" /> 
-                       {/* Note: Screenshot has check mark. Using Check icon. */}
-                     </div>
-                     <p className="text-sm text-[#475467] mb-3">{creator.handle}</p>
-                     
-                     <div className="flex items-center gap-4 text-sm text-[#344054] mb-4 font-medium">
-                       <span className="flex items-center gap-1">
-                         <span className="w-4 h-4 flex items-center justify-center">👥</span> 
-                         {/* Using emoji as placeholder or icon if available */}
-                         {creator.followers}
-                       </span>
-                       <span>
-                         {creator.price}
-                       </span>
-                     </div>
-
-                     <span className="inline-block px-3 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full">
-                       {creator.category}
-                     </span>
-                  </div>
+          {!loading && !error && (
+            <>
+              {creators.length === 0 ? (
+                <div className="text-center py-20 text-[#475467]">
+                  No creators found yet.
                 </div>
-              </div>
-            ))}
-          </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                  {creators.map((creator) => (
+                    <Link 
+                      key={creator.userId} 
+                      href={`/profile/${creator.userId}`}
+                      className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group block"
+                    >
+                      {/* Cover Gradient */}
+                      <div className="h-32 bg-gradient-to-r from-[#9810fa] to-[#e60076]"></div>
+                      
+                      <div className="px-6 pb-6 relative">
+                        {/* Avatar */}
+                        <div className="w-20 h-20 rounded-full border-4 border-white absolute -top-10 bg-white">
+                          <img 
+                            src={creator.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.user.displayName)}&background=random`} 
+                            alt={creator.user.displayName} 
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        </div>
+
+                        {/* Content */}
+                        <div className="pt-12">
+                           <div className="flex items-center gap-2 mb-1">
+                             <h3 className="font-semibold text-lg text-[#101828]">{creator.user.displayName}</h3>
+                             <Check className="w-4 h-4 text-[#e60076]" /> 
+                           </div>
+                           <p className="text-sm text-[#475467] mb-3">@{creator.user.displayName.toLowerCase().replace(/\s/g, '')}</p>
+                           
+                           <div className="flex items-center gap-4 text-sm text-[#344054] mb-4 font-medium">
+                             <span className="flex items-center gap-1">
+                               <span className="w-4 h-4 flex items-center justify-center">👥</span> 
+                               {creator.subscriberCount >= 1000 
+                                 ? `${(creator.subscriberCount / 1000).toFixed(1)}K` 
+                                 : creator.subscriberCount}
+                             </span>
+                             <span>
+                               {creator.subscriptionTiers?.[0] 
+                                 ? `$${creator.subscriptionTiers[0].price}/mo` 
+                                 : 'Price N/A'}
+                             </span>
+                           </div>
+
+                           <div className="flex flex-wrap gap-2">
+                             {creator.categories.map((cat, idx) => (
+                               <span key={idx} className="inline-block px-3 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full">
+                                 {cat}
+                               </span>
+                             ))}
+                           </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
            {/* Load More */}
            <div className="flex justify-center pb-8">
-             <button className="px-8 py-3 border border-gray-200 rounded-full text-[#344054] font-medium hover:bg-gray-50 transition-colors bg-white shadow-sm">
+             <button className="px-8 py-3 border border-gray-200 rounded-full text-[#344054] font-medium hover:bg-gray-50 transition-colors bg-white shadow-sm disabled:opacity-50" disabled={loading}>
                Load More Creators
              </button>
            </div>

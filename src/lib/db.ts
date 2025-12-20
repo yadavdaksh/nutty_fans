@@ -32,7 +32,10 @@ export interface CreatorProfile {
     benefits: string[];
   }[];
   subscriberCount: number;
+  postCount?: number;
+  isLive?: boolean;
   categories: string[];
+  profileViews: number;
   socialLinks: {
     instagram?: string;
     twitter?: string;
@@ -95,7 +98,51 @@ export const createCreatorProfile = async (userId: string, data: Partial<Creator
   await updateUserProfile(userId, { role: 'creator' });
 };
 
-// Get a creator profile
+export interface Post {
+  id: string;
+  creatorId: string;
+  content: string;
+  mediaURL: string;
+  type: 'image' | 'video';
+  isLocked: boolean;
+  likesCount: number;
+  commentsCount: number;
+  createdAt: Timestamp;
+}
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  creatorId: string;
+  tierId: string;
+  status: 'active' | 'expired' | 'expiring';
+  createdAt: Timestamp;
+  expiresAt: Timestamp;
+}
+
+export interface Conversation {
+  id: string;
+  participants: string[];
+  participantMetadata: Record<string, {
+    displayName: string;
+    photoURL?: string;
+  }>;
+  lastMessage: string;
+  lastTimestamp: Timestamp | any;
+  unreadCount: Record<string, number>;
+  updatedAt: Timestamp | any;
+}
+
+export interface Message {
+  id?: string;
+  senderId: string;
+  text: string;
+  type: 'text' | 'image' | 'video';
+  timestamp: Timestamp | any;
+  read: boolean;
+}
+
+// Get creator profile
 export const getCreatorProfile = async (userId: string): Promise<CreatorProfile | null> => {
   const creatorRef = doc(db, 'creators', userId);
   const creatorSnap = await getDoc(creatorRef);

@@ -15,15 +15,23 @@ import {
   DollarSign,
   Users,
   Eye,
-  TrendingUp
+  TrendingUp,
+  Loader2,
+  Check,
+  Plus,
+  Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
 import { CreatorProfile } from '@/lib/db';
+import { useSubscriptions } from '@/hooks/useSubscriptions';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function DashboardPage() {
   const { user, userProfile } = useAuth();
   const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
+  
+  const { subscribers, loading: subsLoading } = useSubscriptions(undefined, user?.uid);
 
   useEffect(() => {
     const fetchCreatorProfile = async () => {
@@ -35,54 +43,49 @@ export default function DashboardPage() {
           console.error('Error fetching creator profile:', error);
         }
       }
-      setLoading(false);
+      setProfileLoading(false);
     };
 
     fetchCreatorProfile();
   }, [user, userProfile]);
 
-  // Mock data for analytics (replace with real data later)
+  const loading = profileLoading || subsLoading;
+
+  // Calculate real stats
+  const activeSubsCount = subscribers.length;
+  const avgPrice = creatorProfile?.subscriptionTiers?.[0]?.price ? parseFloat(creatorProfile.subscriptionTiers[0].price) : 9.99;
+  const estimatedMonthlyEarnings = activeSubsCount * avgPrice;
+
   const stats = {
-    totalEarnings: creatorProfile?.subscriptionTiers?.[0]?.price 
-      ? (parseFloat(creatorProfile.subscriptionTiers[0].price) * (creatorProfile.subscriberCount || 0)) 
-      : 12458,
-    earningsGrowth: 12.5,
-    subscribers: creatorProfile?.subscriberCount || 1284,
-    subscriberGrowth: 8.2,
-    totalViews: 45200,
-    viewsGrowth: 15.3,
-    engagementRate: 89,
-    engagementGrowth: -2.1,
+    totalEarnings: estimatedMonthlyEarnings,
+    earningsGrowth: 12.5, // Mock for now
+    subscribers: activeSubsCount,
+    subscriberGrowth: 8.2, // Mock for now
+    totalViews: creatorProfile?.profileViews || 0,
+    viewsGrowth: 15.3, // Mock for now
+    engagementRate: 89, // Mock for now
+    engagementGrowth: -2.1, // Mock for now
   };
 
-  // Mock revenue data
+  // Mock revenue data (can be improved later with historical tracking)
   const revenueData = [
-    { month: 'Jan', amount: 8500, progress: 70 },
-    { month: 'Feb', amount: 9200, progress: 76 },
-    { month: 'Mar', amount: 10100, progress: 84 },
-    { month: 'Apr', amount: 11300, progress: 94 },
-    { month: 'May', amount: 12458, progress: 100 },
-  ];
-
-  // Mock subscribers data
-  const recentSubscribers = [
-    { name: 'Emma Wilson', time: '2 hours ago', tier: 'Premium', avatar: '' },
-    { name: 'James Chen', time: '5 hours ago', tier: 'Basic', avatar: '' },
-    { name: 'Sofia Garcia', time: '1 day ago', tier: 'VIP', avatar: '' },
-    { name: 'Michael Brown', time: '2 days ago', tier: 'Premium', avatar: '' },
+    { month: 'Jan', amount: estimatedMonthlyEarnings * 0.7, progress: 70 },
+    { month: 'Feb', amount: estimatedMonthlyEarnings * 0.8, progress: 80 },
+    { month: 'Mar', amount: estimatedMonthlyEarnings * 0.9, progress: 90 },
+    { month: 'Current', amount: estimatedMonthlyEarnings, progress: 100 },
   ];
 
   const monthlyGoal = {
-    current: 12458,
-    target: 15000,
-    percentage: 83,
+    current: estimatedMonthlyEarnings,
+    target: Math.max(estimatedMonthlyEarnings * 1.5, 1000),
+    percentage: Math.min(Math.round((estimatedMonthlyEarnings / Math.max(estimatedMonthlyEarnings * 1.5, 1000)) * 100), 100),
   };
 
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-[calc(100vh-65px)] bg-gray-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+        <div className="min-h-screen bg-[#f9fafb] flex items-center justify-center">
+          <Loader2 className="w-10 h-10 animate-spin text-purple-600" />
         </div>
       </ProtectedRoute>
     );
@@ -92,21 +95,24 @@ export default function DashboardPage() {
   if (userProfile?.role !== 'creator') {
     return (
       <ProtectedRoute>
-        <div className="min-h-[calc(100vh-65px)] bg-gray-50 py-8">
+        <div className="min-h-screen bg-[#f9fafb] py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center py-12">
-              <h1 className="text-3xl font-semibold text-[#101828] mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-gray-200 p-12 text-center shadow-sm">
+              <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Sparkles className="w-10 h-10 text-purple-600" />
+              </div>
+              <h1 className="text-3xl font-bold text-[#101828] mb-4">
                 Welcome, {user?.displayName || 'User'}!
               </h1>
-              <p className="text-lg font-normal text-[#4a5565] mb-8" style={{ fontFamily: 'Inter, sans-serif' }}>
-                You&apos;re currently set up as a user. Become a creator to access the creator dashboard.
+              <p className="text-lg text-[#475467] mb-10">
+                You're currently in Fan mode. Start your creator journey today and share your exclusive content with the world.
               </p>
               <Link
                 href="/onboarding/creator"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white px-6 py-3 rounded-full font-medium hover:opacity-90 transition-opacity"
-                style={{ fontFamily: 'Inter, sans-serif' }}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-full font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all"
               >
                 Become a Creator
+                <Plus className="w-5 h-5" />
               </Link>
             </div>
           </div>
@@ -117,138 +123,143 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex min-h-[calc(100vh-65px)] bg-[#f9fafb]">
+      <div className="flex min-h-screen bg-[#f9fafb]">
         <Sidebar />
-        <div className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'}`}>
-          <div className="px-[55px] py-8">
+        <div className="flex-1">
+          <div className="px-8 py-10 max-w-7xl mx-auto">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
               <div>
-                <h1 className="text-[36px] leading-[40px] font-normal text-[#101828] mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <h1 className="text-4xl font-bold text-[#101828] mb-2">
                   Creator Dashboard
                 </h1>
-                <p className="text-[18px] leading-[28px] font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Welcome back, {user?.displayName || 'Sarah'}! Here&apos;s your performance overview.
+                <p className="text-lg text-[#475467]">
+                  Welcome back, {user?.displayName}! Here's how your content is performing.
                 </p>
               </div>
               <Link
-                href="/content/upload"
-                className="flex items-center gap-2 bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"
-                style={{ fontFamily: 'Inter, sans-serif' }}
+                href="/content"
+                className="flex items-center gap-2 bg-[#101828] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
               >
                 <Upload className="w-4 h-4" />
-                Upload New Post
+                Upload New Content
               </Link>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
               {/* Total Earnings */}
-              <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6 overflow-hidden">
+              <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-[#00a63e] to-[#009966] flex items-center justify-center">
-                    <DollarSign className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+                    <DollarSign className="w-6 h-6 text-green-600" />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <ArrowUpRight className="w-4 h-4 text-[#00c950]" />
-                    <span className="text-sm font-normal text-[#00c950]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-lg">
+                    <ArrowUpRight className="w-3.5 h-3.5 text-green-600" />
+                    <span className="text-xs font-bold text-green-600">
                       +{stats.earningsGrowth}%
                     </span>
                   </div>
                 </div>
-                <p className="text-[30px] leading-[36px] font-normal text-[#101828] mb-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <p className="text-3xl font-bold text-[#101828] mb-1">
                   ${stats.totalEarnings.toLocaleString()}
                 </p>
-                <p className="text-sm font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Total Earnings
+                <p className="text-sm font-medium text-[#667085]">
+                  Monthly Revenue
                 </p>
               </div>
 
               {/* Subscribers */}
-              <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6 overflow-hidden">
+              <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-[#9810fa] to-[#e60076] flex items-center justify-center">
-                    <Users className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
+                    <Users className="w-6 h-6 text-purple-600" />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <ArrowUpRight className="w-4 h-4 text-[#00c950]" />
-                    <span className="text-sm font-normal text-[#00c950]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-lg">
+                    <ArrowUpRight className="w-3.5 h-3.5 text-green-600" />
+                    <span className="text-xs font-bold text-green-600">
                       +{stats.subscriberGrowth}%
                     </span>
                   </div>
                 </div>
-                <p className="text-[30px] leading-[36px] font-normal text-[#101828] mb-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <p className="text-3xl font-bold text-[#101828] mb-1">
                   {stats.subscribers.toLocaleString()}
                 </p>
-                <p className="text-sm font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Subscribers
+                <p className="text-sm font-medium text-[#667085]">
+                  Active Subscribers
                 </p>
               </div>
 
               {/* Total Views */}
-              <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6 overflow-hidden">
+              <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-[#155dfc] to-[#0092b8] flex items-center justify-center">
-                    <Eye className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                    <Eye className="w-6 h-6 text-blue-600" />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <ArrowUpRight className="w-4 h-4 text-[#00c950]" />
-                    <span className="text-sm font-normal text-[#00c950]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-lg">
+                    <ArrowUpRight className="w-3.5 h-3.5 text-green-600" />
+                    <span className="text-xs font-bold text-green-600">
                       +{stats.viewsGrowth}%
                     </span>
                   </div>
                 </div>
-                <p className="text-[30px] leading-[36px] font-normal text-[#101828] mb-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <p className="text-3xl font-bold text-[#101828] mb-1">
                   {stats.totalViews >= 1000 ? `${(stats.totalViews / 1000).toFixed(1)}K` : stats.totalViews.toLocaleString()}
                 </p>
-                <p className="text-sm font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Total Views
+                <p className="text-sm font-medium text-[#667085]">
+                  Profile Views
                 </p>
               </div>
 
               {/* Engagement */}
-              <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6 overflow-hidden">
+              <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-[#f54900] to-[#e7000b] flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-orange-600" />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <ArrowDownRight className="w-4 h-4 text-[#fb2c36]" />
-                    <span className="text-sm font-normal text-[#fb2c36]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-red-50 rounded-lg">
+                    <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />
+                    <span className="text-xs font-bold text-red-600">
                       {stats.engagementGrowth}%
                     </span>
                   </div>
                 </div>
-                <p className="text-[30px] leading-[36px] font-normal text-[#101828] mb-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <p className="text-3xl font-bold text-[#101828] mb-1">
                   {stats.engagementRate}%
                 </p>
-                <p className="text-sm font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Engagement
+                <p className="text-sm font-medium text-[#667085]">
+                  Engagement Rate
                 </p>
               </div>
             </div>
 
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
               {/* Revenue Overview */}
-              <div className="lg:col-span-2 bg-white border border-[#e5e7eb] rounded-[14px] p-6">
-                <h2 className="text-base font-normal text-[#101828] mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Revenue Overview
-                </h2>
+              <div className="lg:col-span-2 bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-xl font-bold text-[#101828]">
+                    Revenue History
+                  </h2>
+                  <select className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium outline-none">
+                    <option>Last 6 Months</option>
+                    <option>Last Year</option>
+                  </select>
+                </div>
                 <div className="space-y-6">
                   {revenueData.map((item, index) => (
                     <div key={index}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                        <span className="text-sm font-bold text-[#475467]">
                           {item.month}
                         </span>
-                        <span className="text-base font-normal text-[#101828]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                        <span className="text-base font-bold text-[#101828]">
                           ${item.amount.toLocaleString()}
                         </span>
                       </div>
-                      <div className="h-2 bg-[#e5e7eb] rounded-full overflow-hidden">
+                      <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-[#030213] rounded-full transition-all"
+                          className="h-full bg-purple-600 rounded-full transition-all duration-1000"
                           style={{ width: `${item.progress}%` }}
                         ></div>
                       </div>
@@ -258,45 +269,42 @@ export default function DashboardPage() {
               </div>
 
               {/* Quick Actions */}
-              <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6">
-                <h2 className="text-base font-normal text-[#101828] mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
+              <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
+                <h2 className="text-xl font-bold text-[#101828] mb-8">
                   Quick Actions
                 </h2>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <Link
-                    href="/content/upload"
-                    className="flex items-center gap-3 p-3 rounded-lg border border-[rgba(0,0,0,0.1)] hover:border-[#9810fa] hover:bg-purple-50 transition-all"
+                    href="/content"
+                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
                   >
-                    <Upload className="w-4 h-4 text-[#0a0a0a]" />
-                    <span className="text-sm font-semibold text-[#0a0a0a]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                      Upload Content
-                    </span>
-                  </Link>
-                  <Link
-                    href="/content/schedule"
-                    className="flex items-center gap-3 p-3 rounded-lg border border-[rgba(0,0,0,0.1)] hover:border-[#9810fa] hover:bg-purple-50 transition-all"
-                  >
-                    <Calendar className="w-4 h-4 text-[#0a0a0a]" />
-                    <span className="text-sm font-semibold text-[#0a0a0a]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                      Schedule Post
+                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                      <Upload className="w-5 h-5 text-gray-600 group-hover:text-purple-600" />
+                    </div>
+                    <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
+                      Post New Content
                     </span>
                   </Link>
                   <Link
                     href="/messages"
-                    className="flex items-center gap-3 p-3 rounded-lg border border-[rgba(0,0,0,0.1)] hover:border-[#9810fa] hover:bg-purple-50 transition-all"
+                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
                   >
-                    <MessageSquare className="w-4 h-4 text-[#0a0a0a]" />
-                    <span className="text-sm font-semibold text-[#0a0a0a]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                      Message Subscribers
+                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                      <MessageSquare className="w-5 h-5 text-gray-600 group-hover:text-purple-600" />
+                    </div>
+                    <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
+                      Message Fans
                     </span>
                   </Link>
                   <Link
-                    href="/analytics"
-                    className="flex items-center gap-3 p-3 rounded-lg border border-[rgba(0,0,0,0.1)] hover:border-[#9810fa] hover:bg-purple-50 transition-all"
+                    href="/settings"
+                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
                   >
-                    <BarChart3 className="w-4 h-4 text-[#0a0a0a]" />
-                    <span className="text-sm font-semibold text-[#0a0a0a]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                      View Analytics
+                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                      <BarChart3 className="w-5 h-5 text-gray-600 group-hover:text-purple-600" />
+                    </div>
+                    <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
+                      Account Settings
                     </span>
                   </Link>
                 </div>
@@ -304,64 +312,77 @@ export default function DashboardPage() {
             </div>
 
             {/* Recent Subscribers */}
-            <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6 mb-8">
-              <h2 className="text-base font-normal text-[#101828] mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Recent Subscribers
-              </h2>
-              <div className="space-y-4">
-                {recentSubscribers.map((subscriber, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
-                        <span className="text-white font-medium text-sm">
-                          {subscriber.name[0]}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-base font-normal text-[#101828]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                          {subscriber.name}
-                        </p>
-                        <p className="text-sm font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                          {subscriber.time}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={`px-3 py-1 rounded-lg text-xs font-semibold ${
-                      subscriber.tier === 'Premium' 
-                        ? 'bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white'
-                        : subscriber.tier === 'VIP'
-                        ? 'bg-gradient-to-r from-[#f54900] to-[#e7000b] text-white'
-                        : 'bg-[#dbeafe] border border-[#bedbff] text-[#1447e6]'
-                    }`} style={{ fontFamily: 'Inter, sans-serif' }}>
-                      {subscriber.tier}
-                    </div>
-                  </div>
-                ))}
+            <div className="bg-white border border-gray-100 rounded-2xl p-8 mb-8 shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-bold text-[#101828]">
+                  New Subscribers
+                </h2>
+                <Link href="/analytics" className="text-sm font-bold text-purple-600 hover:text-purple-700">
+                  View All
+                </Link>
               </div>
+              
+              {subscribers.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-[#475467]">
+                  No subscribers yet. Start posting to attract fans!
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {subscribers.slice(0, 5).map((subscriber) => (
+                    <div key={subscriber.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gray-100">
+                          <img 
+                            src={subscriber.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(subscriber.user.displayName)}`} 
+                            alt={subscriber.user.displayName} 
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                        <div>
+                          <p className="text-base font-bold text-[#101828]">
+                            {subscriber.user.displayName}
+                          </p>
+                          <p className="text-sm font-medium text-[#667085]">
+                            {subscriber.createdAt ? formatDistanceToNow(subscriber.createdAt.toDate(), { addSuffix: true }) : 'Just now'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="px-4 py-1.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100 uppercase tracking-wider">
+                        Active Fan
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Monthly Goal Progress */}
-            <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6">
-              <h2 className="text-base font-normal text-[#101828] mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Monthly Goal Progress
+            <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
+              <h2 className="text-xl font-bold text-[#101828] mb-8">
+                Monthly Revenue Goal
               </h2>
               <div className="flex items-center justify-between mb-4">
-                <p className="text-base font-normal text-[#364153]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  ${monthlyGoal.current.toLocaleString()} of ${monthlyGoal.target.toLocaleString()} goal
+                <p className="text-lg font-bold text-[#344054]">
+                  ${monthlyGoal.current.toLocaleString()} <span className="text-[#667085] font-medium text-base">of ${monthlyGoal.target.toLocaleString()} goal</span>
                 </p>
-                <p className="text-base font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <div className="px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-lg relative overflow-hidden">
                   {monthlyGoal.percentage}%
-                </p>
+                </div>
               </div>
-              <div className="h-3 bg-[#e5e7eb] rounded-full overflow-hidden mb-4">
+              <div className="h-4 bg-gray-50 rounded-full overflow-hidden mb-6">
                 <div 
-                  className="h-full bg-[#030213] rounded-full transition-all"
+                  className="h-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-full transition-all duration-1000"
                   style={{ width: `${monthlyGoal.percentage}%` }}
                 ></div>
               </div>
-              <p className="text-sm font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                You&apos;re ${(monthlyGoal.target - monthlyGoal.current).toLocaleString()} away from reaching your monthly goal! Keep up the great work! 🎉
-              </p>
+              <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100 flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                <p className="text-sm font-medium text-purple-900 leading-relaxed">
+                  {monthlyGoal.percentage >= 100 
+                    ? "Congratulations! You've hit your monthly goal! 🎉 Ready to aim higher?" 
+                    : `You're $${(monthlyGoal.target - monthlyGoal.current).toLocaleString()} away from your goal! New content usually boosts growth by 15%.`}
+                </p>
+              </div>
             </div>
           </div>
         </div>

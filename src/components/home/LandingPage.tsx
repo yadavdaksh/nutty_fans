@@ -1,7 +1,22 @@
+'use client';
+
 import Link from 'next/link';
-import { ArrowRight, Users, DollarSign, TrendingUp, Star, Sparkles } from 'lucide-react';
+import { 
+  ArrowRight, 
+  Users, 
+  DollarSign, 
+  TrendingUp, 
+  Star, 
+  Sparkles,
+  Loader2,
+  Check
+} from 'lucide-react';
+import { useCreators } from '@/hooks/useCreators';
 
 export default function LandingPage() {
+  const { creators, loading } = useCreators();
+  const topCreators = creators.slice(0, 6);
+
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Hero Section */}
@@ -103,192 +118,65 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {/* Creator Card 1 */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="h-32 bg-gradient-to-r from-purple-400 to-pink-400"></div>
-              <div className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-300 to-pink-300 -mt-10 border-4 border-white"></div>
-                  <div className="flex-1 pt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-[#101828]" style={{ fontFamily: 'Inter, sans-serif' }}>Alex Rivera</h3>
-                      <span className="text-purple-600">✓</span>
-                    </div>
-                    <p className="text-sm font-normal text-[#4a5565] mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>@alexfitpro</p>
-                    <div className="flex items-center gap-4 text-sm font-normal text-[#4a5565] mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        156K
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
-                        $19.99/mo
-                      </span>
-                    </div>
-                    <span className="inline-block px-3 py-1 text-xs font-medium bg-purple-50 text-purple-700 rounded-full">
-                      Fitness
-                    </span>
-                  </div>
-                </div>
-              </div>
+          {loading ? (
+             <div className="flex justify-center py-12">
+               <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+             </div>
+          ) : topCreators.length === 0 ? (
+            <div className="text-center py-12 text-[#475467] bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+              No creators found yet.
             </div>
-
-            {/* Creator Card 2 */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="h-32 bg-gradient-to-r from-blue-400 to-cyan-400"></div>
-              <div className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-300 to-cyan-300 -mt-10 border-4 border-white"></div>
-                  <div className="flex-1 pt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-[#101828]">Marcus Chen</h3>
-                      <span className="text-purple-600">✓</span>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+              {topCreators.map((creator) => (
+                <Link 
+                  key={creator.userId} 
+                  href={`/profile/${creator.userId}`}
+                  className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-xl transition-all group"
+                >
+                  <div className="h-32 bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 group-hover:opacity-90 transition-opacity"></div>
+                  <div className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-20 h-20 rounded-full bg-gray-100 -mt-16 border-4 border-white shadow-lg overflow-hidden shrink-0">
+                        <img 
+                          src={creator.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.user.displayName)}`} 
+                          alt={creator.user.displayName} 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform" 
+                        />
+                      </div>
+                      <div className="flex-1 pt-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-lg font-semibold text-[#101828] group-hover:text-purple-600 transition-colors">
+                            {creator.user.displayName}
+                          </h3>
+                          <Check className="w-4 h-4 text-[#9810fa] fill-current" />
+                        </div>
+                        <p className="text-sm font-normal text-[#4a5565] mb-3">@{creator.user.displayName.toLowerCase().replace(/\s/g, '')}</p>
+                        <div className="flex items-center gap-4 text-sm font-normal text-[#4a5565] mb-4">
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <Users className="w-4 h-4 text-purple-500" />
+                            {(creator.subscriberCount || 0).toLocaleString()}
+                          </span>
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <DollarSign className="w-4 h-4 text-green-500" />
+                            {creator.subscriptionTiers?.[0]?.price || '9.99'}/mo
+                          </span>
+                        </div>
+                        <span className="inline-block px-3 py-1 text-xs font-semibold bg-gray-100 text-[#344054] rounded-full">
+                          {creator.categories?.[0] || 'Creator'}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-sm text-[#4a5565] mb-2">@marcusmusic</p>
-                    <div className="flex items-center gap-4 text-sm text-[#4a5565] mb-3">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        95K
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
-                        $14.99/mo
-                      </span>
-                    </div>
-                    <span className="inline-block px-3 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full">
-                      Music
-                    </span>
                   </div>
-                </div>
-              </div>
+                </Link>
+              ))}
             </div>
-
-            {/* Creator Card 3 */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="h-32 bg-gradient-to-r from-pink-400 to-rose-400"></div>
-              <div className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-300 to-rose-300 -mt-10 border-4 border-white"></div>
-                  <div className="flex-1 pt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-[#101828]">Emma Rose</h3>
-                      <span className="text-purple-600">✓</span>
-                    </div>
-                    <p className="text-sm text-[#4a5565] mb-2">@emmaroseart</p>
-                    <div className="flex items-center gap-4 text-sm text-[#4a5565] mb-3">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        210K
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
-                        $12.99/mo
-                      </span>
-                    </div>
-                    <span className="inline-block px-3 py-1 text-xs font-medium bg-pink-50 text-pink-700 rounded-full">
-                      Art
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Creator Card 4 */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="h-32 bg-gradient-to-r from-green-400 to-emerald-400"></div>
-              <div className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-300 to-emerald-300 -mt-10 border-4 border-white"></div>
-                  <div className="flex-1 pt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-[#101828]">Jake Thompson</h3>
-                      <span className="text-purple-600">✓</span>
-                    </div>
-                    <p className="text-sm text-[#4a5565] mb-2">@jakethephoto</p>
-                    <div className="flex items-center gap-4 text-sm text-[#4a5565] mb-3">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        89K
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
-                        $7.99/mo
-                      </span>
-                    </div>
-                    <span className="inline-block px-3 py-1 text-xs font-medium bg-green-50 text-green-700 rounded-full">
-                      Photography
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Creator Card 5 */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="h-32 bg-gradient-to-r from-indigo-400 to-purple-400"></div>
-              <div className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-300 to-purple-300 -mt-10 border-4 border-white"></div>
-                  <div className="flex-1 pt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-[#101828]">Luna Star</h3>
-                      <span className="text-purple-600">✓</span>
-                    </div>
-                    <p className="text-sm text-[#4a5565] mb-2">@lunastarmusic</p>
-                    <div className="flex items-center gap-4 text-sm text-[#4a5565] mb-3">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        175K
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
-                        $15.99/mo
-                      </span>
-                    </div>
-                    <span className="inline-block px-3 py-1 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-full">
-                      Music
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Creator Card 6 */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="h-32 bg-gradient-to-r from-orange-400 to-red-400"></div>
-              <div className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-300 to-red-300 -mt-10 border-4 border-white"></div>
-                  <div className="flex-1 pt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-[#101828]">Sarah Johnson</h3>
-                      <span className="text-purple-600">✓</span>
-                    </div>
-                    <p className="text-sm text-[#4a5565] mb-2">@sarahjfitness</p>
-                    <div className="flex items-center gap-4 text-sm text-[#4a5565] mb-3">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        128K
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
-                        $9.99/mo
-                      </span>
-                    </div>
-                    <span className="inline-block px-3 py-1 text-xs font-medium bg-orange-50 text-orange-700 rounded-full">
-                      Fitness
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
 
           <div className="text-center">
             <Link
               href="/discover"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full border-2 border-gray-200 text-[#101828] font-medium hover:border-purple-500 hover:text-purple-600 transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-full border-2 border-gray-200 text-[#101828] font-semibold hover:border-purple-500 hover:text-purple-600 transition-all bg-white"
             >
               View All Creators
               <ArrowRight className="w-4 h-4" />
@@ -309,56 +197,56 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Testimonial 1 */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-300 to-pink-300"></div>
+            <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-300 to-pink-300 border-2 border-white shadow-sm"></div>
                 <div>
-                  <h4 className="font-semibold text-[#101828]" style={{ fontFamily: 'Inter, sans-serif' }}>Jessica Martinez</h4>
-                  <p className="text-sm font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>Fitness Creator</p>
+                  <h4 className="font-bold text-[#101828]">Jessica Martinez</h4>
+                  <p className="text-sm font-medium text-purple-600">Fitness Creator</p>
                 </div>
               </div>
-              <p className="font-normal text-[#4a5565] mb-4 leading-relaxed" style={{ fontFamily: 'Inter, sans-serif' }}>
+              <p className="font-normal text-[#4a5565] mb-6 leading-relaxed italic">
                 &quot;NuttyFans changed my life! I went from side hustle to full-time creator in just 6 months.&quot;
               </p>
-              <div className="flex items-center gap-2 text-purple-600">
-                <DollarSign className="w-4 h-4" />
-                <span className="font-semibold" style={{ fontFamily: 'Inter, sans-serif' }}>$12K/month</span>
+              <div className="flex items-center gap-2 text-[#101828] bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
+                <DollarSign className="w-4 h-4 text-green-500" />
+                <span className="font-bold">$12K/month earnings</span>
               </div>
             </div>
 
             {/* Testimonial 2 */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-300 to-cyan-300"></div>
+            <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-300 to-cyan-300 border-2 border-white shadow-sm"></div>
                 <div>
-                  <h4 className="font-semibold text-[#101828]">David Kim</h4>
-                  <p className="text-sm text-[#4a5565]">Music Producer</p>
+                  <h4 className="font-bold text-[#101828]">David Kim</h4>
+                  <p className="text-sm font-medium text-blue-600">Music Producer</p>
                 </div>
               </div>
-              <p className="text-[#4a5565] mb-4 leading-relaxed">
+              <p className="text-[#4a5565] mb-6 leading-relaxed italic">
                 &quot;The best platform for connecting with real fans. The subscription model is perfect for sustainable income.&quot;
               </p>
-              <div className="flex items-center gap-2 text-purple-600">
-                <DollarSign className="w-4 h-4" />
-                <span className="font-semibold">$8.5K/month</span>
+              <div className="flex items-center gap-2 text-[#101828] bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
+                <DollarSign className="w-4 h-4 text-green-500" />
+                <span className="font-bold">$8.5K/month earnings</span>
               </div>
             </div>
 
             {/* Testimonial 3 */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-300 to-rose-300"></div>
+            <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-300 to-rose-300 border-2 border-white shadow-sm"></div>
                 <div>
-                  <h4 className="font-semibold text-[#101828]">Nina Patel</h4>
-                  <p className="text-sm text-[#4a5565]">Digital Artist</p>
+                  <h4 className="font-bold text-[#101828]">Nina Patel</h4>
+                  <p className="text-sm font-medium text-pink-600">Digital Artist</p>
                 </div>
               </div>
-              <p className="text-[#4a5565] mb-4 leading-relaxed">
+              <p className="text-[#4a5565] mb-6 leading-relaxed italic">
                 &quot;Finally, a platform that values creators. The community is amazing and the tools are powerful.&quot;
               </p>
-              <div className="flex items-center gap-2 text-purple-600">
-                <DollarSign className="w-4 h-4" />
-                <span className="font-semibold">$15K/month</span>
+              <div className="flex items-center gap-2 text-[#101828] bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
+                <DollarSign className="w-4 h-4 text-green-500" />
+                <span className="font-bold">$15K/month earnings</span>
               </div>
             </div>
           </div>
@@ -366,22 +254,27 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl sm:text-5xl font-semibold text-white mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#101828] to-[#1d2939] text-white overflow-hidden relative">
+        <div className="absolute top-0 right-0 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/20 blur-[100px] rounded-full"></div>
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <h2 className="text-4xl sm:text-5xl font-bold mb-6">
             Ready to Start Your Journey?
           </h2>
-          <p className="text-xl font-normal text-white/90 mb-10 max-w-2xl mx-auto" style={{ fontFamily: 'Inter, sans-serif' }}>
-            Join thousands of creators earning a sustainable income doing what they love.
+          <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
+            Join thousands of creators earning a sustainable income doing what they love. Get analytics, direct messaging, and more.
           </p>
-          <Link
-            href="/signup"
-            className="inline-flex items-center gap-2 bg-white text-purple-600 px-8 py-4 rounded-full font-medium hover:bg-gray-50 transition-colors"
-            style={{ fontFamily: 'Inter, sans-serif' }}
-          >
-            Get Started for Free
-            <ArrowRight className="w-5 h-5" />
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-10 py-4 rounded-full font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all transform hover:-translate-y-1"
+            >
+              Get Started for Free
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link href="/discover" className="text-white hover:text-purple-400 font-semibold transition-colors">
+              Explore Discover Feed
+            </Link>
+          </div>
         </div>
       </section>
     </div>
