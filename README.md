@@ -154,6 +154,35 @@ npm start
 - **Access**: Protected (requires creator role)
 - **Note**: Non-creators see a message to become a creator
 
+#### `/messages` - Messages & Chat
+- **Description**: Real-time messaging platform
+- **Features**:
+  - Direct messaging between fans and creators
+  - Real-time typing indicators (via RTDB)
+  - User online/offline presence tracking (via RTDB)
+  - Unread message counters
+  - Optimized for mobile and desktop
+
+#### `/discover` - Discover Page
+- **Description**: Find and browse creators
+- **Features**:
+  - Dynamic creator grid with real-time stats
+  - Merged sample data for a "lived-in" experience
+  - Category filtering (Fitness, Art, etc.)
+
+#### `/live` - Live Streams
+- **Description**: Browse creators who are currently live
+- **Features**:
+  - Real-time filtering for `isLive` creators
+  - Empty states with sample creators
+
+#### `/subscription` - Subscription Management
+- **Description**: Manage active subscriptions
+- **Features**:
+  - List of all active/expired subscriptions
+  - Monthly spend tracking analytics
+  - Easy navigation back to creator profiles
+
 #### `/settings` - Settings Page
 
 - **Description**: User account settings
@@ -192,13 +221,6 @@ npm start
   - Content grid with locked/unlocked states
 - **Access**: Protected (requires authentication)
 
-### Navigation Routes (Referenced but not yet implemented)
-
-- `/discover` - Discover creators page
-- `/messages` - Messages/chat page
-- `/live` - Live streams page
-- `/cart` - Shopping cart page
-- `/subscription` - Subscription management page
 - `/notifications` - Notifications page
 - `/content/upload` - Content upload page
 - `/content/schedule` - Schedule posts page
@@ -311,13 +333,13 @@ nutty-fans/
 - ✅ Profile viewing and editing
 - ✅ Profile image upload (UI ready, backend integration needed)
 
-### Dashboard
-
-- ✅ Creator dashboard with statistics
-- ✅ Revenue overview
-- ✅ Quick actions
-- ✅ Recent subscribers list
-- ✅ Monthly goal tracking
+### Dashboard & Data
+- ✅ Dynamic feed with Firestore & Mock data integration
+- ✅ Live creator indicators
+- ✅ Creator dashboard with real-time statistics
+- ✅ Automated revenue estimation based on subscribers
+- ✅ Recent subscribers activity list
+- ✅ Monthly goal tracking (automated)
 
 ### Settings
 
@@ -331,10 +353,7 @@ nutty-fans/
 - ✅ Subscription tiers showcase
 - ✅ Content grid with locked/unlocked states
 
-## 🗄️ Database Schema
-
 ### UserProfile (Firestore)
-
 ```typescript
 {
   uid: string;
@@ -349,17 +368,69 @@ nutty-fans/
 ```
 
 ### CreatorProfile (Firestore)
-
 ```typescript
 {
-  uid: string;
-  username?: string;
+  userId: string;
   bio?: string;
-  category?: string;
-  subscriptionPrice?: number;
+  categories?: string[];
+  subscriptionTiers: Array<{
+    name: string;
+    price: string;
+    description?: string;
+    benefits: string[];
+  }>;
   subscriberCount?: number;
+  postCount?: number;
+  profileViews?: number;
+  isLive?: boolean;
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+  };
+}
+```
+
+### Post (Firestore)
+```typescript
+{
+  id: string;
+  creatorId: string;
+  content: string;
+  mediaURL: string;
+  type: 'image' | 'video';
+  isLocked: boolean;
+  likesCount: number;
+  commentsCount: number;
   createdAt: Timestamp;
-  updatedAt: Timestamp;
+}
+```
+
+### Subscription (Firestore)
+```typescript
+{
+  id: string;
+  userId: string;
+  creatorId: string;
+  tierId: string;
+  status: 'active' | 'expired' | 'expiring';
+  createdAt: Timestamp;
+  expiresAt: Timestamp;
+}
+```
+
+### Conversation (Firestore)
+```typescript
+{
+  id: string;
+  participants: string[];
+  participantMetadata: Record<string, {
+    displayName: string;
+    photoURL?: string;
+  }>;
+  lastMessage: string;
+  lastTimestamp: Timestamp | any;
+  unreadCount: Record<string, number>;
+  updatedAt: Timestamp | any;
 }
 ```
 
@@ -395,14 +466,21 @@ The application uses middleware and `ProtectedRoute` component to protect routes
 
 ## 🐛 Known Issues / TODO
 
+- [✅] Add messaging system
 - [ ] Complete Google sign-in implementation
 - [ ] Implement profile image upload to Firebase Storage
-- [ ] Add real data fetching for dashboard statistics
-- [ ] Implement content upload functionality
-- [ ] Add messaging system
-- [ ] Implement subscription payment processing
-- [ ] Add analytics charts
+- [ ] Implement content upload functionality (backend)
+- [ ] Implement subscription payment processing (Stripe integration)
+- [ ] Add analytics charts (Recharts)
 - [ ] Complete settings tabs (Account, Notifications, Privacy, Billing, Plans)
+
+## 🧪 Development Fallbacks (Sample Data)
+
+To ensure a rich development and demonstration experience even with an empty database, the platform includes a robust sample data system:
+
+- **Location**: `src/lib/mockData.ts`
+- **Mechanism**: Custom hooks (`useCreators`, `usePosts`, `useFeed`, `useSubscriptions`, `useMessaging`) automatically merge real Firestore/RTDB data with high-quality mock objects.
+- **Benefits**: Immediate visibility of UI states, "lived-in" content for demos, and fallback content when backend data is missing.
 
 ## 📞 Support
 
@@ -414,4 +492,4 @@ This project is private and proprietary.
 
 ---
 
-**Last Updated**: January 2025
+**Last Updated**: December 2025
