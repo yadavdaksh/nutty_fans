@@ -5,30 +5,48 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Bell, Search, Menu, LogOut, User, Settings, LayoutDashboard } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { useMessaging } from '@/hooks/useMessaging';
 
 export default function Header() {
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
+  const { user, userProfile, signOut } = useAuth();
+  const { totalUnreadCount } = useMessaging(user?.uid);
   const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/verify-otp' || pathname === '/verify-age';
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  const mockNotifications = [
+    { id: 1, text: 'Sarah Miller subscribed to your Premium tier!', time: '2 mins ago', unread: true },
+    { id: 2, text: 'You received a $50 tip from Alex Rivers!', time: '1 hour ago', unread: true },
+    { id: 3, text: 'New comment on your latest post', time: '5 hours ago', unread: false },
+  ];
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setIsDropdownOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(target)) {
+        setIsNotificationsOpen(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(target)) {
+        setIsSearchOpen(false);
       }
     };
 
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isDropdownOpen]);
+  }, []);
 
   const toggleDropdown = () => {
     setIsDropdownOpen((prev) => !prev);
@@ -78,12 +96,17 @@ export default function Header() {
 
                 <Link 
                   href="/messages" 
-                  className={`text-[15.1px] leading-6 font-normal transition-colors ${
+                  className={`text-[15.1px] leading-6 font-normal transition-colors relative flex items-center gap-1 ${
                     pathname === '/messages' ? 'text-[#101828]' : 'text-[#4a5565] hover:text-[#101828]'
                   }`}
                   style={{ fontFamily: 'Inter, sans-serif' }}
                 >
                   Messages
+                  {totalUnreadCount > 0 && userProfile?.role === 'creator' && (
+                    <span className="flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-bold text-white bg-[#e60076] rounded-full">
+                      {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+                    </span>
+                  )}
                 </Link>
                 <Link 
                   href="/subscription" 
@@ -132,22 +155,63 @@ export default function Header() {
           {/* Right side - Icons and Profile */}
           {!isAuthPage && (
             <div className="flex items-center h-10 gap-0">
-              {/* Search Icon - 36px x 36px */}
-              <button 
-                className="w-9 h-9 rounded-full flex items-center justify-center text-[#4a5565] hover:text-[#101828] transition-colors"
-                aria-label="Search"
-              >
-                <Search className="w-4 h-4" />
-              </button>
+              {/* Search Icon with Expansion */}
+              <div className="relative flex items-center" ref={searchRef}>
+                <div className={`flex items-center overflow-hidden transition-all duration-300 ${isSearchOpen ? 'w-64 opacity-100' : 'w-0 opacity-0'}`}>
+                   <input 
+                     type="text"
+                     placeholder="Search fans or categories..."
+                     value={searchQuery}
+                     onChange={(e) => setSearchQuery(e.target.value)}
+                     className="w-full bg-[#f9fafb] border border-gray-200 rounded-full px-4 py-1.5 text-[14px] text-[#101828] placeholder:text-[#98a2b3] focus:border-[#9810fa] focus:bg-white outline-none transition-all shadow-sm"
+                     style={{ fontFamily: 'Inter, sans-serif' }}
+                   />
+                </div>
+                <button 
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isSearchOpen ? 'text-purple-600' : 'text-[#4a5565] hover:text-[#101828]'}`}
+                  onClick={() => setIsSearchOpen(!isSearchOpen)}
+                  aria-label="Search"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+              </div>
 
-              {/* Notifications Icon with Badge - 36px x 36px, gap of 16px */}
-              <button 
-                className="w-9 h-9 rounded-full flex items-center justify-center text-[#4a5565] hover:text-[#101828] transition-colors relative ml-4"
-                aria-label="Notifications"
-              >
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-[#e60076] rounded-full"></span>
-              </button>
+              {/* Notifications Icon with Dropdown */}
+              <div className="relative ml-4" ref={notificationsRef}>
+                <button 
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors relative ${isNotificationsOpen ? 'text-purple-600' : 'text-[#4a5565] hover:text-[#101828]'}`}
+                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                  aria-label="Notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                  {mockNotifications.some(n => n.unread) && (
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#e60076] rounded-full border-2 border-white"></span>
+                  )}
+                </button>
+
+                {isNotificationsOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in duration-200">
+                    <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-sm text-[#101828]" style={{ fontFamily: 'Inter, sans-serif' }}>Notifications</h3>
+                      <button className="text-xs text-purple-600 hover:text-purple-700 font-medium">Mark as read</button>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {mockNotifications.map((notif) => (
+                        <div key={notif.id} className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 flex gap-3 ${notif.unread ? 'bg-purple-50/30' : ''}`}>
+                          <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${notif.unread ? 'bg-[#e60076]' : 'opacity-0'}`}></div>
+                          <div>
+                            <p className="text-sm font-normal text-[#101828] leading-tight" style={{ fontFamily: 'Inter, sans-serif' }}>{notif.text}</p>
+                            <p className="text-xs text-[#98a2b3] mt-1">{notif.time}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="px-4 py-2 text-center border-t border-gray-100">
+                      <button className="text-sm font-medium text-purple-600 hover:text-purple-700">View all notifications</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Profile Image - 40px x 40px, gap of 16px from notifications */}
               <div className="relative ml-4" ref={dropdownRef}>

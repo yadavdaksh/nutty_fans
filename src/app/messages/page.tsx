@@ -77,7 +77,7 @@ export default function MessagesPage() {
       unsubscribe?.();
       unsubPresence?.();
     };
-  }, [activeChatId, user?.uid, activeConversation]);
+  }, [activeChatId, user?.uid, activeConversation, activeChatMessages.length]);
 
   // Set typing status with debounce
   useEffect(() => {
@@ -125,9 +125,9 @@ export default function MessagesPage() {
     }
   };
 
-  const filteredConversations = conversations.filter(conv => {
-    const otherUser = Object.values(conv.participantMetadata).find((m: any) => m.displayName !== userProfile?.displayName);
-    return (otherUser as any)?.displayName?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredConversations = !user?.uid ? [] : conversations.filter(conv => {
+    const otherUser = Object.entries(conv.participantMetadata).find(([id]) => id !== user?.uid)?.[1] as any;
+    return otherUser?.displayName?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   return (
@@ -164,10 +164,10 @@ export default function MessagesPage() {
                </div>
 
                {/* List */}
-               <div className="flex-1 overflow-y-auto">
-                 {inboxLoading ? (
-                   <div className="p-8 text-center text-gray-400 text-sm">Loading chats...</div>
-                 ) : filteredConversations.length === 0 ? (
+                <div className="flex-1 overflow-y-auto">
+                  {inboxLoading || !user?.uid ? (
+                    <div className="p-8 text-center text-gray-400 text-sm">Loading chats...</div>
+                  ) : filteredConversations.length === 0 ? (
                    <div className="p-8 text-center text-gray-400 text-sm">No conversations found</div>
                  ) : (
                    filteredConversations.map((conv) => {

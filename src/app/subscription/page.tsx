@@ -45,7 +45,7 @@ export default function SubscriptionPage() {
               <p className="text-sm font-medium text-[#475467] mb-1">Monthly Spend</p>
               <h3 className="text-2xl font-bold text-[#101828]">
                  ${subscriptions.reduce((acc, sub) => {
-                  const price = sub.creator.subscriptionTiers.find(t => t.name.toLowerCase().includes(sub.tierId.toLowerCase()))?.price || '9.99';
+                  const price = sub.creator?.subscriptionTiers?.find((t: any) => t.name.toLowerCase() === sub.tierId?.toLowerCase())?.price || '9.99';
                   return acc + parseFloat(price);
                 }, 0).toFixed(2)}
               </h3>
@@ -78,8 +78,7 @@ export default function SubscriptionPage() {
               </div>
             ) : (
               subscriptions.map((sub) => {
-                const tier = sub.creator.subscriptionTiers.find(t => t.name.toLowerCase().includes(sub.tierId.toLowerCase())) || { name: 'Active', price: '9.99' };
-                const expires = sub.expiresAt.toDate();
+                const expires = sub.expiresAt?.toDate ? sub.expiresAt.toDate() : new Date();
 
                 return (
                   <div key={sub.id} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:border-purple-200 transition-colors">
@@ -88,16 +87,16 @@ export default function SubscriptionPage() {
                       <div className="flex items-center gap-4 min-w-[240px]">
                         <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden">
                           <img 
-                            src={sub.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(sub.user.displayName)}`} 
-                            alt={sub.user.displayName} 
+                            src={sub.creator?.coverImageURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(sub.user?.displayName || 'C')}`} 
+                            alt={sub.user?.displayName || 'Creator'} 
                             className="w-full h-full object-cover" 
                           />
                         </div>
                         <div>
                           <h3 className="font-semibold text-[#101828] flex items-center gap-1">
-                            {sub.user.displayName} <Check className="w-4 h-4 text-[#9810fa] fill-current" />
+                            {sub.user?.displayName || 'Unknown Creator'} <Check className="w-4 h-4 text-[#9810fa] fill-current" />
                           </h3>
-                          <p className="text-sm text-[#475467]">@{sub.user.displayName.toLowerCase().replace(/\s/g, '')}</p>
+                          <p className="text-sm text-[#475467]">@{sub.user?.displayName?.toLowerCase().replace(/\s/g, '') || 'unknown'}</p>
                         </div>
                       </div>
 
@@ -106,9 +105,12 @@ export default function SubscriptionPage() {
                         <div className="flex justify-between items-end mb-2">
                           <div>
                             <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 mb-1">
-                              {tier.name}
+                              {sub.tierId || 'Basic'}
                             </span>
-                            <p className="text-xl font-bold text-[#101828] text-sm">${tier.price}<span className="text-sm font-normal text-[#475467]">/mo</span></p>
+                            <p className="text-xl font-bold text-[#101828] text-sm">
+                              ${sub.creator?.subscriptionTiers?.find((t: any) => t.name.toLowerCase() === sub.tierId?.toLowerCase())?.price || '9.99'}
+                              <span className="text-sm font-normal text-[#475467]">/mo</span>
+                            </p>
                           </div>
                           <div className="text-right">
                             <p className="text-xs font-medium text-[#475467] mb-1">Renewal Date</p>

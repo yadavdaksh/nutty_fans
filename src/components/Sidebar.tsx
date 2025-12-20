@@ -142,7 +142,14 @@ export default function Sidebar() {
               { href: '/profile', label: 'Profile', icon: User },
             ].map((item) => {
               const Icon = item.icon;
-              const isActive = pathname.startsWith(item.href);
+              
+              // Custom logic for Profile to avoid highlighting on others' profiles
+              let isActive = false;
+              if (item.href === '/profile') {
+                isActive = pathname === '/profile' || (user?.uid ? pathname === `/profile/${user.uid}` : false);
+              } else {
+                isActive = pathname.startsWith(item.href);
+              }
               
               return (
                 <li key={item.href} className="w-full">

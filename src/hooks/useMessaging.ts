@@ -13,6 +13,7 @@ import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '../lib/mockData';
  * Manages the inbox list, active message history, and online/typing statuses.
  */
 export function useMessaging(userId: string | undefined) {
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeChatMessages, setActiveChatMessages] = useState<Message[]>([]);
   const [inboxLoading, setInboxLoading] = useState(true);
@@ -22,14 +23,16 @@ export function useMessaging(userId: string | undefined) {
   // 1. Listen to Inbox (Conversations where user is a participant)
   useEffect(() => {
     if (!userId) {
-      setInboxLoading(false);
+      setConversations([]);
+      setInboxLoading(true);
       return;
     }
 
+    setInboxLoading(true);
+
     const q = query(
       collection(db, 'conversations'),
-      where('participants', 'array-contains', userId),
-      orderBy('updatedAt', 'desc')
+      where('participants', 'array-contains', userId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -59,16 +62,29 @@ export function useMessaging(userId: string | undefined) {
       });
 
       // Sort by updatedAt desc
-      combinedConvs.sort((a, b) => b.updatedAt.toMillis() - a.updatedAt.toMillis());
+      combinedConvs.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : Date.now();
+        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : Date.now();
+        return timeB - timeA;
+      });
 
       setConversations(combinedConvs);
+      
+      // Calculate total unread count
+      const total = combinedConvs.reduce((acc, conv) => {
+        return acc + (conv.unreadCount?.[userId] || 0);
+      }, 0);
+      setTotalUnreadCount(total);
+      
       setInboxLoading(false);
     }, (error) => {
-      console.error("Inbox listener error:", error);
+      console.error("[useMessaging] Inbox listener error:", error);
       setInboxLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+    };
   }, [userId]);
 
   /**
@@ -143,6 +159,7 @@ export function useMessaging(userId: string | undefined) {
   return {
     conversations,
     activeChatMessages,
+    totalUnreadCount,
     inboxLoading,
     messagesLoading,
     typingUsers,

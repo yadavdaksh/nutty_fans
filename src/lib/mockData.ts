@@ -183,6 +183,7 @@ export const MOCK_SUBSCRIPTIONS: (Subscription & { user: UserProfile; creator: C
     status: 'active',
     createdAt: createTimestamp(15),
     expiresAt: createTimestamp(-15),
+    price: '49.99',
     user: MOCK_CREATORS[0].user,
     creator: MOCK_CREATORS[0]
   },
@@ -194,6 +195,7 @@ export const MOCK_SUBSCRIPTIONS: (Subscription & { user: UserProfile; creator: C
     status: 'active',
     createdAt: createTimestamp(30),
     expiresAt: createTimestamp(-30),
+    price: '19.99',
     user: MOCK_CREATORS[1].user,
     creator: MOCK_CREATORS[1]
   }

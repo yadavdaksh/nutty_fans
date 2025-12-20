@@ -3,7 +3,17 @@
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
-import { getCreatorProfile, CreatorProfile, getUserProfile, UserProfile } from '@/lib/db';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { 
+  getCreatorProfile, 
+  CreatorProfile, 
+  getUserProfile, 
+  UserProfile, 
+  checkSubscriptionStatus, 
+  createSubscription,
+  Subscription
+} from '@/lib/db';
 import { 
   getConversationId, 
   startConversation, 
@@ -33,31 +43,78 @@ export default function ProfilePage() {
   const [targetUser, setTargetUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isStartingChat, setIsStartingChat] = useState(false);
+  const [activeSubscription, setActiveSubscription] = useState<Subscription | null>(null);
+  const isSubscribed = !!activeSubscription;
+  const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
 
   const { posts, loading: postsLoading } = usePosts(creatorUid);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!creatorUid) return;
-      
-      try {
-        setLoading(true);
-        // Fetch both user info (for name/avatar) and creator info (for bio/tiers)
-        const [uProfile, cProfile] = await Promise.all([
-          getUserProfile(creatorUid),
-          getCreatorProfile(creatorUid)
-        ]);
-        
-        setTargetUser(uProfile);
-        setCreatorProfile(cProfile);
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-      } finally {
-        setLoading(false);
+    if (!creatorUid) return;
+
+    // 1. Fetch static user profile
+    getUserProfile(creatorUid).then(setTargetUser);
+
+    // 2. Subscribe to creator profile for real-time stats
+    const creatorRef = doc(db, 'creators', creatorUid);
+    const unsubCreator = onSnapshot(creatorRef, (snap) => {
+      if (snap.exists()) {
+        setCreatorProfile(snap.data() as CreatorProfile);
       }
+      setLoading(false);
+    });
+
+    // 3. Subscribe to subscription status
+    let unsubSub = () => {};
+    if (user) {
+      const subRef = doc(db, 'subscriptions', `${user.uid}_${creatorUid}`);
+      unsubSub = onSnapshot(subRef, (snap) => {
+        if (snap.exists()) {
+          const data = snap.data() as Subscription;
+          // Local check for expiry
+          const isValid = data.status === 'active' && data.expiresAt.toDate() > new Date();
+          setActiveSubscription(isValid ? data : null);
+        } else {
+          setActiveSubscription(null);
+        }
+      });
+    }
+
+    return () => {
+      unsubCreator();
+      unsubSub();
     };
-    fetchProfile();
-  }, [creatorUid]);
+  }, [creatorUid, user]);
+
+  const handleSubscribe = async (tier: any) => {
+    if (!user || userProfile?.role !== 'user') {
+      alert("Only fans can subscribe to creators.");
+      return;
+    }
+
+    if (isSubscribed) {
+      alert("You are already subscribed to this creator.");
+      return;
+    }
+
+    setIsSubscribing(tier.name);
+    try {
+      await createSubscription(user.uid, creatorUid, tier.name, tier.price);
+      alert(`Successfully subscribed to ${tier.name}!`);
+    } catch (error) {
+      console.error("Error subscribing:", error);
+      alert("Failed to process subscription. Please try again.");
+    } finally {
+      setIsSubscribing(null);
+    }
+  };
+
+  const scrollToTiers = () => {
+    const element = document.getElementById('subscription-tiers');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const handleMessageClick = async () => {
     if (!user || !userProfile || !targetUser) return;
@@ -233,8 +290,12 @@ export default function ProfilePage() {
                       ) : (
                         <>
                           {targetUser.role === 'creator' && (
-                            <button className="px-6 py-2.5 bg-[#d926a9] text-white text-sm font-semibold rounded-lg hover:bg-[#b01e88] transition-colors shadow-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
-                              Subscribe
+                            <button 
+                              onClick={scrollToTiers}
+                              className={`px-6 py-2.5 ${isSubscribed ? 'bg-green-600' : 'bg-[#d926a9] hover:bg-[#b01e88]'} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm`} 
+                              style={{ fontFamily: 'Inter, sans-serif' }}
+                            >
+                              {isSubscribed ? 'Subscribed' : 'Subscribe'}
                             </button>
                           )}
                           <button 
@@ -269,7 +330,7 @@ export default function ProfilePage() {
 
             {/* Subscription Tiers - Only for Creators */}
             {targetUser.role === 'creator' && (
-              <div className="mb-6">
+              <div className="mb-6" id="subscription-tiers">
                 <h2 className="text-2xl font-normal text-[#101828] mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
                   Subscription Tiers
                 </h2>
@@ -303,12 +364,55 @@ export default function ProfilePage() {
                           </li>
                         ))}
                       </ul>
-                      <button
-                        className={`w-full py-2 rounded-lg text-sm font-semibold transition-colors bg-white border border-[rgba(0,0,0,0.1)] text-[#0a0a0a] hover:bg-gray-50`}
-                        style={{ fontFamily: 'Inter, sans-serif' }}
-                      >
-                        Subscribe Now
-                      </button>
+                      {(() => {
+                        const activeTierIndex = tiersToDisplay.findIndex(t => t.name === activeSubscription?.tierId);
+                        const currentTierIndex = index;
+                        
+                        const isActiveTier = activeSubscription?.tierId === tier.name;
+                        const currentPrice = parseFloat(activeSubscription?.price || '0');
+                        const tierPrice = parseFloat(tier.price);
+                        
+                        // Logic: Upgrade if price is higher OR (price is same but index is higher)
+                        const isUpgrade = !isActiveTier && isSubscribed && (
+                          tierPrice > currentPrice || 
+                          (tierPrice === currentPrice && currentTierIndex > activeTierIndex)
+                        );
+                        
+                        // Logic: Lower if price is lower OR (price is same but index is lower)
+                        const isLower = !isActiveTier && isSubscribed && (
+                          tierPrice < currentPrice || 
+                          (tierPrice === currentPrice && currentTierIndex < activeTierIndex)
+                        );
+
+                        return (
+                          <button
+                            onClick={() => !isActiveTier && !isLower && handleSubscribe(tier)}
+                            disabled={!!isSubscribing || isActiveTier || (isLower && !isUpgrade)}
+                            className={`w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
+                              isActiveTier 
+                                ? 'bg-green-50 text-green-700 border border-green-200 cursor-default'
+                                : isUpgrade
+                                ? 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm'
+                                : isLower
+                                ? 'bg-gray-50 text-gray-400 border border-gray-100 cursor-not-allowed opacity-50'
+                                : 'bg-white border border-[rgba(0,0,0,0.1)] text-[#0a0a0a] hover:bg-gray-50 disabled:opacity-50'
+                            }`}
+                            style={{ fontFamily: 'Inter, sans-serif' }}
+                          >
+                            {isSubscribing === tier.name ? (
+                              <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                            ) : isActiveTier ? (
+                              'Current Tier'
+                            ) : isUpgrade ? (
+                              'Upgrade Now'
+                            ) : isLower ? (
+                              'Subscribed'
+                            ) : (
+                              'Subscribe Now'
+                            )}
+                          </button>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
@@ -354,7 +458,7 @@ export default function ProfilePage() {
                         key={item.id}
                         className="bg-white border border-[#e5e7eb] rounded-[14px] overflow-hidden aspect-square relative"
                       >
-                        {item.isLocked && !isOwnProfile ? (
+                        {item.isLocked && !isOwnProfile && !isSubscribed ? (
                           <>
                             <div className="absolute inset-0 blur-md bg-gradient-to-br from-purple-400 to-pink-400"></div>
                             <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-4 text-center">

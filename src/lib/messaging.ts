@@ -99,12 +99,14 @@ export const sendMessage = async (
     timestamp: serverTimestamp(),
     read: false
   };
+ 
+  const convRef = doc(db, 'conversations', conversationId);
+  await ensureConversationRecord(conversationId, senderId, recipientId);
 
   // 1. Add message to sub-collection
   await addDoc(messagesRef, messageData);
 
   // 2. Update conversation metadata
-  const convRef = doc(db, 'conversations', conversationId);
   await updateDoc(convRef, {
     lastMessage: text,
     lastTimestamp: serverTimestamp(),
@@ -116,11 +118,55 @@ export const sendMessage = async (
 /**
  * Marks all messages in a conversation as read for the current user.
  */
-export const markAsRead = async (conversationId: string, userId: string) => {
+export const markAsRead = async (conversationId: string, userId: string): Promise<void> => {
   const convRef = doc(db, 'conversations', conversationId);
+  const convSnap = await getDoc(convRef);
+  
+  // If it's a mock or new chat, ensure it exists with metadata so it doesn't disappear from inbox
+  if (!convSnap.exists() || !convSnap.data()?.participants) {
+    // We try to find the recipient ID to pass to the helper
+    const mock = MOCK_CONVERSATIONS.find(c => c.id === conversationId);
+    const recipientId = mock?.participants.find(p => p !== 'current_user_id' && p !== userId) || 'unknown';
+    await ensureConversationRecord(conversationId, userId, recipientId);
+  }
+
   await updateDoc(convRef, {
     [`unreadCount.${userId}`]: 0
   });
+};
+
+/**
+ * Ensures a conversation document exists with minimum required metadata.
+ * Promotes mocks to real Firestore documents if needed.
+ */
+const ensureConversationRecord = async (conversationId: string, currentUserId: string, recipientId: string) => {
+  const convRef = doc(db, 'conversations', conversationId);
+  const convSnap = await getDoc(convRef);
+
+  if (!convSnap.exists() || !convSnap.data()?.participants) {
+    const mock = MOCK_CONVERSATIONS.find(c => c.id === conversationId);
+    let participants = [currentUserId, recipientId];
+    let participantMetadata = {};
+
+    if (mock) {
+      participants = mock.participants.map(p => p === 'current_user_id' ? currentUserId : p);
+      participantMetadata = { ...mock.participantMetadata };
+      if ((participantMetadata as any)['current_user_id']) {
+        (participantMetadata as any)[currentUserId] = (participantMetadata as any)['current_user_id'];
+        delete (participantMetadata as any)['current_user_id'];
+      }
+    }
+
+    await setDoc(convRef, {
+      participants,
+      participantMetadata,
+      updatedAt: serverTimestamp(),
+      unreadCount: {
+        [currentUserId]: 0,
+        [recipientId]: 0
+      }
+    }, { merge: true });
+  }
 };
 
 /**
