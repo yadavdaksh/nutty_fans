@@ -21,6 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { 
   BarChart3, 
   Users, 
@@ -28,11 +29,13 @@ import {
   Ticket, 
   ShieldAlert, 
   Settings,
-  ArrowLeft
+  ArrowLeft,
+  LogOut
 } from 'lucide-react';
 
 function AdminSidebar() {
   const pathname = usePathname();
+  const { signOut } = useAuth();
 
   const menuItems = [
     { label: 'Dashboard', icon: BarChart3, href: '/admin' },
@@ -78,6 +81,15 @@ function AdminSidebar() {
               </li>
             );
           })}
+          <li>
+            <button
+              onClick={() => signOut()}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-gray-400 hover:bg-red-500/10 hover:text-red-500 group"
+            >
+              <LogOut className="w-5 h-5 text-gray-500 group-hover:text-red-500" />
+              <span className="font-medium text-[15px]">Sign Out</span>
+            </button>
+          </li>
         </ul>
       </nav>
       <div className="absolute bottom-0 left-0 w-full p-6 border-t border-gray-700/50 bg-[#161623]">

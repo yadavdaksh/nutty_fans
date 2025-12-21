@@ -118,6 +118,7 @@ export default function OnboardingPage() {
             });
             await updateUserProfile(user.uid, {
               displayName: formData.displayName,
+              bio: formData.bio,
             });
             await refreshProfile();
           }
@@ -141,6 +142,10 @@ export default function OnboardingPage() {
         setLoading(true);
         try {
            if (user) {
+            await updateUserProfile(user.uid, {
+              bio: formData.bio || `Welcome to my page!`,
+              role: 'creator'
+            });
             await createCreatorProfile(user.uid, {
               categories: selectedCategories,
               socialLinks: socials,

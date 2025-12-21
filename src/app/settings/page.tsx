@@ -20,8 +20,12 @@ import {
   Eye,
   Instagram,
   Twitter,
-  LogOut
+  LogOut,
+  Loader2
 } from 'lucide-react';
+import { useEffect } from 'react';
+import { getCreatorProfile, updateUserProfile, createCreatorProfile } from '@/lib/db';
+import { updateProfile } from 'firebase/auth';
 
 const Toggle = ({ 
   checked, 
@@ -45,15 +49,17 @@ const Toggle = ({
 );
 
 export default function SettingsPage() {
-  const { user, userProfile, signOut } = useAuth();
+  const { user, userProfile, signOut, refreshProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    username: '@creativepro',
-    displayName: 'Creative Professional',
-    email: user?.email || 'creator@example.com',
-    website: 'https://mywebsite.com',
-    location: 'Los Angeles, CA',
-    bio: 'Digital creator sharing exclusive content with my amazing community! 🎨✨',
+    username: '',
+    displayName: '',
+    email: '',
+    website: '',
+    location: '',
+    bio: '',
   });
 
   const [accountSettings, setAccountSettings] = useState({
@@ -83,6 +89,42 @@ export default function SettingsPage() {
 
 
 
+  useEffect(() => {
+    async function fetchDetails() {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        // User profile data
+        const initialData = {
+          username: userProfile?.username || '',
+          displayName: userProfile?.displayName || user?.displayName || '',
+          email: userProfile?.email || user?.email || '',
+          location: userProfile?.location || '',
+          bio: userProfile?.bio || '',
+          website: '',
+        };
+
+        // Creator profile data if applicable
+        if (userProfile?.role === 'creator') {
+          const creator = await getCreatorProfile(user.uid);
+          if (creator) {
+            initialData.bio = creator.bio || '';
+            initialData.website = creator.website || '';
+          }
+        }
+
+        setFormData(initialData);
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDetails();
+  }, [user, userProfile]);
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'account', label: 'Account', icon: CreditCard },
@@ -97,10 +139,42 @@ export default function SettingsPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Form submitted:', formData);
+    if (!user) return;
+
+    setSaving(true);
+    try {
+      // 1. Update Firebase Auth Profile (DisplayName)
+      if (formData.displayName !== user.displayName) {
+        await updateProfile(user, { displayName: formData.displayName });
+      }
+
+      // 2. Update Firestore UserProfile
+      await updateUserProfile(user.uid, {
+        displayName: formData.displayName,
+        username: formData.username,
+        location: formData.location,
+        bio: formData.bio,
+      });
+
+      // 3. Update Firestore CreatorProfile (if creator)
+      if (userProfile?.role === 'creator') {
+        await createCreatorProfile(user.uid, {
+          bio: formData.bio,
+          website: formData.website,
+        });
+      }
+
+      await refreshProfile();
+      alert("Settings saved successfully!");
+    } catch (error: unknown) {
+      console.error('Error saving settings:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to save settings. Please try again.";
+      alert(errorMessage);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -145,8 +219,15 @@ export default function SettingsPage() {
             </div>
 
             {/* Tab Content */}
-            <div className="bg-white/60 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-lg">
-              {activeTab === 'profile' && (
+            <div className="bg-white/60 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-lg min-h-[400px] flex flex-col">
+              {loading ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-[#475467]">
+                  <Loader2 className="w-12 h-12 animate-spin mb-4 text-[#9810fa]" />
+                  <p className="text-lg font-medium animate-pulse">Loading settings...</p>
+                </div>
+              ) : (
+                <>
+                  {activeTab === 'profile' && (
                 <form onSubmit={handleSubmit}>
                   <h2 className="text-2xl font-normal text-[#101828] mb-8" style={{ fontFamily: 'Inter, sans-serif' }}>
                     Profile Information
@@ -295,11 +376,16 @@ export default function SettingsPage() {
                     </button>
                     <button
                       type="submit"
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#ad46ff] to-[#f6339a] text-white rounded-full text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                      disabled={saving}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#ad46ff] to-[#f6339a] text-white rounded-full text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
                       style={{ fontFamily: 'Inter, sans-serif' }}
                     >
-                      <Save className="w-4 h-4" />
-                      Save Changes
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      {saving ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 </form>
@@ -716,6 +802,8 @@ export default function SettingsPage() {
                     Subscription plans content will be here
                   </p>
                 </div>
+                  )}
+                </>
               )}
             </div>
           </div>
