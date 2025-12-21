@@ -99,7 +99,7 @@ export const MOCK_POSTS: Post[] = [
     id: 'mp2',
     creatorId: 'mock_alex',
     content: 'Just finished this new piece. The lighting took forever but I am so happy with how it turned out! #digitalart #landscape',
-    mediaURL: 'https://images.unsplash.com/photo-1541462608141-ad4d059450c5?w=800&q=80',
+    mediaURL: 'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=800&q=80',
     type: 'image',
     isLocked: true,
     likesCount: 432,

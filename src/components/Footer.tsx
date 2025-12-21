@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { Twitter, Instagram, Youtube, Facebook } from 'lucide-react';
 
 export default function Footer() {

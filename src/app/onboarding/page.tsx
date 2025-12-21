@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { updateUserProfile, createCreatorProfile } from '@/lib/db';
 import { updateProfile } from 'firebase/auth';
+import NextImage from 'next/image';
 import { 
   Heart, 
   Crown, 
@@ -21,10 +22,6 @@ import {
   Book,
   Code,
   Mic,
-  Globe,
-  Youtube,
-  Twitter,
-  Instagram,
   Plus,
   Trash2,
   Image as ImageIcon
@@ -228,7 +225,7 @@ export default function OnboardingPage() {
                   Welcome to NuttyFans!
                 </h1>
                 <p className="text-xl text-[#475467] font-inter">
-                  Let's set up your profile. First, tell us how you'll be using NuttyFans.
+                  Let&apos;s set up your profile. First, tell us how you&apos;ll be using NuttyFans.
                 </p>
               </div>
 
@@ -251,7 +248,7 @@ export default function OnboardingPage() {
                   }`}>
                     <Heart className="w-7 h-7" />
                   </div>
-                  <h3 className="text-2xl font-bold text-[#101828] mb-3 font-inter">I'm a Fan</h3>
+                  <h3 className="text-2xl font-bold text-[#101828] mb-3 font-inter">I&apos;m a Fan</h3>
                   <p className="text-[#475467] text-lg leading-relaxed font-inter">
                     Discover and support your favorite creators, access exclusive content, and join vibrant communities.
                   </p>
@@ -275,7 +272,7 @@ export default function OnboardingPage() {
                   }`}>
                     <Crown className="w-7 h-7" />
                   </div>
-                  <h3 className="text-2xl font-bold text-[#101828] mb-3 font-inter">I'm a Creator</h3>
+                  <h3 className="text-2xl font-bold text-[#101828] mb-3 font-inter">I&apos;m a Creator</h3>
                   <p className="text-[#475467] text-lg leading-relaxed font-inter">
                     Share your content, build your community, and earn from your passion with powerful creator tools.
                   </p>
@@ -299,7 +296,12 @@ export default function OnboardingPage() {
                     <div className="w-40 h-40 rounded-full border-[6px] border-[#e0cef7] p-1 flex items-center justify-center mb-4">
                        <div className="w-full h-full rounded-full bg-gray-100 overflow-hidden relative">
                          {selectedImage ? (
-                           <img src={selectedImage} alt="Profile" className="w-full h-full object-cover" />
+                           <NextImage 
+                            src={selectedImage} 
+                            alt="Profile" 
+                            fill 
+                            className="object-cover" 
+                           />
                          ) : (
                            <User className="w-16 h-16 text-gray-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                          )}
@@ -350,18 +352,23 @@ export default function OnboardingPage() {
                 <div className="w-24 h-24 bg-gradient-to-br from-[#9810fa] to-[#e60076] rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-purple-500/30 animate-in zoom-in duration-500">
                   <Check className="w-12 h-12 text-white" />
                 </div>
-                <h1 className="text-[48px] font-bold text-[#101828] mb-4 font-inter tracking-tight">You're All Set!</h1>
+                <h1 className="text-[48px] font-bold text-[#101828] mb-4 font-inter tracking-tight">You&apos;re All Set!</h1>
                 <p className="text-xl text-[#475467] font-inter max-w-md mx-auto leading-relaxed">
-                  Welcome to NuttyFans! You're ready to discover amazing creators and exclusive content.
+                  Welcome to NuttyFans! You&apos;re ready to discover amazing creators and exclusive content.
                 </p>
               </div>
 
                {/* Profile Card Preview */}
                 <div className="bg-gray-50 rounded-3xl p-6 flex items-center gap-5 max-w-sm mx-auto mb-12 border border-white shadow-sm">
                    <div className="w-16 h-16 rounded-full bg-white p-1 shadow-sm">
-                      <div className="w-full h-full rounded-full bg-gray-200 overflow-hidden">
+                      <div className="w-full h-full rounded-full bg-gray-200 overflow-hidden relative">
                         {selectedImage ? (
-                          <img src={selectedImage} alt="User" className="w-full h-full object-cover" />
+                           <NextImage 
+                            src={selectedImage} 
+                            alt="User" 
+                            fill 
+                            className="object-cover" 
+                           />
                         ) : (
                            <User className="w-full h-full p-3 text-gray-400" />
                         )}
@@ -507,10 +514,15 @@ export default function OnboardingPage() {
                 <p className="text-lg text-[#475467] font-inter">Make a striking first impression.</p>
               </div>
               <div className="bg-white rounded-[24px] p-8 border border-gray-200 shadow-xl">
-                 <div className="border-2 border-dashed border-gray-300 rounded-[24px] aspect-[21/9] flex flex-col items-center justify-center p-8 hover:bg-gray-50 transition-colors cursor-pointer relative overflow-hidden">
-                    {selectedCoverImage ? (
-                      <img src={selectedCoverImage} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-[24px] aspect-[21/9] flex flex-col items-center justify-center p-8 hover:bg-gray-50 transition-colors cursor-pointer relative overflow-hidden">
+                     {selectedCoverImage ? (
+                       <NextImage 
+                        src={selectedCoverImage} 
+                        alt="Cover" 
+                        fill 
+                        className="object-cover" 
+                       />
+                     ) : (
                       <>
                         <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4 text-gray-400">
                            <ImageIcon className="w-8 h-8" />

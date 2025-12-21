@@ -11,8 +11,9 @@ import {
   query,
   where,
   getDocs,
-  limit,
-  addDoc
+  DocumentReference,
+  DocumentSnapshot,
+  FieldValue
 } from 'firebase/firestore';
 
 export type UserRole = 'user' | 'creator' | 'admin';
@@ -35,7 +36,7 @@ export interface CreatorProfile {
   subscriptionTiers: {
     name: string;
     price: string;
-    description: string;
+    description?: string;
     benefits: string[];
   }[];
   subscriberCount: number;
@@ -126,6 +127,7 @@ export interface Subscription {
   createdAt: Timestamp;
   expiresAt: Timestamp;
   price: string;
+  appliedCoupon?: string | null;
 }
 
 export interface Conversation {
@@ -136,9 +138,9 @@ export interface Conversation {
     photoURL?: string;
   }>;
   lastMessage: string;
-  lastTimestamp: Timestamp | any;
+  lastTimestamp: Timestamp | FieldValue | null;
   unreadCount: Record<string, number>;
-  updatedAt: Timestamp | any;
+  updatedAt: Timestamp | FieldValue | null;
 }
 
 export interface Message {
@@ -146,7 +148,7 @@ export interface Message {
   senderId: string;
   text: string;
   type: 'text' | 'image' | 'video';
-  timestamp: Timestamp | any;
+  timestamp: Timestamp | FieldValue | null;
   read: boolean;
 }
 
@@ -155,11 +157,11 @@ export interface Coupon {
   code: string;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
-  expiryDate: Timestamp | any;
+  expiryDate: Timestamp | FieldValue | null;
   usageLimit: number;
   usageCount: number;
   status: 'active' | 'inactive';
-  createdAt: Timestamp | any;
+  createdAt: Timestamp | FieldValue | null;
 }
 
 // Get creator profile
@@ -181,31 +183,31 @@ export const createSubscription = async (
   couponCode?: string
 ) => {
   const subId = `${userId}_${creatorId}`;
-  const subRef = doc(db, 'subscriptions', subId);
-  const creatorRef = doc(db, 'creators', creatorId);
+  const subRef = doc(db, 'subscriptions', subId) as DocumentReference<Subscription>;
+  const creatorRef = doc(db, 'creators', creatorId) as DocumentReference<CreatorProfile>;
 
   // 1. If couponCode provided, find the coupon document first
-  let couponRef: any = null;
+  let couponRef: DocumentReference<Coupon> | null = null;
   if (couponCode) {
     const q = query(collection(db, 'coupons'), where('code', '==', couponCode.toUpperCase()));
     const couponSnap = await getDocs(q);
     if (!couponSnap.empty) {
-      couponRef = doc(db, 'coupons', couponSnap.docs[0].id);
+      couponRef = doc(db, 'coupons', couponSnap.docs[0].id) as DocumentReference<Coupon>;
     }
   }
 
   await runTransaction(db, async (transaction) => {
     // 2. Get creator profile, sub, and coupon (if provided)
-    const gets: Promise<any>[] = [
+    const gets: Promise<DocumentSnapshot<unknown>>[] = [
       transaction.get(creatorRef),
       transaction.get(subRef)
     ];
     if (couponRef) gets.push(transaction.get(couponRef));
 
     const snaps = await Promise.all(gets);
-    const creatorSnap = snaps[0];
-    const subSnap = snaps[1];
-    const couponSnap = couponRef ? snaps[2] : null;
+    const creatorSnap = snaps[0] as DocumentSnapshot<CreatorProfile>;
+    const subSnap = snaps[1] as DocumentSnapshot<Subscription>;
+    const couponSnap = couponRef ? snaps[2] as DocumentSnapshot<Coupon> : null;
     
     if (!creatorSnap.exists()) throw new Error("Creator not found");
     const isNewSubscription = !subSnap.exists();
@@ -229,14 +231,14 @@ export const createSubscription = async (
     // 4. Update creator stats only if new
     if (isNewSubscription) {
       transaction.update(creatorRef, {
-        subscriberCount: (creatorSnap.data().subscriberCount || 0) + 1
+        subscriberCount: (creatorSnap.data()?.subscriberCount || 0) + 1
       });
     }
 
     // 5. Update coupon usage
-    if (couponSnap && couponSnap.exists()) {
+    if (couponSnap && couponSnap.exists() && couponRef) {
       transaction.update(couponRef, {
-        usageCount: (couponSnap.data().usageCount || 0) + 1
+        usageCount: (couponSnap.data()?.usageCount || 0) + 1
       });
     }
   });
@@ -277,7 +279,7 @@ export const validateCoupon = async (code: string): Promise<Coupon | null> => {
   const coupon = { id: snap.docs[0].id, ...snap.docs[0].data() } as Coupon;
   
   // Check Expiry
-  if (coupon.expiryDate.toDate() < new Date()) return null;
+  if (coupon.expiryDate instanceof Timestamp && coupon.expiryDate.toDate() < new Date()) return null;
   
   // Check Usage Limit
   if (coupon.usageLimit > 0 && coupon.usageCount >= coupon.usageLimit) return null;

@@ -46,14 +46,16 @@ export function useCreators() {
 
         setCreators(combinedCreators);
         setLoading(false);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching creators:", err);
-        setError(err.message);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(errorMessage);
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: unknown) => {
       console.error("Snapshot error:", err);
-      setError(err.message);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
       setLoading(false);
     });
 

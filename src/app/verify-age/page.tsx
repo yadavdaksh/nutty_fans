@@ -83,9 +83,10 @@ export default function VerifyAgePage() {
       // Redirect to dashboard after successful profile creation
       // Redirect to onboarding after successful verification
       router.push('/onboarding');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Age verification error:', err);
-      setError(err.message || 'Failed to verify age. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to verify age. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

@@ -149,7 +149,7 @@ export default function CouponManagement() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Clock className="w-4 h-4" />
-                      {new Date(coupon.expiryDate.toDate()).toLocaleDateString()}
+                      {coupon.expiryDate instanceof Timestamp ? coupon.expiryDate.toDate().toLocaleDateString() : 'N/A'}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -218,7 +218,7 @@ export default function CouponManagement() {
                   <select 
                     className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-900"
                     value={newCoupon.discountType}
-                    onChange={e => setNewCoupon({...newCoupon, discountType: e.target.value as any})}
+                    onChange={e => setNewCoupon({...newCoupon, discountType: e.target.value as 'percentage' | 'fixed'})}
                   >
                     <option value="percentage">Percentage (%)</option>
                     <option value="fixed">Fixed ($)</option>

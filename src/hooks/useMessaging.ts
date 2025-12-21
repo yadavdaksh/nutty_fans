@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { onSnapshot, query, collection, where, orderBy, limit } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { onSnapshot, query, collection, where, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { ref, onValue } from 'firebase/database';
 import { db, rtdb } from '../lib/firebase';
 import { Conversation, Message } from '../lib/db';
@@ -16,19 +16,22 @@ export function useMessaging(userId: string | undefined) {
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeChatMessages, setActiveChatMessages] = useState<Message[]>([]);
-  const [inboxLoading, setInboxLoading] = useState(true);
+  const [inboxLoading, setInboxLoading] = useState(!!userId);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
+  const [prevUserId, setPrevUserId] = useState(userId);
+
+  // Sync state if userId changes
+  if (userId !== prevUserId) {
+    setPrevUserId(userId);
+    if (!userId) {
+      setConversations([]);
+    }
+  }
 
   // 1. Listen to Inbox (Conversations where user is a participant)
   useEffect(() => {
-    if (!userId) {
-      setConversations([]);
-      setInboxLoading(true);
-      return;
-    }
-
-    setInboxLoading(true);
+    if (!userId) return;
 
     const q = query(
       collection(db, 'conversations'),
@@ -63,8 +66,8 @@ export function useMessaging(userId: string | undefined) {
 
       // Sort by updatedAt desc
       combinedConvs.sort((a, b) => {
-        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : Date.now();
-        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : Date.now();
+        const timeA = a.updatedAt instanceof Timestamp ? a.updatedAt.toMillis() : Date.now();
+        const timeB = b.updatedAt instanceof Timestamp ? b.updatedAt.toMillis() : Date.now();
         return timeB - timeA;
       });
 
@@ -91,8 +94,8 @@ export function useMessaging(userId: string | undefined) {
    * Subscribes to message history for a specific chat.
    * Also listens to real-time typing indicators in RTDB.
    */
-  const subscribeToMessages = (chatId: string) => {
-    if (!chatId) return;
+  const subscribeToMessages = useCallback((chatId: string) => {
+    if (!chatId) return () => {};
     
     setMessagesLoading(true);
     
@@ -110,7 +113,7 @@ export function useMessaging(userId: string | undefined) {
       } as Message));
       
       // If it's a mock conversation, inject mock messages
-      let combinedMsgs = [...msgs];
+      const combinedMsgs = [...msgs];
       const isMockConv = MOCK_CONVERSATIONS.some(c => c.id === chatId);
       
       if (isMockConv) {
@@ -127,7 +130,11 @@ export function useMessaging(userId: string | undefined) {
       }
 
       // Sort by timestamp asc
-      combinedMsgs.sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
+      combinedMsgs.sort((a, b) => {
+        const timeA = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : 0;
+        const timeB = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : 0;
+        return timeA - timeB;
+      });
 
       setActiveChatMessages(combinedMsgs);
       setMessagesLoading(false);
@@ -144,17 +151,17 @@ export function useMessaging(userId: string | undefined) {
       unsubMessages();
       unsubTyping();
     };
-  };
+  }, [userId]);
 
   /**
    * Listen to any user's online status in RTDB.
    */
-  const subscribeToUserPresence = (targetUserId: string, callback: (status: any) => void) => {
+  const subscribeToUserPresence = useCallback((targetUserId: string, callback: (status: unknown) => void) => {
     const statusRef = ref(rtdb, `/status/${targetUserId}`);
     return onValue(statusRef, (snapshot) => {
       callback(snapshot.val());
     });
-  };
+  }, []);
 
   return {
     conversations,

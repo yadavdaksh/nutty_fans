@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Bell, Search, Menu, LogOut, User, Settings, LayoutDashboard } from 'lucide-react';
+import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { useMessaging } from '@/hooks/useMessaging';
 
@@ -227,11 +228,14 @@ export default function Header() {
                       onClick={toggleDropdown}
                     >
                       {user.photoURL ? (
-                        <img 
-                          src={user.photoURL} 
-                          alt={user.displayName || 'User'} 
-                          className="w-full h-full object-cover"
-                        />
+                        <div className="w-full h-full relative">
+                          <Image 
+                            src={user.photoURL} 
+                            alt={user.displayName || 'User'} 
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
                           <span className="text-white font-medium text-sm">

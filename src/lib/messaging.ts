@@ -5,12 +5,8 @@ import {
   setDoc, 
   addDoc, 
   updateDoc, 
-  query, 
-  where, 
-  orderBy, 
   serverTimestamp, 
   getDoc,
-  Timestamp,
   increment
 } from 'firebase/firestore';
 import { ref, set, onDisconnect, remove } from 'firebase/database';
@@ -150,11 +146,12 @@ const ensureConversationRecord = async (conversationId: string, currentUserId: s
 
     if (mock) {
       participants = mock.participants.map(p => p === 'current_user_id' ? currentUserId : p);
-      participantMetadata = { ...mock.participantMetadata };
-      if ((participantMetadata as any)['current_user_id']) {
-        (participantMetadata as any)[currentUserId] = (participantMetadata as any)['current_user_id'];
-        delete (participantMetadata as any)['current_user_id'];
+      const metadata = { ...mock.participantMetadata };
+      if (metadata['current_user_id']) {
+        metadata[currentUserId] = metadata['current_user_id'];
+        delete metadata['current_user_id'];
       }
+      participantMetadata = metadata;
     }
 
     await setDoc(convRef, {
@@ -174,7 +171,6 @@ const ensureConversationRecord = async (conversationId: string, currentUserId: s
  */
 export const setUserOnlineStatus = (userId: string) => {
   const statusRef = ref(rtdb, `/status/${userId}`);
-  const connectedRef = ref(rtdb, '.info/connected');
 
   // Set to online when connected, and set a disconnect hook to flip status
   set(statusRef, { state: 'online', last_changed: Date.now() });

@@ -87,8 +87,9 @@ export default function VerifyOTPPage() {
       
       // Redirect to age verification page
       router.push('/verify-age');
-    } catch (err: any) {
-      setError(err.message || 'Invalid verification code. Please try again.');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Invalid verification code. Please try again.';
+      setError(errorMessage);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } finally {
@@ -106,7 +107,7 @@ export default function VerifyOTPPage() {
     try {
       // TODO: Implement actual OTP resend logic
       // For now, just reset the timer
-    } catch (err: any) {
+    } catch {
       setError('Failed to resend code. Please try again.');
     }
   };

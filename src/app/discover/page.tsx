@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { Search, Filter, Check, Loader2, UserCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -91,11 +92,12 @@ export default function DiscoverPage() {
                       
                       <div className="px-6 pb-6 relative">
                         {/* Avatar */}
-                        <div className="w-20 h-20 rounded-full border-4 border-white absolute -top-10 bg-white">
-                          <img 
+                        <div className="w-20 h-20 rounded-full border-4 border-white absolute -top-10 bg-white overflow-hidden">
+                          <Image 
                             src={creator.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.user.displayName)}&background=random`} 
                             alt={creator.user.displayName} 
-                            className="w-full h-full rounded-full object-cover"
+                            fill
+                            className="object-cover"
                           />
                         </div>
 

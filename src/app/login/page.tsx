@@ -31,8 +31,9 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       router.push('/');
-    } catch (error: any) {
-      console.error('Login error:', error);
+    } catch (err: unknown) {
+      console.error('Login error:', err);
+      const error = err as { code?: string };
       if (error.code === 'auth/invalid-credential') {
         setAuthError('Invalid email or password.');
       } else if (error.code === 'auth/user-not-found') {

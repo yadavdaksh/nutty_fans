@@ -3,19 +3,20 @@
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { 
-  AlertCircle,
   Loader2,
   Check,
   Calendar,
   Settings,
   ExternalLink
 } from 'lucide-react';
+import { Timestamp } from 'firebase/firestore';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function SubscriptionPage() {
   const { user, userProfile } = useAuth();
-  const { subscriptions, loading, error } = useSubscriptions(user?.uid);
+  const { subscriptions, loading } = useSubscriptions(user?.uid);
 
   return (
     <div className="flex min-h-screen bg-[#fdfbfd]" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -45,7 +46,8 @@ export default function SubscriptionPage() {
               <p className="text-sm font-medium text-[#475467] mb-1">Monthly Spend</p>
               <h3 className="text-2xl font-bold text-[#101828]">
                  ${subscriptions.reduce((acc, sub) => {
-                  const price = sub.creator?.subscriptionTiers?.find((t: any) => t.name.toLowerCase() === sub.tierId?.toLowerCase())?.price || '9.99';
+                  const tiers = sub.creator?.subscriptionTiers as Array<{ name: string; price: string }>;
+                  const price = tiers?.find((t) => t.name.toLowerCase() === sub.tierId?.toLowerCase())?.price || '9.99';
                   return acc + parseFloat(price);
                 }, 0).toFixed(2)}
               </h3>
@@ -74,22 +76,25 @@ export default function SubscriptionPage() {
               </div>
             ) : subscriptions.length === 0 ? (
               <div className="bg-white border border-dashed border-gray-200 rounded-2xl p-12 text-center text-[#475467]">
-                You don't have any active subscriptions yet.
+                You don&apos;t have any active subscriptions yet.
               </div>
             ) : (
               subscriptions.map((sub) => {
-                const expires = sub.expiresAt?.toDate ? sub.expiresAt.toDate() : new Date();
+                const expires = sub.expiresAt instanceof Timestamp ? sub.expiresAt.toDate() : new Date();
+                const tiers = sub.creator?.subscriptionTiers as Array<{ name: string; price: string }>;
+                const price = tiers?.find((t) => t.name.toLowerCase() === sub.tierId?.toLowerCase())?.price || '9.99';
 
                 return (
                   <div key={sub.id} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:border-purple-200 transition-colors">
                     <div className="flex flex-col md:flex-row md:items-center gap-6">
                       {/* Creator Info */}
                       <div className="flex items-center gap-4 min-w-[240px]">
-                        <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden">
-                          <img 
+                        <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden relative">
+                          <Image 
                             src={sub.creator?.coverImageURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(sub.user?.displayName || 'C')}`} 
                             alt={sub.user?.displayName || 'Creator'} 
-                            className="w-full h-full object-cover" 
+                            fill
+                            className="object-cover" 
                           />
                         </div>
                         <div>
@@ -108,7 +113,7 @@ export default function SubscriptionPage() {
                               {sub.tierId || 'Basic'}
                             </span>
                             <p className="text-xl font-bold text-[#101828] text-sm">
-                              ${sub.creator?.subscriptionTiers?.find((t: any) => t.name.toLowerCase() === sub.tierId?.toLowerCase())?.price || '9.99'}
+                              ${price}
                               <span className="text-sm font-normal text-[#475467]">/mo</span>
                             </p>
                           </div>

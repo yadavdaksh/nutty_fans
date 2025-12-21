@@ -52,7 +52,7 @@ export default function CheckoutModal({ isOpen, onClose, tier, onConfirm, creato
         setError('Invalid or expired coupon code.');
         setAppliedCoupon(null);
       }
-    } catch (err) {
+    } catch {
       setError('Error validating coupon. Try again.');
       setAppliedCoupon(null);
     } finally {

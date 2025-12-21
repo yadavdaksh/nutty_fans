@@ -10,10 +10,22 @@ import {
   setTypingStatus, 
   setUserOnlineStatus,
 } from '@/lib/messaging';
-import { Conversation } from '@/lib/db';
-import { Search, MoreVertical, Smile, Send, Loader2 } from 'lucide-react';
+import { Search, MoreVertical, Smile, Send, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
+import { Timestamp } from 'firebase/firestore';
+import { Conversation } from '@/lib/db';
+
+type ParticipantMetadata = {
+  displayName: string;
+  photoURL?: string;
+};
+
+type UserPresence = {
+  state: string;
+  last_changed: number;
+};
 
 export default function MessagesPage() {
   const { user, userProfile } = useAuth();
@@ -31,17 +43,18 @@ export default function MessagesPage() {
   } = useMessaging(user?.uid);
 
   const [activeChatId, setActiveChatId] = useState<string | null>(initialChatId);
+  const [prevInitialChatId, setPrevInitialChatId] = useState<string | null>(initialChatId);
+
+  // Sync activeChatId with URL search parameters during render to avoid cascading renders
+  if (initialChatId !== prevInitialChatId) {
+    setPrevInitialChatId(initialChatId);
+    setActiveChatId(initialChatId);
+  }
+
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [recipientPresence, setRecipientPresence] = useState<any>(null);
+  const [recipientPresence, setRecipientPresence] = useState<unknown>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Sync activeChatId with URL search parameters
-  useEffect(() => {
-    if (initialChatId) {
-      setActiveChatId(initialChatId);
-    }
-  }, [initialChatId]);
 
   const activeConversation = conversations.find(c => c.id === activeChatId);
 
@@ -55,7 +68,7 @@ export default function MessagesPage() {
     if (!activeChatId) return;
 
     // Reset presence
-    setRecipientPresence(null);
+    Promise.resolve().then(() => setRecipientPresence(null));
 
     // Subscribe to messages
     const unsubscribe = subscribeToMessages(activeChatId);
@@ -68,16 +81,16 @@ export default function MessagesPage() {
     let unsubPresence: (() => void) | undefined;
     
     if (recipientId) {
-      unsubPresence = subscribeToUserPresence(recipientId, (status) => {
+      unsubPresence = subscribeToUserPresence(recipientId, (status: unknown) => {
         setRecipientPresence(status);
       });
     }
 
     return () => {
-      unsubscribe?.();
+      unsubscribe();
       unsubPresence?.();
     };
-  }, [activeChatId, user?.uid, activeConversation, activeChatMessages.length]);
+  }, [activeChatId, activeConversation, subscribeToMessages, subscribeToUserPresence, user]);
 
   // Set typing status with debounce
   useEffect(() => {
@@ -99,14 +112,25 @@ export default function MessagesPage() {
         setTypingStatus(activeChatId, user.uid, false);
       }
     };
-  }, [messageText, activeChatId, user?.uid]);
+  }, [messageText, activeChatId, user]);
 
   // Set user online status
   useEffect(() => {
     if (user?.uid) {
       setUserOnlineStatus(user.uid);
     }
-  }, [user?.uid]);
+  }, [user]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handlers: Record<string, (e: KeyboardEvent) => void> = {
+      'p': (e: KeyboardEvent) => (e.metaKey || e.ctrlKey) && (e.preventDefault(), setSearchQuery('')),
+      'n': (e: KeyboardEvent) => (e.metaKey || e.ctrlKey) && (e.preventDefault(), setMessageText('')),
+    };
+    const handleKeyDown = (e: KeyboardEvent) => handlers[e.key]?.(e);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,8 +149,8 @@ export default function MessagesPage() {
     }
   };
 
-  const filteredConversations = !user?.uid ? [] : conversations.filter(conv => {
-    const otherUser = Object.entries(conv.participantMetadata).find(([id]) => id !== user?.uid)?.[1] as any;
+  const filteredConversations = !user?.uid ? [] : conversations.filter((conv: Conversation) => {
+    const otherUser = Object.entries(conv.participantMetadata).find(([id]) => id !== user?.uid)?.[1] as ParticipantMetadata;
     return otherUser?.displayName?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -170,8 +194,8 @@ export default function MessagesPage() {
                   ) : filteredConversations.length === 0 ? (
                    <div className="p-8 text-center text-gray-400 text-sm">No conversations found</div>
                  ) : (
-                   filteredConversations.map((conv) => {
-                     const otherUser = Object.entries(conv.participantMetadata).find(([id]) => id !== user?.uid)?.[1] as any;
+                   filteredConversations.map((conv: Conversation) => {
+                     const otherUser = Object.entries(conv.participantMetadata).find(([id]) => id !== user?.uid)?.[1] as ParticipantMetadata;
                      const isActive = conv.id === activeChatId;
                      const hasUnread = (conv.unreadCount?.[user?.uid || ''] || 0) > 0;
 
@@ -182,8 +206,13 @@ export default function MessagesPage() {
                          className={`p-4 flex gap-3 cursor-pointer transition-colors hover:bg-gray-50 ${isActive ? 'bg-gray-50' : ''}`}
                        >
                          <div className="relative flex-shrink-0">
-                           <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                             <img src={otherUser?.photoURL || 'https://i.pravatar.cc/150'} alt={otherUser?.displayName} className="w-full h-full object-cover" />
+                           <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
+                             <Image 
+                               src={otherUser?.photoURL || 'https://i.pravatar.cc/150'} 
+                               alt={otherUser?.displayName || 'User'} 
+                               fill
+                               className="object-cover" 
+                             />
                            </div>
                          </div>
                          <div className="flex-1 min-w-0">
@@ -193,7 +222,7 @@ export default function MessagesPage() {
                              </h3>
                              {conv.lastTimestamp && (
                                <span className="text-[10px] text-gray-400">
-                                 {format(conv.lastTimestamp.toDate ? conv.lastTimestamp.toDate() : new Date(), 'h:mm a')}
+                                 {format(conv.lastTimestamp instanceof Timestamp ? conv.lastTimestamp.toDate() : new Date(), 'h:mm a')}
                                </span>
                              )}
                            </div>
@@ -219,28 +248,29 @@ export default function MessagesPage() {
                    <div className="p-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
                       <div className="flex items-center gap-3">
                          <div className="relative">
-                           <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                             <img 
-                               src={(Object.entries(activeConversation?.participantMetadata || {}).find(([id]) => id !== user?.uid)?.[1] as any)?.photoURL || 'https://i.pravatar.cc/150'} 
-                               alt="Recipient" 
-                               className="w-full h-full object-cover" 
-                             />
-                           </div>
-                           {recipientPresence?.state === 'online' && (
-                             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
-                           )}
+                           <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
+                              <Image 
+                                src={(Object.entries(activeConversation?.participantMetadata || {}).find(([id]) => id !== user?.uid)?.[1] as ParticipantMetadata)?.photoURL || 'https://i.pravatar.cc/150'} 
+                                alt="Recipient" 
+                                fill
+                                className="object-cover" 
+                              />
+                            </div>
+                            {(recipientPresence as UserPresence)?.state === 'online' && (
+                              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
+                            )}
                          </div>
-                         <div>
-                           <h3 className="font-semibold text-[#101828] text-sm">
-                             {(Object.entries(activeConversation?.participantMetadata || {}).find(([id]) => id !== user?.uid)?.[1] as any)?.displayName}
-                           </h3>
-                           <div className="flex items-center gap-1.5">
-                             <span className={`w-1.5 h-1.5 rounded-full ${recipientPresence?.state === 'online' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                             <span className="text-xs text-[#475467]">
-                               {recipientPresence?.state === 'online' ? 'Online' : 'Offline'}
-                             </span>
-                           </div>
-                         </div>
+                          <div>
+                            <h3 className="font-semibold text-[#101828] text-sm">
+                              {(Object.entries(activeConversation?.participantMetadata || {}).find(([id]) => id !== user?.uid)?.[1] as ParticipantMetadata)?.displayName}
+                            </h3>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${(recipientPresence as UserPresence)?.state === 'online' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                              <span className="text-xs text-[#475467]">
+                                {(recipientPresence as UserPresence)?.state === 'online' ? 'Online' : 'Offline'}
+                              </span>
+                            </div>
+                          </div>
                       </div>
                       <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50">
                         <MoreVertical className="w-5 h-5" />
@@ -269,7 +299,7 @@ export default function MessagesPage() {
                                  {msg.text}
                                </div>
                                <div className={`text-[10px] text-gray-400 mt-1.5 ${isMe ? 'text-right' : 'text-left'}`}>
-                                 {msg.timestamp ? format(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(), 'h:mm a') : 'Sending...'}
+                                 {msg.timestamp instanceof Timestamp ? format(msg.timestamp.toDate(), 'h:mm a') : 'Sending...'}
                                </div>
                             </div>
                           </div>
@@ -342,5 +372,4 @@ export default function MessagesPage() {
   );
 }
 
-// Helper icons missed in imports
-import { MessageSquare } from 'lucide-react';
+

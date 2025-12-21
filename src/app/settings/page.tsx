@@ -3,6 +3,7 @@
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
 import { useState } from 'react';
 import { 
   User, 
@@ -14,17 +15,34 @@ import {
   Upload,
   Save,
   Globe,
-  Link as LinkIcon,
   Download,
   Trash2,
   Eye,
-  EyeOff,
-  Smartphone,
-  Mail,
   Instagram,
   Twitter,
   LogOut
 } from 'lucide-react';
+
+const Toggle = ({ 
+  checked, 
+  onChange 
+}: { 
+  checked: boolean; 
+  onChange: (checked: boolean) => void;
+}) => (
+  <div 
+    onClick={() => onChange(!checked)}
+    className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[#9810fa] focus:ring-offset-2 ${
+      checked ? 'bg-[#9810fa]' : 'bg-gray-200'
+    }`}
+  >
+    <span
+      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+        checked ? 'translate-x-6' : 'translate-x-1'
+      }`}
+    />
+  </div>
+);
 
 export default function SettingsPage() {
   const { user, userProfile, signOut } = useAuth();
@@ -63,26 +81,7 @@ export default function SettingsPage() {
     allowDownloads: false,
   });
 
-  const Toggle = ({ 
-    checked, 
-    onChange 
-  }: { 
-    checked: boolean; 
-    onChange: (checked: boolean) => void;
-  }) => (
-    <div 
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[#9810fa] focus:ring-offset-2 ${
-        checked ? 'bg-[#9810fa]' : 'bg-gray-200'
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </div>
-  );
+
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -159,9 +158,14 @@ export default function SettingsPage() {
                       Profile Picture
                     </label>
                     <div className="flex items-center gap-4">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center shadow-lg ring-4 ring-[#9810fa]/50">
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center shadow-lg ring-4 ring-[#9810fa]/50 relative overflow-hidden">
                         {user?.photoURL ? (
-                          <img src={user.photoURL} alt={user.displayName || 'User'} className="w-full h-full rounded-full object-cover" />
+                          <Image 
+                            src={user.photoURL} 
+                            alt={user.displayName || 'User'} 
+                            fill
+                            className="object-cover" 
+                          />
                         ) : (
                           <span className="text-white text-2xl font-bold">
                             {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
@@ -641,7 +645,7 @@ export default function SettingsPage() {
                      <div className="flex items-center justify-between">
                        <div>
                         <p className="text-sm font-medium text-[#344054]" style={{ fontFamily: 'Inter, sans-serif' }}>Show Online Status</p>
-                        <p className="text-sm text-[#475467]" style={{ fontFamily: 'Inter, sans-serif' }}>Let others see when you're online</p>
+                        <p className="text-sm text-[#475467]" style={{ fontFamily: 'Inter, sans-serif' }}>Let others see when you&apos;re online</p>
                       </div>
                       <div className="relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer">
                          <Toggle 

@@ -3,8 +3,6 @@
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { 
-  Bell, 
-  Heart, 
   Heart as HeartIcon,
   MessageSquare,
   Image as ImageIcon, 
@@ -16,6 +14,7 @@ import {
 import { useFeed } from '@/hooks/useFeed';
 import { useCreators } from '@/hooks/useCreators';
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 
 import { useSubscriptions } from '@/hooks/useSubscriptions';
@@ -46,7 +45,7 @@ export default function LoggedInHome() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-semibold text-[#101828] mb-1">Home</h1>
-            <p className="text-[#475467]">Welcome back! Here's what's new from your favorite creators.</p>
+            <p className="text-[#475467]">Welcome back! Here&apos;s what&apos;s new from your favorite creators.</p>
           </div>
 
           {/* Live Models Strip */}
@@ -62,10 +61,11 @@ export default function LoggedInHome() {
                   <Link href={`/profile/${model.userId}`} key={model.userId} className="flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer group">
                     <div className="w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-[#9810fa] to-[#e60076]">
                       <div className="w-full h-full rounded-full border-2 border-white overflow-hidden relative">
-                        <img 
+                        <Image 
                           src={model.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(model.user.displayName)}`} 
                           alt={model.user.displayName} 
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform" 
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform" 
                         />
                       </div>
                     </div>
@@ -89,11 +89,12 @@ export default function LoggedInHome() {
               <div key={post.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
                 <div className="p-4 flex justify-between items-start">
                   <Link href={`/profile/${post.creatorId}`} className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                       <img 
+                     <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
+                       <Image 
                         src={post.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.user.displayName)}`} 
                         alt={post.user.displayName} 
-                        className="w-full h-full object-cover" 
+                        fill
+                        className="object-cover" 
                        />
                      </div>
                      <div>
@@ -132,10 +133,11 @@ export default function LoggedInHome() {
                   ) : null}
                   
                   {post.type === 'image' ? (
-                    <img 
+                    <Image 
                       src={post.mediaURL} 
                       alt="Post content" 
-                      className={`w-full h-full object-cover transition-all ${post.isLocked ? 'blur-xl grayscale' : ''}`}
+                      fill
+                      className={`object-cover transition-all ${post.isLocked ? 'blur-xl grayscale' : ''}`}
                     />
                   ) : (
                     <div className={`w-full h-full flex items-center justify-center transition-all ${post.isLocked ? 'blur-xl grayscale' : ''}`}>
@@ -181,11 +183,12 @@ export default function LoggedInHome() {
                ) : (
                  subscriptions.map((sub) => (
                   <div key={sub.id} className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden">
-                       <img 
+                     <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden relative">
+                       <Image 
                         src={sub.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(sub.user.displayName)}`} 
                         alt={sub.user.displayName} 
-                        className="w-full h-full object-cover" 
+                        fill
+                        className="object-cover" 
                        />
                      </div>
                      <div className="flex-1 min-w-0">
@@ -214,14 +217,15 @@ export default function LoggedInHome() {
                     <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
                  </div>
                ) : (
-                 recommendedCreators.map((rec, i) => (
+                 recommendedCreators.map((rec) => (
                   <div key={rec.userId} className="flex items-center justify-between">
                     <Link href={`/profile/${rec.userId}`} className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden">
-                         <img 
+                       <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden relative">
+                         <Image 
                           src={rec.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(rec.user.displayName)}`} 
                           alt={rec.user.displayName} 
-                          className="w-full h-full object-cover" 
+                          fill
+                          className="object-cover" 
                          />
                        </div>
                         <div className="min-w-0">

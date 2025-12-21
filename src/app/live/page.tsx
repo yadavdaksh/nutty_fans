@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useCreators } from '@/hooks/useCreators';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LivePage() {
   const { userProfile } = useAuth();
@@ -64,10 +65,11 @@ export default function LivePage() {
                  >
                    {/* Thumbnail Container */}
                    <div className="relative aspect-video bg-gray-900 overflow-hidden">
-                     <img 
+                     <Image 
                        src={`https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=800&q=80`} 
                        alt={creator.user.displayName} 
-                       className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
+                       fill
+                       className="object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
                      />
                      
                      {/* Live Badge */}
@@ -93,12 +95,13 @@ export default function LivePage() {
                    {/* Details */}
                    <div className="p-5 flex gap-4">
                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-200">
-                          <img 
-                           src={creator.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.user.displayName)}`} 
-                           alt={creator.user.displayName} 
-                           className="w-full h-full object-cover" 
-                          />
+                        <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-200 relative">
+                           <Image 
+                            src={creator.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.user.displayName)}`} 
+                            alt={creator.user.displayName} 
+                            fill
+                            className="object-cover" 
+                           />
                         </div>
                      </div>
                      <div className="min-w-0 flex-1">

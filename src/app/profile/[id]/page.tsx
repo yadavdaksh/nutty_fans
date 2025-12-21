@@ -6,16 +6,13 @@ import { useAuth } from '@/context/AuthContext';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
-  getCreatorProfile, 
   CreatorProfile, 
   getUserProfile, 
   UserProfile, 
-  checkSubscriptionStatus, 
   createSubscription,
   Subscription
 } from '@/lib/db';
 import { 
-  getConversationId, 
   startConversation, 
   checkConversationExists 
 } from '@/lib/messaging';
@@ -30,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import CheckoutModal from '@/components/CheckoutModal';
 
 export default function ProfilePage() {
@@ -48,7 +46,7 @@ export default function ProfilePage() {
   const isSubscribed = !!activeSubscription;
   const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<any>(null);
+  const [selectedTier, setSelectedTier] = useState<CreatorProfile['subscriptionTiers'][number] | null>(null);
 
   const { posts, loading: postsLoading } = usePosts(creatorUid);
 
@@ -89,7 +87,7 @@ export default function ProfilePage() {
     };
   }, [creatorUid, user]);
 
-  const handleSubscribe = async (tier: any) => {
+  const handleSubscribe = async (tier: CreatorProfile['subscriptionTiers'][number]) => {
     if (!user || userProfile?.role !== 'user') {
       alert("Only fans can subscribe to creators.");
       return;
@@ -231,7 +229,12 @@ export default function ProfilePage() {
                 <div className="relative -mt-20 flex-shrink-0">
                   <div className="w-[160px] h-[160px] rounded-full border-[6px] border-white shadow-lg overflow-hidden bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
                     {targetUser.photoURL ? (
-                      <img src={targetUser.photoURL} alt={targetUser.displayName} className="w-full h-full object-cover" />
+                      <Image 
+                        src={targetUser.photoURL} 
+                        alt={targetUser.displayName} 
+                        fill 
+                        className="object-cover" 
+                      />
                     ) : (
                       <span className="text-white text-5xl font-bold">
                         {targetUser.displayName[0]?.toUpperCase() || 'S'}
@@ -365,7 +368,7 @@ export default function ProfilePage() {
                         </span>
                       </div>
                       <ul className="space-y-3 mb-6">
-                        {(tier as any).benefits?.map((benefit: string, idx: number) => (
+                        {tier.benefits?.map((benefit, idx) => (
                           <li key={idx} className="flex items-start gap-2">
                             <Check className="w-5 h-5 text-[#9810fa] flex-shrink-0 mt-0.5" />
                             <span className="text-sm font-normal text-[#364153]" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -491,7 +494,12 @@ export default function ProfilePage() {
                         ) : (
                           <>
                             {item.type === 'image' ? (
-                              <img src={item.mediaURL} alt="" className="w-full h-full object-cover" />
+                              <Image 
+                                src={item.mediaURL} 
+                                alt="Post content" 
+                                fill 
+                                className="object-cover" 
+                              />
                             ) : (
                               <div className="w-full h-full bg-black flex items-center justify-center">
                                 <video src={item.mediaURL} className="w-full h-full object-cover" />

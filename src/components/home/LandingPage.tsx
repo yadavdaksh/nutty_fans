@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   ArrowRight, 
   Users, 
@@ -137,11 +138,12 @@ export default function LandingPage() {
                   <div className="h-32 bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 group-hover:opacity-90 transition-opacity"></div>
                   <div className="p-6">
                     <div className="flex items-start gap-4">
-                      <div className="w-20 h-20 rounded-full bg-gray-100 -mt-16 border-4 border-white shadow-lg overflow-hidden shrink-0">
-                        <img 
+                      <div className="w-20 h-20 rounded-full bg-gray-100 -mt-16 border-4 border-white shadow-lg overflow-hidden shrink-0 relative">
+                        <Image 
                           src={creator.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.user.displayName)}`} 
                           alt={creator.user.displayName} 
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform" 
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform" 
                         />
                       </div>
                       <div className="flex-1 pt-2">

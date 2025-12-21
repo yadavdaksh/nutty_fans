@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Post } from '@/lib/db';
 
@@ -52,9 +52,10 @@ export function usePosts(creatorId?: string) {
 
         setPosts(combinedPosts);
         setLoading(false);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching posts:", err);
-        setError(err.message);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(errorMessage);
         setLoading(false);
       }
     }, (err) => {

@@ -14,19 +14,29 @@ export interface SubscriptionWithUser extends Subscription {
   user: UserProfile;
 }
 
-import { MOCK_SUBSCRIPTIONS, MOCK_CREATORS } from '@/lib/mockData';
+import { MOCK_SUBSCRIPTIONS } from '@/lib/mockData';
 
 export function useSubscriptions(userId?: string, creatorId?: string) {
   const [subscriptions, setSubscriptions] = useState<SubscriptionWithCreator[]>([]);
   const [subscribers, setSubscribers] = useState<SubscriptionWithUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!userId || !!creatorId);
   const [error, setError] = useState<string | null>(null);
+  const [prevParams, setPrevParams] = useState({ userId, creatorId });
 
-  useEffect(() => {
+  // Sync state if parameters change
+  if (userId !== prevParams.userId || creatorId !== prevParams.creatorId) {
+    setPrevParams({ userId, creatorId });
     if (!userId && !creatorId) {
       setLoading(false);
-      return;
+      setSubscriptions([]);
+      setSubscribers([]);
+    } else {
+      setLoading(true);
     }
+  }
+
+  useEffect(() => {
+    if (!userId && !creatorId) return;
 
     let q;
     if (userId) {
@@ -103,9 +113,10 @@ export function useSubscriptions(userId?: string, creatorId?: string) {
           setSubscribers(combinedSubscribers);
         }
         setLoading(false);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching subscriptions:", err);
-        setError(err.message);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(errorMessage);
         setLoading(false);
       }
     }, (err) => {
@@ -115,7 +126,7 @@ export function useSubscriptions(userId?: string, creatorId?: string) {
     });
 
     return () => unsubscribe();
-  }, [userId, creatorId]);
+  }, [userId, creatorId, loading]);
 
   return { subscriptions, subscribers, loading, error };
 }

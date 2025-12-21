@@ -7,7 +7,6 @@ import { getCreatorProfile } from '@/lib/db';
 import { useEffect, useState } from 'react';
 import { 
   Upload,
-  Calendar,
   MessageSquare,
   BarChart3,
   ArrowUpRight,
@@ -17,10 +16,10 @@ import {
   Eye,
   TrendingUp,
   Loader2,
-  Check,
   Plus,
   Sparkles
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { CreatorProfile } from '@/lib/db';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
@@ -105,7 +104,7 @@ export default function DashboardPage() {
                 Welcome, {user?.displayName || 'User'}!
               </h1>
               <p className="text-lg text-[#475467] mb-10">
-                You're currently in Fan mode. Start your creator journey today and share your exclusive content with the world.
+                You&apos;re currently in Fan mode. Start your creator journey today and share your exclusive content with the world.
               </p>
               <Link
                 href="/onboarding/creator"
@@ -134,7 +133,7 @@ export default function DashboardPage() {
                   Creator Dashboard
                 </h1>
                 <p className="text-lg text-[#475467]">
-                  Welcome back, {user?.displayName}! Here's how your content is performing.
+                  Welcome back, {user?.displayName}! Here&apos;s how your content is performing.
                 </p>
               </div>
               <Link
@@ -331,11 +330,12 @@ export default function DashboardPage() {
                   {subscribers.slice(0, 5).map((subscriber) => (
                     <div key={subscriber.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gray-100">
-                          <img 
+                        <div className="w-12 h-12 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gray-100 relative">
+                          <Image 
                             src={subscriber.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(subscriber.user.displayName)}`} 
                             alt={subscriber.user.displayName} 
-                            className="w-full h-full object-cover" 
+                            fill
+                            className="object-cover" 
                           />
                         </div>
                         <div>
