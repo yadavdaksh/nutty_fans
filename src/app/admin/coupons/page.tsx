@@ -42,9 +42,18 @@ export default function CouponManagement() {
 
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if code exists
+    const codeUpper = newCoupon.code.toUpperCase().trim();
+    if (coupons.some(c => c.code === codeUpper)) {
+      alert(`Coupon code "${codeUpper}" already exists!`);
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'coupons'), {
         ...newCoupon,
+        code: codeUpper,
         usageCount: 0,
         status: 'active',
         createdAt: serverTimestamp(),

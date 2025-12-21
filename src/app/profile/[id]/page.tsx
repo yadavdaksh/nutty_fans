@@ -109,7 +109,7 @@ export default function ProfilePage() {
     
     setIsSubscribing(selectedTier.name);
     try {
-      await createSubscription(user.uid, creatorUid, selectedTier.name, finalPrice);
+      await createSubscription(user.uid, creatorUid, selectedTier.name, finalPrice, couponCode);
       // alert(`Successfully subscribed to ${selectedTier.name}!`);
     } catch (error) {
       console.error("Error subscribing:", error);

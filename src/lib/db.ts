@@ -177,23 +177,40 @@ export const createSubscription = async (
   userId: string,
   creatorId: string,
   tierId: string,
-  price: string
+  price: string,
+  couponCode?: string
 ) => {
   const subId = `${userId}_${creatorId}`;
   const subRef = doc(db, 'subscriptions', subId);
   const creatorRef = doc(db, 'creators', creatorId);
 
+  // 1. If couponCode provided, find the coupon document first
+  let couponRef: any = null;
+  if (couponCode) {
+    const q = query(collection(db, 'coupons'), where('code', '==', couponCode.toUpperCase()));
+    const couponSnap = await getDocs(q);
+    if (!couponSnap.empty) {
+      couponRef = doc(db, 'coupons', couponSnap.docs[0].id);
+    }
+  }
+
   await runTransaction(db, async (transaction) => {
-    // 1. Get creator profile and check for existing sub
-    const [creatorSnap, subSnap] = await Promise.all([
+    // 2. Get creator profile, sub, and coupon (if provided)
+    const gets: Promise<any>[] = [
       transaction.get(creatorRef),
       transaction.get(subRef)
-    ]);
+    ];
+    if (couponRef) gets.push(transaction.get(couponRef));
+
+    const snaps = await Promise.all(gets);
+    const creatorSnap = snaps[0];
+    const subSnap = snaps[1];
+    const couponSnap = couponRef ? snaps[2] : null;
     
     if (!creatorSnap.exists()) throw new Error("Creator not found");
     const isNewSubscription = !subSnap.exists();
     
-    // 2. Create/Update subscription record
+    // 3. Create/Update subscription record
     const expiresAt = new Date();
     expiresAt.setMonth(expiresAt.getMonth() + 1);
 
@@ -205,13 +222,21 @@ export const createSubscription = async (
       status: 'active',
       createdAt: serverTimestamp(),
       expiresAt: Timestamp.fromDate(expiresAt),
-      price
+      price,
+      appliedCoupon: couponCode || null
     });
 
-    // 3. Update creator stats only if new
+    // 4. Update creator stats only if new
     if (isNewSubscription) {
       transaction.update(creatorRef, {
         subscriberCount: (creatorSnap.data().subscriberCount || 0) + 1
+      });
+    }
+
+    // 5. Update coupon usage
+    if (couponSnap && couponSnap.exists()) {
+      transaction.update(couponRef, {
+        usageCount: (couponSnap.data().usageCount || 0) + 1
       });
     }
   });
