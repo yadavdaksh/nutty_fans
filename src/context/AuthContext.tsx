@@ -41,6 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const profile = await getUserProfile(uid);
       setUserProfile(profile);
+      
+      // Set admin cookie for middleware
+      if (profile?.role === 'admin') {
+        Cookies.set('is_admin', 'true', { expires: 7 });
+      } else {
+        Cookies.remove('is_admin');
+      }
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }
@@ -55,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await fetchProfile(user.uid);
       } else {
         Cookies.remove('session_token');
+        Cookies.remove('is_admin');
         setUserProfile(null);
       }
       setLoading(false);

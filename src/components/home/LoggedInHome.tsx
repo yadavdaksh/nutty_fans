@@ -27,7 +27,9 @@ export default function LoggedInHome() {
   const { subscriptions, loading: subsLoading } = useSubscriptions(user?.uid);
 
   const liveModels = creators.filter(c => c.isLive);
-  const recommendedCreators = creators.slice(0, 3); // Simple recommendation for now
+  const recommendedCreators = creators
+    .filter(c => !subscriptions.some(s => s.creatorId === c.userId))
+    .slice(0, 3);
 
   return (
     <div className="flex min-h-screen bg-[#fdfbfd]" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -222,9 +224,11 @@ export default function LoggedInHome() {
                           className="w-full h-full object-cover" 
                          />
                        </div>
-                       <div className="min-w-0">
-                         <p className="text-sm font-semibold text-[#101828] truncate">{rec.user.displayName}</p>
-                         <p className="text-xs text-[#475467] truncate">@{rec.user.displayName.toLowerCase().replace(/\s/g, '')}</p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-semibold text-[#101828] truncate">{rec.user.displayName}</p>
+                          </div>
+                          <p className="text-xs text-[#475467] truncate">@{rec.user.displayName.toLowerCase().replace(/\s/g, '')}</p>
                          <span className="inline-block mt-1 px-1.5 py-0.5 bg-gray-100 text-[#475467] text-[10px] rounded-full font-medium">
                           {rec.categories?.[0] || 'Creator'}
                          </span>

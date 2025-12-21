@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { 
   Home, 
   Search, 
@@ -19,6 +19,9 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentCategory = searchParams.get('category') || 'All';
   const { user, userProfile } = useAuth();
   const [totalUnread, setTotalUnread] = useState(0);
 
@@ -114,11 +117,18 @@ export default function Sidebar() {
           <div className="px-6 py-4">
              <h3 className="text-[#98a2b3] font-medium text-sm mb-4">Categories</h3>
              <div className="flex flex-col gap-2">
-               {['All', 'Fitness', 'Music', 'Art', 'Photography', 'Gaming', 'Cooking', 'Fashion', 'Comedy'].map((cat, i) => {
-                 const isActive = i === 0;
+               {['All', 'Fitness', 'Music', 'Art', 'Photography', 'Gaming', 'Cooking', 'Fashion', 'Comedy'].map((cat) => {
+                 const isActive = currentCategory === cat;
                  return (
                    <button
-                     key={i}
+                     key={cat}
+                     onClick={() => {
+                        if (cat === 'All') {
+                          router.push('/discover');
+                        } else {
+                          router.push(`/discover?category=${cat}`);
+                        }
+                     }}
                      className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
                        isActive
                         ? 'bg-[#e60076] text-white border-[#e60076]'

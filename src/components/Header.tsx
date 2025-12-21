@@ -11,7 +11,9 @@ export default function Header() {
   const pathname = usePathname();
   const { user, userProfile, signOut } = useAuth();
   const { totalUnreadCount } = useMessaging(user?.uid);
+  const isAdminPage = pathname.startsWith('/admin');
   const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/verify-otp' || pathname === '/verify-age';
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -56,6 +58,8 @@ export default function Header() {
     await signOut();
     setIsDropdownOpen(false);
   };
+
+  if (isAdminPage) return null;
 
   return (
     <header 

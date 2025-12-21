@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Routes that require authentication
-  const protectedRoutes = ['/dashboard', '/verify-otp', '/verify-age', '/onboarding', '/profile', '/messages', '/content'];
+  const protectedRoutes = ['/admin', '/dashboard', '/verify-otp', '/verify-age', '/onboarding', '/profile', '/messages', '/content'];
   
   // Routes that are for guests only (redirect to dashboard if logged in)
   const authRoutes = ['/login', '/signup'];
@@ -17,8 +17,15 @@ export function middleware(request: NextRequest) {
   // If trying to access protected route without session
   if (isProtectedRoute && !session) {
     const loginUrl = new URL('/login', request.url);
-    // loginUrl.searchParams.set('from', pathname); // Optional: remember where they were trying to go
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Admin route protection
+  if (pathname.startsWith('/admin')) {
+    const isAdmin = request.cookies.get('is_admin');
+    if (!session || !isAdmin) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
   }
 
   // If trying to access auth routes while logged in

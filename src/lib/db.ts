@@ -150,6 +150,18 @@ export interface Message {
   read: boolean;
 }
 
+export interface Coupon {
+  id?: string;
+  code: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  expiryDate: Timestamp | any;
+  usageLimit: number;
+  usageCount: number;
+  status: 'active' | 'inactive';
+  createdAt: Timestamp | any;
+}
+
 // Get creator profile
 export const getCreatorProfile = async (userId: string): Promise<CreatorProfile | null> => {
   const creatorRef = doc(db, 'creators', userId);
@@ -222,4 +234,28 @@ export const checkSubscriptionStatus = async (userId: string, creatorId: string)
     }
   }
   return null;
+};
+
+/**
+ * Validates a coupon code.
+ */
+export const validateCoupon = async (code: string): Promise<Coupon | null> => {
+  const q = query(
+    collection(db, 'coupons'), 
+    where('code', '==', code.toUpperCase()), 
+    where('status', '==', 'active')
+  );
+  
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  
+  const coupon = { id: snap.docs[0].id, ...snap.docs[0].data() } as Coupon;
+  
+  // Check Expiry
+  if (coupon.expiryDate.toDate() < new Date()) return null;
+  
+  // Check Usage Limit
+  if (coupon.usageLimit > 0 && coupon.usageCount >= coupon.usageLimit) return null;
+  
+  return coupon;
 };

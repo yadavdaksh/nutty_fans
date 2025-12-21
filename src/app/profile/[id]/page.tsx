@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import CheckoutModal from '@/components/CheckoutModal';
 
 export default function ProfilePage() {
   const { user, userProfile } = useAuth();
@@ -46,6 +47,8 @@ export default function ProfilePage() {
   const [activeSubscription, setActiveSubscription] = useState<Subscription | null>(null);
   const isSubscribed = !!activeSubscription;
   const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<any>(null);
 
   const { posts, loading: postsLoading } = usePosts(creatorUid);
 
@@ -92,18 +95,25 @@ export default function ProfilePage() {
       return;
     }
 
-    if (isSubscribed) {
-      alert("You are already subscribed to this creator.");
+    if (activeSubscription?.tierId === tier.name) {
+      alert("You are already subscribed to this tier.");
       return;
     }
 
-    setIsSubscribing(tier.name);
+    setSelectedTier(tier);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleConfirmSubscription = async (finalPrice: string, couponCode?: string) => {
+    if (!user || !selectedTier) return;
+    
+    setIsSubscribing(selectedTier.name);
     try {
-      await createSubscription(user.uid, creatorUid, tier.name, tier.price);
-      alert(`Successfully subscribed to ${tier.name}!`);
+      await createSubscription(user.uid, creatorUid, selectedTier.name, finalPrice);
+      // alert(`Successfully subscribed to ${selectedTier.name}!`);
     } catch (error) {
       console.error("Error subscribing:", error);
-      alert("Failed to process subscription. Please try again.");
+      throw error;
     } finally {
       setIsSubscribing(null);
     }
@@ -528,6 +538,15 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+      {selectedTier && (
+        <CheckoutModal 
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          tier={selectedTier}
+          creatorName={targetUser?.displayName || 'Creator'}
+          onConfirm={handleConfirmSubscription}
+        />
+      )}
     </ProtectedRoute>
   );
 }
