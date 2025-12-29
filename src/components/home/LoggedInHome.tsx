@@ -4,7 +4,7 @@ import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Heart as HeartIcon,
-  MessageSquare,
+
   Image as ImageIcon, 
   Video, 
   Loader2,
@@ -157,9 +157,7 @@ export default function LoggedInHome() {
                    <button className="flex items-center gap-2 text-[#475467] hover:text-[#e60076] transition-colors text-sm font-medium">
                      <HeartIcon className="w-5 h-5" /> {post.likesCount}
                    </button>
-                   <button className="flex items-center gap-2 text-[#475467] hover:text-purple-600 transition-colors text-sm font-medium">
-                     <MessageSquare className="w-5 h-5" /> {post.commentsCount}
-                   </button>
+
                 </div>
               </div>
             ))

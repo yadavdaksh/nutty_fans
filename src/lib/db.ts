@@ -1,4 +1,5 @@
 import { db } from './firebase';
+export { db };
 import { 
   doc, 
   setDoc, 
@@ -8,13 +9,33 @@ import {
   Timestamp,
   runTransaction,
   collection,
-  query,
-  where,
-  getDocs,
+  FieldValue,
+  increment,
   DocumentReference,
   DocumentSnapshot,
-  FieldValue
+  query,
+  where,
+  getDocs
 } from 'firebase/firestore';
+
+export interface Stream {
+  id: string;
+  creatorId: string;
+  isActive: boolean;
+  title: string;
+  viewerCount: number;
+  startedAt: Timestamp | FieldValue;
+  accessType: 'public' | 'subscribers' | 'paid';
+  price?: number;
+}
+
+export interface StreamPurchase {
+  userId: string;
+  creatorId: string;
+  streamId: string;
+  amount: number;
+  purchasedAt: Timestamp;
+}
 
 export type UserRole = 'user' | 'creator' | 'admin';
 
@@ -53,6 +74,10 @@ export interface CreatorProfile {
     twitter?: string;
     website?: string;
     youtube?: string;
+  };
+  callPrices?: {
+    audioPerMinute: number;
+    videoPerMinute: number;
   };
 }
 
@@ -141,19 +166,23 @@ export interface Conversation {
     displayName: string;
     photoURL?: string;
   }>;
-  lastMessage: string;
+  lastMessage?: string;
   lastTimestamp: Timestamp | FieldValue | null;
   unreadCount: Record<string, number>;
   updatedAt: Timestamp | FieldValue | null;
+  lastMessageType?: 'text' | 'image' | 'video' | 'call';
 }
 
 export interface Message {
   id?: string;
   senderId: string;
   text: string;
-  type: 'text' | 'image' | 'video';
+  type: 'text' | 'image' | 'video' | 'call';
   timestamp: Timestamp | FieldValue | null;
   read: boolean;
+  isLocked?: boolean;
+  price?: number | null;
+  unlockedBy?: string[];
 }
 
 export interface Coupon {
@@ -290,3 +319,38 @@ export const validateCoupon = async (code: string): Promise<Coupon | null> => {
   
   return coupon;
 };
+
+// Create a new post
+export const createPost = async (postData: Omit<Post, 'id' | 'createdAt' | 'likesCount' | 'commentsCount'>) => {
+  const postsRef = collection(db, 'posts');
+  
+  const newPost = {
+    ...postData,
+    likesCount: 0,
+    commentsCount: 0,
+    createdAt: serverTimestamp(),
+  };
+
+  await setDoc(doc(postsRef), newPost);
+  
+  // Update creator's post count
+  const creatorRef = doc(db, 'creators', postData.creatorId);
+  await updateDoc(creatorRef, {
+    postCount: increment(1)
+  });
+  
+  return newPost;
+};
+
+export interface Call {
+  id: string;
+  callerId: string;
+  receiverId: string;
+  type: 'audio' | 'video';
+  status: 'ringing' | 'active' | 'ended' | 'rejected' | 'busy';
+  startTime: Timestamp | FieldValue;
+  endTime?: Timestamp | FieldValue;
+  pricePerMinute: number;
+  callerName?: string;
+  callerPhotoURL?: string;
+}

@@ -7,7 +7,8 @@ import {
   updateDoc, 
   serverTimestamp, 
   getDoc,
-  increment
+  increment,
+  arrayUnion
 } from 'firebase/firestore';
 import { ref, set, onDisconnect, remove } from 'firebase/database';
 import { Conversation, Message } from './db';
@@ -84,7 +85,9 @@ export const sendMessage = async (
   senderId: string, 
   recipientId: string,
   text: string, 
-  type: 'text' | 'image' | 'video' = 'text'
+  type: 'text' | 'image' | 'video' | 'call' = 'text',
+  isLocked: boolean = false,
+  price?: number
 ) => {
   const messagesRef = collection(db, 'conversations', conversationId, 'messages');
   
@@ -93,7 +96,10 @@ export const sendMessage = async (
     text,
     type,
     timestamp: serverTimestamp(),
-    read: false
+    read: false,
+    isLocked,
+    price: price ?? null,
+    unlockedBy: []
   };
  
   const convRef = doc(db, 'conversations', conversationId);
@@ -105,9 +111,59 @@ export const sendMessage = async (
   // 2. Update conversation metadata
   await updateDoc(convRef, {
     lastMessage: text,
+    lastMessageType: type,
     lastTimestamp: serverTimestamp(),
     updatedAt: serverTimestamp(),
     [`unreadCount.${recipientId}`]: increment(1)
+  });
+};
+
+/**
+ * Logs a system message (like call started/ended)
+ */
+export const logSystemMessage = async (
+  conversationId: string,
+  text: string,
+  type: 'call' = 'call'
+) => {
+  const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+  
+  const messageData: Message = {
+    senderId: 'system',
+    text,
+    type,
+    timestamp: serverTimestamp(),
+    read: true,
+    isLocked: false,
+    price: null,
+    unlockedBy: []
+  };
+
+  const convRef = doc(db, 'conversations', conversationId);
+  await addDoc(messagesRef, messageData);
+  await updateDoc(convRef, {
+    lastMessage: text,
+    lastMessageType: type,
+    lastTimestamp: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+};
+
+/**
+ * Unlocks a locked message for a specific user.
+ */
+export const unlockMessage = async (
+  conversationId: string,
+  messageId: string,
+  userId: string
+) => {
+  const messageRef = doc(db, 'conversations', conversationId, 'messages', messageId);
+  
+  // In a real app, we would enable a payment transaction here.
+  // For now, we just update the unlockedBy array.
+  
+  await updateDoc(messageRef, {
+    unlockedBy: arrayUnion(userId) // Ensure arrayUnion is imported!
   });
 };
 

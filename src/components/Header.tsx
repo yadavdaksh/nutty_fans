@@ -8,10 +8,12 @@ import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { useMessaging } from '@/hooks/useMessaging';
 
+
 export default function Header() {
   const pathname = usePathname();
   const { user, userProfile, signOut } = useAuth();
   const { totalUnreadCount } = useMessaging(user?.uid);
+  /* useChatNotifications(); - Removed to avoid duplicate toasts (called in LayoutShell) */
   const isAdminPage = pathname.startsWith('/admin');
   const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/verify-otp' || pathname === '/verify-age';
 
@@ -123,9 +125,9 @@ export default function Header() {
                   Subscription
                 </Link>
                 <Link 
-                  href="/live" 
+                  href={userProfile?.role === 'creator' ? '/live/go-live' : '/live'}
                   className={`text-[15.1px] leading-6 font-normal transition-colors ${
-                    pathname === '/live' ? 'text-[#101828]' : 'text-[#4a5565] hover:text-[#101828]'
+                    pathname === '/live' || pathname === '/live/go-live' ? 'text-[#101828]' : 'text-[#4a5565] hover:text-[#101828]'
                   }`}
                   style={{ fontFamily: 'Inter, sans-serif' }}
                 >

@@ -26,6 +26,8 @@ import {
 import { useEffect } from 'react';
 import { getCreatorProfile, updateUserProfile, createCreatorProfile } from '@/lib/db';
 import { updateProfile } from 'firebase/auth';
+import { useStorage } from '@/hooks/useStorage';
+import { useRef } from 'react';
 
 const Toggle = ({ 
   checked, 
@@ -66,6 +68,9 @@ export default function SettingsPage() {
     twoFactor: false,
     loginAlerts: true,
   });
+
+  const { uploadFile, isUploading: uploadingImage } = useStorage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [notificationSettings, setNotificationSettings] = useState({
     email: true,
@@ -137,6 +142,36 @@ export default function SettingsPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size exceeds 5MB limit.");
+      return;
+    }
+
+    try {
+      const path = `users/${user.uid}/profile_${Date.now()}_${file.name}`;
+      const url = await uploadFile(file, path);
+      
+      // Update Firebase Auth Profile
+      await updateProfile(user, { photoURL: url });
+
+      // Update Firestore User Profile
+      await updateUserProfile(user.uid, { photoURL: url });
+
+      await refreshProfile();
+      alert("Profile picture updated successfully!");
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      // Create a fresh input to allow re-uploading same file if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -255,15 +290,28 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="text-sm font-normal text-[#364153] mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
-                          JPG, PNG or GIF. Max size 5MB
+                          JPG, PNG or GIF. Max size 5MB. Recommended 1080x1080.
                         </p>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          className="hidden"
+                          accept="image/png, image/jpeg, image/gif"
+                          onChange={handleImageUpload}
+                        />
                         <button
                           type="button"
-                          className="flex items-center gap-2 px-4 py-2 bg-white border border-[rgba(0,0,0,0.1)] rounded-full text-sm font-semibold text-[#0a0a0a] hover:bg-gray-50 transition-colors cursor-pointer"
+                          disabled={uploadingImage}
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center gap-2 px-4 py-2 bg-white border border-[rgba(0,0,0,0.1)] rounded-full text-sm font-semibold text-[#0a0a0a] hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
                           style={{ fontFamily: 'Inter, sans-serif' }}
                         >
-                          <Upload className="w-4 h-4" />
-                          Change Photo
+                          {uploadingImage ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                          {uploadingImage ? 'Uploading...' : 'Change Photo'}
                         </button>
                       </div>
                     </div>

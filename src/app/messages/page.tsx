@@ -4,13 +4,17 @@ import { useState, useEffect, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { useMessaging } from '@/hooks/useMessaging';
+import { useStorage } from '@/hooks/useStorage';
+import { useUsersInfo } from '@/hooks/useUsersInfo';
 import { 
   sendMessage, 
   markAsRead, 
   setTypingStatus, 
   setUserOnlineStatus,
+  unlockMessage
 } from '@/lib/messaging';
-import { Search, MoreVertical, Smile, Send, MessageSquare } from 'lucide-react';
+import { Search, MoreVertical, Smile, Send, MessageSquare, Image as ImageIcon, Lock, X, Camera, Phone, Video, Loader2 } from 'lucide-react';
+import { useCall } from '@/hooks/useCall';
 import { format } from 'date-fns';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -42,6 +46,8 @@ export default function MessagesPage() {
     subscribeToUserPresence
   } = useMessaging(user?.uid);
 
+  const { startCall, loading: callLoading } = useCall();
+
   const [activeChatId, setActiveChatId] = useState<string | null>(initialChatId);
   const [prevInitialChatId, setPrevInitialChatId] = useState<string | null>(initialChatId);
 
@@ -54,13 +60,30 @@ export default function MessagesPage() {
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [recipientPresence, setRecipientPresence] = useState<unknown>(null);
+  
+  // Image Upload State
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const [price, setPrice] = useState<string>('');
+  const [unlockingMessageId, setUnlockingMessageId] = useState<string | null>(null);
+
+  // Camera State
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeConversation = conversations.find(c => c.id === activeChatId);
 
+  // Live User Updates
+  const allParticipantIds = conversations.flatMap(c => c.participants).filter(id => id !== user?.uid);
+  const { users: liveUsers } = useUsersInfo(allParticipantIds);
+
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView();
   }, [activeChatMessages]);
 
   // Handle conversation subscription
@@ -132,6 +155,121 @@ export default function MessagesPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const { uploadFile, isUploading } = useStorage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPendingFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setIsLocked(false);
+      setPrice('');
+    }
+    // Reset input so validation logic doesn't block re-selecting same file
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const cancelUpload = () => {
+    setPendingFile(null);
+    setPreviewUrl(null);
+    setIsLocked(false);
+    setPrice('');
+  };
+
+  const handleSendImage = async () => {
+    if (!pendingFile || !activeChatId || !user?.uid) return;
+
+    const recipientId = activeConversation?.participants.find((p: string) => p !== user.uid);
+    if (!recipientId) return;
+
+    try {
+      // 1. Upload Image
+      const timestamp = Date.now();
+      const path = `messages/${activeChatId}/${timestamp}_${pendingFile.name}`;
+      const downloadURL = await uploadFile(pendingFile, path);
+
+      // 2. Send Image Message
+      const priceValue = isLocked && price ? parseFloat(price) : undefined;
+      await sendMessage(activeChatId, user.uid, recipientId, downloadURL, 'image', isLocked, priceValue);
+      
+      cancelUpload();
+    } catch (error) {
+      console.error("Error sending image:", error);
+      alert("Failed to upload image. Please try again.");
+    }
+  };
+
+  const handleUnlock = async (messageId: string) => {
+    if (!activeChatId || !user?.uid) return;
+    
+    // In a real app, this would trigger a payment modal
+    const confirmUnlock = window.confirm("Unlock this image for the listed price?");
+    if (!confirmUnlock) return;
+
+    setUnlockingMessageId(messageId);
+    try {
+      await unlockMessage(activeChatId, messageId, user.uid);
+    } catch (error) {
+      console.error("Error unlocking message:", error);
+      alert("Failed to unlock message.");
+    } finally {
+      setUnlockingMessageId(null);
+    }
+  };
+
+  const startCamera = async () => {
+    try {
+      setIsCameraOpen(true);
+      // Give React a moment to render the video element
+      setTimeout(async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          streamRef.current = stream;
+        }
+      }, 100);
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      alert("Could not access camera. Please allow camera permissions.");
+      setIsCameraOpen(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraOpen(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0);
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const file = new File([blob], `camera_${Date.now()}.jpg`, { type: "image/jpeg" });
+                setPendingFile(file);
+                setPreviewUrl(URL.createObjectURL(file));
+                setIsLocked(false);
+                setPrice('');
+                stopCamera();
+            }
+        }, 'image/jpeg');
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageText.trim() || !activeChatId || !user?.uid) return;
@@ -143,7 +281,7 @@ export default function MessagesPage() {
     setMessageText(''); // Clear input instantly (Optimistic UI)
 
     try {
-      await sendMessage(activeChatId, user.uid, recipientId, text);
+      await sendMessage(activeChatId, user.uid, recipientId, text, 'text');
     } catch (error) {
       console.error("Error sending message:", error);
     }
@@ -195,7 +333,16 @@ export default function MessagesPage() {
                    <div className="p-8 text-center text-gray-400 text-sm">No conversations found</div>
                  ) : (
                    filteredConversations.map((conv: Conversation) => {
-                     const otherUser = Object.entries(conv.participantMetadata).find(([id]) => id !== user?.uid)?.[1] as ParticipantMetadata;
+                     // Get static metadata
+                     const otherUserMeta = Object.entries(conv.participantMetadata).find(([id]) => id !== user?.uid);
+                     const otherUserId = otherUserMeta?.[0];
+                     const otherUserStatic = otherUserMeta?.[1] as ParticipantMetadata;
+
+                     // Prefer live data if available
+                     const liveUser = otherUserId ? liveUsers[otherUserId] : null;
+                     const displayPhoto = liveUser?.photoURL || otherUserStatic?.photoURL || 'https://i.pravatar.cc/150';
+                     const displayName = liveUser?.displayName || otherUserStatic?.displayName || 'User';
+
                      const isActive = conv.id === activeChatId;
                      const hasUnread = (conv.unreadCount?.[user?.uid || ''] || 0) > 0;
 
@@ -208,8 +355,8 @@ export default function MessagesPage() {
                          <div className="relative flex-shrink-0">
                            <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
                              <Image 
-                               src={otherUser?.photoURL || 'https://i.pravatar.cc/150'} 
-                               alt={otherUser?.displayName || 'User'} 
+                               src={displayPhoto} 
+                               alt={displayName} 
                                fill
                                className="object-cover" 
                              />
@@ -218,7 +365,7 @@ export default function MessagesPage() {
                          <div className="flex-1 min-w-0">
                            <div className="flex justify-between items-start mb-0.5">
                              <h3 className={`text-sm ${hasUnread ? 'font-bold' : 'font-semibold'} text-[#101828]`}>
-                               {otherUser?.displayName}
+                               {displayName}
                              </h3>
                              {conv.lastTimestamp && (
                                <span className="text-[10px] text-gray-400">
@@ -226,9 +373,16 @@ export default function MessagesPage() {
                                </span>
                              )}
                            </div>
-                           <p className={`text-xs ${hasUnread ? 'text-[#101828] font-medium' : 'text-[#475467]'} truncate leading-relaxed`}>
-                             {conv.lastMessage}
-                           </p>
+                            <p className={`text-xs ${hasUnread ? 'text-[#101828] font-medium' : 'text-[#475467]'} truncate leading-relaxed flex items-center gap-1`}>
+                              {conv.lastMessageType === 'image' || (!conv.lastMessageType && conv.lastMessage && conv.lastMessage.startsWith('https://firebasestorage')) ? (
+                                <>
+                                  <ImageIcon className="w-3 h-3" />
+                                  <span>Image</span>
+                                </>
+                              ) : (
+                                conv.lastMessage
+                              )}
+                            </p>
                          </div>
                          {hasUnread && (
                            <div className="w-2 h-2 bg-purple-600 rounded-full self-center"></div>
@@ -249,20 +403,31 @@ export default function MessagesPage() {
                       <div className="flex items-center gap-3">
                          <div className="relative">
                            <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
-                              <Image 
-                                src={(Object.entries(activeConversation?.participantMetadata || {}).find(([id]) => id !== user?.uid)?.[1] as ParticipantMetadata)?.photoURL || 'https://i.pravatar.cc/150'} 
-                                alt="Recipient" 
-                                fill
-                                className="object-cover" 
-                              />
+                             {(() => {
+                               const otherUserId = activeConversation?.participants.find(id => id !== user?.uid);
+                               const liveUser = otherUserId ? liveUsers[otherUserId] : null;
+                               const staticMeta = otherUserId ? activeConversation?.participantMetadata[otherUserId] : null;
+
+                               return (
+                                 <Image 
+                                   src={liveUser?.photoURL || staticMeta?.photoURL || 'https://i.pravatar.cc/150'} 
+                                   alt="Recipient" 
+                                   fill
+                                   className="object-cover" 
+                                 />
+                               );
+                             })()}
                             </div>
-                            {(recipientPresence as UserPresence)?.state === 'online' && (
-                              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
-                            )}
+
                          </div>
                           <div>
                             <h3 className="font-semibold text-[#101828] text-sm">
-                              {(Object.entries(activeConversation?.participantMetadata || {}).find(([id]) => id !== user?.uid)?.[1] as ParticipantMetadata)?.displayName}
+                              {(() => {
+                                const otherUserId = activeConversation?.participants.find(id => id !== user?.uid);
+                                const liveUser = otherUserId ? liveUsers[otherUserId] : null;
+                                const staticMeta = otherUserId ? activeConversation?.participantMetadata[otherUserId] : null;
+                                return liveUser?.displayName || staticMeta?.displayName || 'User';
+                              })()}
                             </h3>
                             <div className="flex items-center gap-1.5">
                               <span className={`w-1.5 h-1.5 rounded-full ${(recipientPresence as UserPresence)?.state === 'online' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
@@ -272,9 +437,65 @@ export default function MessagesPage() {
                             </div>
                           </div>
                       </div>
-                      <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50">
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {userProfile?.role !== 'creator' && (
+                          <>
+                            <div className="group relative">
+                              <button 
+                                onClick={() => {
+                                   const recipientId = activeConversation?.participants.find((p: string) => p !== user?.uid);
+                                   if (recipientId && user?.uid) {
+                                      startCall(
+                                        user.uid, 
+                                        recipientId, 
+                                        'audio', 
+                                        2.00, 
+                                        user.displayName || 'User',
+                                        user.photoURL || undefined
+                                      );
+                                   }
+                                }}
+                                disabled={callLoading}
+                                className="p-2 text-gray-400 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50"
+                                title="Start Audio Call"
+                              >
+                                {callLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Phone className="w-5 h-5" />}
+                              </button>
+                              <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                $2.00/min
+                              </span>
+                            </div>
+                            <div className="group relative">
+                              <button 
+                                onClick={() => {
+                                   const recipientId = activeConversation?.participants.find((p: string) => p !== user?.uid);
+                                   if (recipientId && user?.uid) {
+                                      startCall(
+                                        user.uid, 
+                                        recipientId, 
+                                        'video', 
+                                        5.00,
+                                        user.displayName || 'User',
+                                        user.photoURL || undefined
+                                      );
+                                   }
+                                }}
+                                disabled={callLoading}
+                                className="p-2 text-gray-400 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50"
+                                title="Start Video Call"
+                              >
+                                {callLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
+                              </button>
+                              <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                $5.00/min
+                              </span>
+                            </div>
+                          </>
+                        )}
+                        <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50">
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+                      </div>
                    </div>
 
                    {/* Messages Area */}
@@ -282,6 +503,24 @@ export default function MessagesPage() {
                       {messagesLoading ? (
                         <div className="text-center text-gray-400 text-sm py-8">Loading history...</div>
                       ) : activeChatMessages.map((msg) => {
+                        if (msg.type === 'call') {
+                          return (
+                            <div key={msg.id} className="flex justify-center my-4">
+                              <div className="flex items-center gap-2 px-4 py-1.5 bg-gray-100 rounded-full text-xs font-semibold text-gray-500 shadow-sm border border-gray-200">
+                                {msg.text.toLowerCase().includes('video') ? (
+                                  <Video className="w-3 h-3 text-purple-600" />
+                                ) : (
+                                  <Phone className="w-3 h-3 text-purple-600" />
+                                )}
+                                <span>{msg.text}</span>
+                                <span className="text-gray-400 font-normal ml-1 border-l border-gray-300 pl-2">
+                                  {msg.timestamp instanceof Timestamp ? format(msg.timestamp.toDate(), 'h:mm a') : ''}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+
                         const isMe = msg.senderId === user?.uid;
                         return (
                           <div 
@@ -294,9 +533,83 @@ export default function MessagesPage() {
                                    isMe 
                                      ? 'bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white rounded-tr-none' 
                                      : 'bg-white text-[#344054] border border-gray-100 rounded-tl-none'
-                                 }`}
+                                 } overflow-hidden`}
                                >
-                                 {msg.text}
+                                 {msg.type === 'image' ? (
+                                   <div className="relative w-60 h-60 -mx-2 -my-1 rounded-lg overflow-hidden bg-gray-100">
+                                     {(() => {
+                                       const isLocked = msg.isLocked;
+                                       const isUnlocked = isMe || (msg.unlockedBy && msg.unlockedBy.includes(user?.uid || ''));
+                                       
+                                       // Check purchase status for the creator (sender)
+                                       if (isMe && isLocked) {
+                                          const recipientId = activeConversation?.participants.find(p => p !== user?.uid);
+                                          const isPurchased = recipientId && msg.unlockedBy?.includes(recipientId);
+                                          
+                                          return (
+                                            <>
+                                              <Image 
+                                                src={msg.text} 
+                                                alt="Shared image"
+                                                fill
+                                                className="object-cover opacity-90"
+                                              />
+                                              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-[1px]">
+                                                <div className="bg-black/60 rounded-full px-3 py-1 mb-2 flex items-center gap-1.5 backdrop-blur-md">
+                                                  <Lock className="w-3 h-3 text-white" />
+                                                  <span className="text-white text-xs font-medium">${msg.price}</span>
+                                                </div>
+                                                <div className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1.5 ${isPurchased ? 'bg-green-500 text-white' : 'bg-white/90 text-gray-600'}`}>
+                                                  {isPurchased ? (
+                                                    <>
+                                                      <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                                                      <span>Purchased</span>
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
+                                                      <span>Pending</span>
+                                                    </>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </>
+                                          );
+                                       }
+
+                                       if (isLocked && !isUnlocked) {
+                                         return (
+                                           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/10 backdrop-blur-md z-10 p-4 text-center">
+                                              <Lock className="w-8 h-8 text-white mb-2" />
+                                              <p className="text-white font-bold text-sm mb-3">
+                                                Locked Content
+                                              </p>
+                                              <button 
+                                                onClick={() => msg.id && handleUnlock(msg.id)}
+                                                disabled={unlockingMessageId === msg.id}
+                                                className="px-4 py-2 bg-white text-purple-600 rounded-full text-xs font-bold hover:bg-gray-100 transition-colors shadow-lg flex items-center gap-2"
+                                              >
+                                                {unlockingMessageId === msg.id ? (
+                                                  <div className="w-3 h-3 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                  <span>Unlock for ${msg.price}</span>
+                                                )}
+                                              </button>
+                                           </div>
+                                         );
+                                       }
+
+                                       return (
+                                          <Image 
+                                            src={msg.text} // In 'image' type, 'text' field holds the URL
+                                            alt="Shared image"
+                                            fill
+                                            className={`object-cover ${isLocked && !isUnlocked ? 'blur-xl' : ''}`}
+                                          />
+                                       );
+                                     })()}
+                                   </div>
+                                 ) : msg.text}
                                </div>
                                <div className={`text-[10px] text-gray-400 mt-1.5 ${isMe ? 'text-right' : 'text-left'}`}>
                                  {msg.timestamp instanceof Timestamp ? format(msg.timestamp.toDate(), 'h:mm a') : 'Sending...'}
@@ -343,6 +656,33 @@ export default function MessagesPage() {
                             <Smile className="w-5 h-5" />
                           </button>
                         </div>
+                        {userProfile?.role === 'creator' && (
+                          <>
+                            <input 
+                              type="file" 
+                              ref={fileInputRef}
+                              onChange={handleFileChange}
+                              className="hidden" 
+                              accept="image/*"
+                            />
+                            <button 
+                              type="button" 
+                              onClick={handleImageClick}
+                              disabled={isUploading}
+                              className="p-2.5 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+                            >
+                              {isUploading ? <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={startCamera}
+                              disabled={isUploading}
+                              className="p-2.5 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+                            >
+                              <Camera className="w-5 h-5" />
+                            </button>
+                          </>
+                        )}
                         <button 
                           type="submit"
                           disabled={!messageText.trim()}
@@ -362,6 +702,133 @@ export default function MessagesPage() {
                     <p className="text-sm text-gray-500 max-w-xs">
                       Choose from your existing conversations on the left to start chatting.
                     </p>
+                 </div>
+               )}
+
+
+
+               {/* Camera Modal */}
+               {isCameraOpen && (
+                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+                    <div className="relative w-full max-w-2xl bg-black rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+                      <div className="relative aspect-[4/3] bg-black">
+                        <video 
+                          ref={videoRef} 
+                          autoPlay 
+                          playsInline 
+                          className="w-full h-full object-cover"
+                        />
+                         <button 
+                          onClick={stopCamera}
+                          className="absolute top-4 right-4 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 backdrop-blur-md transition-colors"
+                        >
+                          <X className="w-6 h-6" />
+                        </button>
+                      </div>
+                      
+                      <div className="p-6 flex items-center justify-center gap-8 bg-gray-900 border-t border-white/10">
+                         <button 
+                           onClick={capturePhoto}
+                           className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center p-1 hover:scale-105 transition-transform"
+                         >
+                           <div className="w-full h-full bg-white rounded-full"></div>
+                         </button>
+                      </div>
+                    </div>
+                 </div>
+               )}
+
+               {/* Image Upload Modal */}
+               {pendingFile && activeChatId && (
+                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                     <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                       <h3 className="font-semibold text-gray-900">Send Image</h3>
+                       <button onClick={cancelUpload} className="text-gray-400 hover:text-gray-600 p-1">
+                         <X className="w-5 h-5" />
+                       </button>
+                     </div>
+                     
+                     <div className="p-6">
+                       <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-gray-100 mb-6 border border-gray-200">
+                         {previewUrl && (
+                           <Image 
+                             src={previewUrl} 
+                             alt="Preview" 
+                             fill 
+                             className="object-contain" 
+                           />
+                         )}
+                       </div>
+                       
+                       {userProfile?.role === 'creator' && (
+                         <div className="mb-6 space-y-4">
+                           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                             <div className="flex items-center gap-3">
+                               <div className={`p-2 rounded-lg ${isLocked ? 'bg-purple-100 text-purple-600' : 'bg-gray-200 text-gray-500'}`}>
+                                 <Lock className="w-5 h-5" />
+                               </div>
+                               <div>
+                                 <p className="text-sm font-semibold text-gray-900">Paid Content</p>
+                                 <p className="text-xs text-gray-500">Lock this image behind a paywall</p>
+                               </div>
+                             </div>
+                             
+                             <button 
+                               type="button"
+                               onClick={() => setIsLocked(!isLocked)}
+                               className={`relative w-11 h-6 rounded-full transition-colors ${isLocked ? 'bg-purple-600' : 'bg-gray-300'}`}
+                             >
+                               <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${isLocked ? 'translate-x-5' : 'translate-x-0'}`} />
+                             </button>
+                           </div>
+                           
+                           {isLocked && (
+                             <div className="animate-in slide-in-from-top-2 duration-200">
+                               <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+                                 Price ($)
+                               </label>
+                               <div className="relative">
+                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                                 <input 
+                                   type="number" 
+                                   min="1"
+                                   step="0.01"
+                                   value={price}
+                                   onChange={(e) => setPrice(e.target.value)}
+                                   placeholder="5.00"
+                                   className="w-full pl-7 pr-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-medium"
+                                 />
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                       )}
+
+                       <div className="flex gap-3">
+                         <button 
+                           onClick={cancelUpload}
+                           className="flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                         >
+                           Cancel
+                         </button>
+                         <button 
+                           onClick={handleSendImage}
+                           disabled={isUploading || (isLocked && !price)}
+                           className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white font-semibold rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
+                         >
+                           {isUploading ? (
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                           ) : (
+                             <>
+                               <Send className="w-4 h-4" />
+                               <span>Send {isLocked && price ? `for $${price}` : ''}</span>
+                             </>
+                           )}
+                         </button>
+                       </div>
+                     </div>
+                   </div>
                  </div>
                )}
             </div>

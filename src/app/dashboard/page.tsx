@@ -17,12 +17,15 @@ import {
   TrendingUp,
   Loader2,
   Plus,
-  Sparkles
+  Sparkles,
+  Image as ImageIcon
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CreatorProfile } from '@/lib/db';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
+import { usePosts } from '@/hooks/usePosts';
+import PostGrid from '@/components/PostGrid';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function DashboardPage() {
@@ -31,6 +34,7 @@ export default function DashboardPage() {
   const [profileLoading, setProfileLoading] = useState(true);
   
   const { subscribers, loading: subsLoading } = useSubscriptions(undefined, user?.uid);
+  const { posts: myPosts, loading: postsLoading } = usePosts(user?.uid);
 
   useEffect(() => {
     const fetchCreatorProfile = async () => {
@@ -240,7 +244,7 @@ export default function DashboardPage() {
                   <h2 className="text-xl font-bold text-[#101828]">
                     Revenue History
                   </h2>
-                  <select className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium outline-none">
+                  <select className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium outline-none text-[#101828]">
                     <option>Last 6 Months</option>
                     <option>Last Year</option>
                   </select>
@@ -357,7 +361,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Monthly Goal Progress */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
+            <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm mb-10">
               <h2 className="text-xl font-bold text-[#101828] mb-8">
                 Monthly Revenue Goal
               </h2>
@@ -383,6 +387,39 @@ export default function DashboardPage() {
                     : `You're $${(monthlyGoal.target - monthlyGoal.current).toLocaleString()} away from your goal! New content usually boosts growth by 15%.`}
                 </p>
               </div>
+            </div>
+
+            {/* My Posts Section */}
+            <div className="mb-10">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-[#101828]">My Recent Posts</h2>
+                <Link href="/analytics" className="text-sm font-bold text-purple-600 hover:text-purple-700">
+                  View Analytics
+                </Link>
+              </div>
+
+              {postsLoading ? (
+                <div className="text-center py-12">
+                   <Loader2 className="w-8 h-8 animate-spin text-purple-600 mx-auto" />
+                </div>
+              ) : myPosts.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center">
+                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                     <ImageIcon className="w-8 h-8 text-gray-400" />
+                   </div>
+                   <h3 className="text-lg font-bold text-[#101828] mb-2">No posts yet</h3>
+                   <p className="text-[#475467] mb-6">Create your first post to start engaging with fans!</p>
+                   <Link
+                    href="/content"
+                    className="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-purple-700 transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Create Post
+                  </Link>
+                </div>
+              ) : (
+                <PostGrid posts={myPosts} />
+              )}
             </div>
           </div>
         </div>

@@ -9,15 +9,13 @@ import {
   Check,
   Play
 } from 'lucide-react';
-import { useCreators } from '@/hooks/useCreators';
+import { useActiveStreams } from '@/hooks/useActiveStreams';
 import Link from 'next/link';
 import Image from 'next/image';
 
 export default function LivePage() {
   const { userProfile } = useAuth();
-  const { creators, loading } = useCreators();
-
-  const liveCreators = creators.filter(c => c.isLive);
+  const { streams, loading } = useActiveStreams();
 
   return (
     <div className="flex min-h-screen bg-[#fdfbfd]" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -48,7 +46,7 @@ export default function LivePage() {
                <div className="col-span-2 flex justify-center py-20">
                  <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
                </div>
-             ) : liveCreators.length === 0 ? (
+             ) : streams.length === 0 ? (
                <div className="col-span-2 text-center py-24 bg-white rounded-3xl border border-dashed border-gray-200">
                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
                     <Video className="w-8 h-8" />
@@ -57,17 +55,17 @@ export default function LivePage() {
                   <p className="text-[#475467]">Check back later or explore other creators in Discover</p>
                </div>
              ) : (
-               liveCreators.map((creator) => (
+               streams.map((stream) => (
                  <Link 
-                   key={creator.userId} 
-                   href={`/profile/${creator.userId}`}
+                   key={stream.id} 
+                   href={`/live/${stream.creatorId}`}
                    className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer"
                  >
                    {/* Thumbnail Container */}
                    <div className="relative aspect-video bg-gray-900 overflow-hidden">
                      <Image 
                        src={`https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=800&q=80`} 
-                       alt={creator.user.displayName} 
+                       alt={stream.title} 
                        fill
                        className="object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
                      />
@@ -81,7 +79,7 @@ export default function LivePage() {
                      {/* Viewer Count */}
                      <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-xs font-medium">
                        <Users className="w-3.5 h-3.5" />
-                       1.2K
+                       {stream.viewerCount || 0}
                      </div>
    
                       {/* Play Button Overlay */}
@@ -97,8 +95,8 @@ export default function LivePage() {
                      <div className="flex-shrink-0">
                         <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-200 relative">
                            <Image 
-                            src={creator.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.user.displayName)}`} 
-                            alt={creator.user.displayName} 
+                            src={stream.creator?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(stream.creator?.displayName || 'Creator')}`} 
+                            alt={stream.creator?.displayName || 'Creator'} 
                             fill
                             className="object-cover" 
                            />
@@ -106,13 +104,13 @@ export default function LivePage() {
                      </div>
                      <div className="min-w-0 flex-1">
                        <h3 className="text-base font-semibold text-[#101828] mb-1 line-clamp-1 group-hover:text-purple-600 transition-colors">
-                         Join my live session! - {creator.categories?.[0] || 'Life'}
+                         {stream.title}
                        </h3>
                        <p className="text-xs text-[#475467] mb-3 flex items-center gap-1">
-                         {creator.user.displayName} <Check className="w-3 h-3 text-[#9810fa] fill-current" />
+                         {stream.creator?.displayName || 'Unknown Creator'} <Check className="w-3 h-3 text-[#9810fa] fill-current" />
                        </p>
                        <span className="inline-block px-2.5 py-0.5 bg-gray-50 text-[#344054] text-xs font-medium rounded-full border border-gray-200">
-                          {creator.categories?.[0] || 'Creator'}
+                          Live
                         </span>
                      </div>
                    </div>

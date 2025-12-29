@@ -484,10 +484,7 @@ export default function ProfilePage() {
                                   <Heart className="w-4 h-4" />
                                   <span className="text-xs">{item.likesCount}</span>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <MessageSquare className="w-4 h-4" />
-                                  <span className="text-xs">{item.commentsCount}</span>
-                                </div>
+
                               </div>
                             </div>
                           </>
@@ -513,12 +510,7 @@ export default function ProfilePage() {
                                     {item.likesCount}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <MessageSquare className="w-4 h-4" />
-                                  <span className="text-sm font-normal" style={{ fontFamily: 'Inter, sans-serif' }}>
-                                    {item.commentsCount}
-                                  </span>
-                                </div>
+
                               </div>
                             </div>
                           </>
