@@ -13,6 +13,8 @@ import {
   setUserOnlineStatus,
   unlockMessage
 } from '@/lib/messaging';
+import { getWalletBalance, processTransaction } from '@/lib/db';
+import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Smile, Send, MessageSquare, Image as ImageIcon, Lock, X, Camera, Phone, Video, Loader2 } from 'lucide-react';
 import { useCall } from '@/hooks/useCall';
 import { format } from 'date-fns';
@@ -158,6 +160,31 @@ export default function MessagesPage() {
   const { uploadFile, isUploading } = useStorage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const handleVoiceCall = async () => {
+    if (!activeChatId || !user?.uid) return;
+    
+    // Check for minimum balance ($5.00)
+    const balance = await getWalletBalance(user.uid);
+    if (balance < 500) { // 500 cents
+      toast.error("Insufficient balance for call. Minimum $5.00 required.");
+      return;
+    }
+
+    startCall(activeChatId, 'voice');
+  };
+
+  const handleVideoCall = async () => {
+    if (!activeChatId || !user?.uid) return;
+
+    // Check for minimum balance ($10.00 for video)
+    const balance = await getWalletBalance(user.uid);
+    if (balance < 1000) { // 1000 cents
+      toast.error("Insufficient balance for video call. Minimum $10.00 required.");
+      return;
+    }
+
+    startCall(activeChatId, 'video');
+  };
   const handleImageClick = () => {
     fileInputRef.current?.click();
   };
@@ -204,19 +231,40 @@ export default function MessagesPage() {
     }
   };
 
-  const handleUnlock = async (messageId: string) => {
+  const handleUnlock = async (messageId: string, price: number) => {
     if (!activeChatId || !user?.uid) return;
     
-    // In a real app, this would trigger a payment modal
-    const confirmUnlock = window.confirm("Unlock this image for the listed price?");
+    // Check Price
+    const priceCents = Math.round(price * 100);
+
+    // 1. Check Wallet Balance
+    const balance = await getWalletBalance(user.uid);
+    if (balance < priceCents) {
+       toast.error(`Insufficient wallet balance. You need $${price.toFixed(2)}.`);
+       // Optional: Router push to wallet?
+       return;
+    }
+
+    const confirmUnlock = window.confirm(`Unlock for $${price.toFixed(2)}? This will be deducted from your wallet.`);
     if (!confirmUnlock) return;
 
     setUnlockingMessageId(messageId);
     try {
+      // 2. Process Transaction
+      const recipientId = activeConversation?.participants.find(p => p !== user.uid);
+      await processTransaction(
+        user.uid,
+        priceCents,
+        `Unlock message`,
+        { contentType: 'message_unlock', contentId: messageId, creatorId: recipientId, category: 'message_unlock' }
+      );
+      
+      // 3. Unlock Content
       await unlockMessage(activeChatId, messageId, user.uid);
+      toast.success("Content unlocked!");
     } catch (error) {
       console.error("Error unlocking message:", error);
-      alert("Failed to unlock message.");
+      toast.error("Failed to unlock message.");
     } finally {
       setUnlockingMessageId(null);
     }
@@ -585,7 +633,7 @@ export default function MessagesPage() {
                                                 Locked Content
                                               </p>
                                               <button 
-                                                onClick={() => msg.id && handleUnlock(msg.id)}
+                                                onClick={() => msg.id && msg.price && handleUnlock(msg.id, msg.price)}
                                                 disabled={unlockingMessageId === msg.id}
                                                 className="px-4 py-2 bg-white text-purple-600 rounded-full text-xs font-bold hover:bg-gray-100 transition-colors shadow-lg flex items-center gap-2"
                                               >

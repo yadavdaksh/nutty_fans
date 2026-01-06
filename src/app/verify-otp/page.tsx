@@ -11,7 +11,7 @@ export default function VerifyOTPPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resendTimer, setResendTimer] = useState(60);
+  const [resendTimer, setResendTimer] = useState(10);
   const [canResend, setCanResend] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const router = useRouter();
@@ -77,13 +77,27 @@ export default function VerifyOTPPage() {
       return;
     }
 
+    if (!user) {
+      setError("User not authenticated");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // TODO: Implement actual OTP verification with Firebase or your backend
-      // For now, simulate verification
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: user.email, 
+          uid: user.uid,
+          otp: otpString
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed');
       
       // Redirect to age verification page
       router.push('/verify-age');
@@ -98,15 +112,23 @@ export default function VerifyOTPPage() {
   };
 
   const handleResend = async () => {
-    if (!canResend) return;
+    if (!canResend || !user) return;
     
     setCanResend(false);
-    setResendTimer(60);
+    setResendTimer(10);
     setError(null);
     
     try {
-      // TODO: Implement actual OTP resend logic
-      // For now, just reset the timer
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: user.email, 
+          uid: user.uid
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to resend");
+      // Success toast could go here
     } catch {
       setError('Failed to resend code. Please try again.');
     }

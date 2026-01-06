@@ -29,6 +29,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import CheckoutModal from '@/components/CheckoutModal';
+import TipModal from '@/components/TipModal';
 
 export default function ProfilePage() {
   const { user, userProfile } = useAuth();
@@ -47,6 +48,7 @@ export default function ProfilePage() {
   const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<CreatorProfile['subscriptionTiers'][number] | null>(null);
+  const [isTipOpen, setIsTipOpen] = useState(false);
 
   const { posts, loading: postsLoading } = usePosts(creatorUid);
 
@@ -108,7 +110,14 @@ export default function ProfilePage() {
     setIsSubscribing(selectedTier.name);
     try {
       await createSubscription(user.uid, creatorUid, selectedTier.name, finalPrice, couponCode);
-      // alert(`Successfully subscribed to ${selectedTier.name}!`);
+      toast.success(`Successfully subscribed to ${selectedTier.name}!`, {
+        duration: 5000,
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
     } catch (error) {
       console.error("Error subscribing:", error);
       throw error;
@@ -321,7 +330,11 @@ export default function ProfilePage() {
                             Message
                           </button>
                           {targetUser.role === 'creator' && (
-                            <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#d0d5dd] text-[#344054] text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
+                            <button 
+                              onClick={() => setIsTipOpen(true)}
+                              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#d0d5dd] text-[#344054] text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm" 
+                              style={{ fontFamily: 'Inter, sans-serif' }}
+                            >
                               <span className="w-4 h-4 flex items-center justify-center">🚀</span>
                               Tip
                             </button>
@@ -544,9 +557,17 @@ export default function ProfilePage() {
           onClose={() => setIsCheckoutOpen(false)}
           tier={selectedTier}
           creatorName={targetUser?.displayName || 'Creator'}
+          creatorId={creatorUid}
           onConfirm={handleConfirmSubscription}
         />
       )}
+      <TipModal
+        isOpen={isTipOpen}
+        onClose={() => setIsTipOpen(false)}
+        creatorName={targetUser?.displayName || 'Creator'}
+        creatorId={creatorUid}
+        userId={user?.uid || ''}
+      />
     </ProtectedRoute>
   );
 }

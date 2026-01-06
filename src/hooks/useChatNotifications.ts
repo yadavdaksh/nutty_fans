@@ -61,8 +61,16 @@ export function useChatNotifications() {
                return; 
              }
 
+             // Format Message for Toast
+             let toastMessage = data.lastMessage || 'Sent a message';
+             const isImage = data.lastMessageType === 'image' || toastMessage.startsWith('https://firebasestorage.googleapis.com');
+             
+             if (isImage) {
+               toastMessage = 'Sent an image 📷';
+             }
+
              // Show Toast
-             toast(`${senderName}: ${data.lastMessage || 'Sent a message'}`, {
+             toast(`${senderName}: ${toastMessage}`, {
                duration: 4000,
                position: 'top-right',
                icon: '💬',

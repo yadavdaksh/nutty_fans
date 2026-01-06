@@ -11,9 +11,10 @@ import {
   Sparkles, 
   Bell, 
   Settings, 
-  User 
+  User,
+  Wallet 
 } from 'lucide-react';
-import { query, collection, where, onSnapshot } from 'firebase/firestore';
+import { query, collection, where, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 
@@ -24,6 +25,7 @@ export default function Sidebar() {
   const currentCategory = searchParams.get('category') || 'All';
   const { user, userProfile } = useAuth();
   const [totalUnread, setTotalUnread] = useState(0);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   // Listen for total unread messages
   useEffect(() => {
@@ -45,6 +47,17 @@ export default function Sidebar() {
 
     return () => unsubscribe();
   }, [user?.uid]);
+
+  // Listen for Wallet Balance
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+      if (snap.exists()) {
+        setWalletBalance(snap.data().walletBalance || 0);
+      }
+    });
+    return () => unsub();
+  }, [user?.uid]);
   
   // Hide sidebar for creators as per request
   if (userProfile?.role === 'creator') return null;
@@ -60,6 +73,13 @@ export default function Sidebar() {
     },
     { href: '/live', label: 'Live Streams', icon: Video },
     { href: '/subscription', label: 'Subscriptions', icon: Sparkles },
+    { 
+      href: '/wallet', 
+      label: 'Wallet', 
+      icon: Wallet,
+      badge: `$${(walletBalance / 100).toFixed(2)}`,
+      badgeColor: 'green' 
+    },
   ];
 
   return (
@@ -100,7 +120,7 @@ export default function Sidebar() {
                   </div>
                   {item.badge && (
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      isActive ? 'bg-white text-[#de1d3e]' : 'bg-[#de1d3e] text-white'
+                      isActive ? 'bg-white text-[#de1d3e]' : (item.badgeColor === 'green' ? 'bg-green-100 text-green-700' : 'bg-[#de1d3e] text-white')
                     }`}>
                       {item.badge}
                     </span>

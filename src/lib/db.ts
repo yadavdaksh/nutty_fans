@@ -49,6 +49,7 @@ export interface UserProfile {
   photoURL?: string;
   role: UserRole;
   isAgeVerified: boolean;
+  walletBalance?: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -354,3 +355,155 @@ export interface Call {
   callerName?: string;
   callerPhotoURL?: string;
 }
+
+export interface WalletTransaction {
+  id?: string;
+  userId: string;
+  type: 'credit' | 'debit';
+  amount: number; // in cents
+  description: string;
+  timestamp: Timestamp | FieldValue;
+  metadata?: any;
+}
+
+export const getWalletBalance = async (userId: string): Promise<number> => {
+  const userRef = doc(db, 'users', userId);
+  const snap = await getDoc(userRef);
+  if (snap.exists()) {
+    return snap.data().walletBalance || 0;
+  }
+  return 0;
+};
+
+export const addFunds = async (userId: string, amount: number, paymentId: string, description: string = 'Wallet Recharge', metadata: any = {}) => {
+  const userRef = doc(db, 'users', userId);
+  const transactionRef = collection(db, 'wallet_transactions');
+
+  await runTransaction(db, async (transaction) => {
+    const userDoc = await transaction.get(userRef);
+    if (!userDoc.exists()) {
+      throw new Error("User does not exist!");
+    }
+
+    const newBalance = (userDoc.data().walletBalance || 0) + amount;
+    
+    transaction.update(userRef, { walletBalance: newBalance });
+    
+    // Add transaction record
+    const newTxRef = doc(transactionRef);
+    transaction.set(newTxRef, {
+      userId,
+      type: 'credit',
+      amount,
+      description,
+      metadata: { ...metadata, paymentId },
+      timestamp: serverTimestamp()
+    });
+  });
+};
+
+export const processTransaction = async (userId: string, amount: number, description: string, metadata: any = {}) => {
+  const userRef = doc(db, 'users', userId);
+  const txCollectionRef = collection(db, 'wallet_transactions');
+  const creatorId = metadata?.creatorId;
+  const creatorRef = creatorId ? doc(db, 'users', creatorId) : null;
+
+  return await runTransaction(db, async (transaction) => {
+     // 1. Perform ALL Reads first
+     const userDoc = await transaction.get(userRef);
+     const creatorDoc = creatorRef ? await transaction.get(creatorRef) : null;
+
+     if (!userDoc.exists()) throw new Error("User not found");
+
+     // 2. Logic Check
+     const currentBalance = userDoc.data().walletBalance || 0;
+     if (currentBalance < amount) {
+        throw new Error("Insufficient funds");
+     }
+
+     // 3. Perform ALL Writes
+     // Debit User
+     const newBalance = currentBalance - amount;
+     transaction.update(userRef, { walletBalance: newBalance });
+
+     const newTxRef = doc(txCollectionRef);
+     transaction.set(newTxRef, {
+        userId,
+        type: 'debit',
+        amount,
+        description,
+        metadata,
+        timestamp: serverTimestamp()
+     });
+
+     // 2. Credit Creator
+     if (creatorDoc && creatorDoc.exists()) {
+        const creatorBalance = creatorDoc.data().walletBalance || 0;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        transaction.update(creatorRef!, { walletBalance: creatorBalance + amount });
+
+        const creditTxRef = doc(txCollectionRef);
+        transaction.set(creditTxRef, {
+           userId: creatorId,
+           type: 'credit',
+           amount,
+           description: `Received: ${description}`,
+           metadata: { ...metadata, senderId: userId },
+           timestamp: serverTimestamp()
+        });
+     }
+  });
+};
+
+export interface EarningsBreakdown {
+  total: number;
+  subscription: number;
+  tip: number;
+  message_unlock: number;
+  post_unlock: number;
+  call: number;
+  video_call: number;
+  other: number;
+  [key: string]: number;
+}
+
+export const getEarningsBreakdown = async (userId: string): Promise<EarningsBreakdown> => {
+  const txCollectionRef = collection(db, 'wallet_transactions');
+  const q = query(
+    txCollectionRef, 
+    where('userId', '==', userId), 
+    where('type', '==', 'credit')
+  );
+
+  const snapshot = await getDocs(q);
+  const breakdown: EarningsBreakdown = {
+    total: 0,
+    subscription: 0,
+    tip: 0,
+    message_unlock: 0, // content_unlock
+    post_unlock: 0,
+    call: 0,
+    video_call: 0,
+    other: 0
+  };
+
+  snapshot.docs.forEach(doc => {
+    const data = doc.data();
+    const amount = data.amount || 0; // in cents
+    const cat = data.metadata?.category;
+
+    breakdown.total += amount;
+
+    if (breakdown[cat] !== undefined) {
+       breakdown[cat] += amount;
+    } else {
+       // Fallback for older transactions or different names
+       if (data.description.toLowerCase().includes('tip')) breakdown.tip += amount;
+       else if (data.description.toLowerCase().includes('subscription')) breakdown.subscription += amount;
+       else if (data.description.toLowerCase().includes('unlock')) breakdown.message_unlock += amount; // Generic unlock
+       else breakdown.other += amount;
+    }
+  });
+
+  return breakdown;
+};

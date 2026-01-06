@@ -10,8 +10,8 @@ export function usePosts(creatorId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
+    // loading is already true by default, no need to set it here
+
     
     let q = query(
       collection(db, 'posts'),

@@ -3,7 +3,7 @@
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
-import { getCreatorProfile } from '@/lib/db';
+import { getCreatorProfile, getEarningsBreakdown } from '@/lib/db';
 import { useEffect, useState } from 'react';
 import { 
   Upload,
@@ -31,6 +31,7 @@ import { formatDistanceToNow } from 'date-fns';
 export default function DashboardPage() {
   const { user, userProfile } = useAuth();
   const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
+  const [earningsBreakdown, setEarningsBreakdown] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   
   const { subscribers, loading: subsLoading } = useSubscriptions(undefined, user?.uid);
@@ -42,6 +43,9 @@ export default function DashboardPage() {
         try {
           const profile = await getCreatorProfile(user.uid);
           setCreatorProfile(profile);
+          
+          const breakdown = await getEarningsBreakdown(user.uid);
+          setEarningsBreakdown(breakdown);
         } catch (error) {
           console.error('Error fetching creator profile:', error);
         }
@@ -56,11 +60,14 @@ export default function DashboardPage() {
 
   // Calculate real stats
   const activeSubsCount = subscribers.length;
-  const avgPrice = creatorProfile?.subscriptionTiers?.[0]?.price ? parseFloat(creatorProfile.subscriptionTiers[0].price) : 9.99;
-  const estimatedMonthlyEarnings = activeSubsCount * avgPrice;
+
+  // Use real wallet balance for earnings (converted from cents to dollars)
+  const realEarnings = (userProfile?.walletBalance || 0) / 100;
+  // Fallback to estimated if 0 (optional, but for now let's show real)
+  const totalEarnings = realEarnings;
 
   const stats = {
-    totalEarnings: estimatedMonthlyEarnings,
+    totalEarnings: totalEarnings,
     earningsGrowth: 12.5, // Mock for now
     subscribers: activeSubsCount,
     subscriberGrowth: 8.2, // Mock for now
@@ -72,16 +79,16 @@ export default function DashboardPage() {
 
   // Mock revenue data (can be improved later with historical tracking)
   const revenueData = [
-    { month: 'Jan', amount: estimatedMonthlyEarnings * 0.7, progress: 70 },
-    { month: 'Feb', amount: estimatedMonthlyEarnings * 0.8, progress: 80 },
-    { month: 'Mar', amount: estimatedMonthlyEarnings * 0.9, progress: 90 },
-    { month: 'Current', amount: estimatedMonthlyEarnings, progress: 100 },
+    { month: 'Jan', amount: totalEarnings * 0.7, progress: 70 },
+    { month: 'Feb', amount: totalEarnings * 0.8, progress: 80 },
+    { month: 'Mar', amount: totalEarnings * 0.9, progress: 90 },
+    { month: 'Current', amount: totalEarnings, progress: 100 },
   ];
 
   const monthlyGoal = {
-    current: estimatedMonthlyEarnings,
-    target: Math.max(estimatedMonthlyEarnings * 1.5, 1000),
-    percentage: Math.min(Math.round((estimatedMonthlyEarnings / Math.max(estimatedMonthlyEarnings * 1.5, 1000)) * 100), 100),
+    current: totalEarnings,
+    target: Math.max(totalEarnings * 1.5, 1000),
+    percentage: Math.min(Math.round((totalEarnings / Math.max(totalEarnings * 1.5, 1000)) * 100), 100),
   };
 
   if (loading) {
@@ -242,33 +249,70 @@ export default function DashboardPage() {
               <div className="lg:col-span-2 bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
                 <div className="flex items-center justify-between mb-8">
                   <h2 className="text-xl font-bold text-[#101828]">
-                    Revenue History
+                    Revenue Breakdown
                   </h2>
                   <select className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium outline-none text-[#101828]">
-                    <option>Last 6 Months</option>
-                    <option>Last Year</option>
+                    <option>All Time</option>
                   </select>
                 </div>
-                <div className="space-y-6">
-                  {revenueData.map((item, index) => (
-                    <div key={index}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-bold text-[#475467]">
-                          {item.month}
-                        </span>
-                        <span className="text-base font-bold text-[#101828]">
-                          ${item.amount.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-purple-600 rounded-full transition-all duration-1000"
-                          style={{ width: `${item.progress}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                
+                {earningsBreakdown ? (
+                  <div className="space-y-6">
+                    {[
+                      { label: 'Subscriptions', key: 'subscription', color: 'bg-purple-600' },
+                      { label: 'Tips & Donations', key: 'tip', color: 'bg-yellow-500' },
+                      { label: 'Message Unlocks', key: 'message_unlock', color: 'bg-pink-500' },
+                      { label: 'Calls', key: 'call', color: 'bg-blue-500' },
+                    ].map((item) => {
+                      const amount = earningsBreakdown[item.key] || 0;
+                      // Avoid division by zero
+                      const total = earningsBreakdown.total || 1; 
+                      const percentage = Math.round((amount / total) * 100);
+                      
+                      return (
+                        <div key={item.key}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-bold text-[#475467]">
+                              {item.label}
+                            </span>
+                            <div className="text-right">
+                              <span className="text-sm font-bold text-[#101828] block">
+                                ${(amount / 100).toFixed(2)}
+                              </span>
+                              <span className="text-xs text-gray-500 font-medium">
+                                {percentage}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full ${item.color} rounded-full transition-all duration-1000`}
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Other category if relevant */}
+                    {earningsBreakdown.other > 0 && (
+                       <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-bold text-[#475467]">Other</span>
+                            <span className="text-sm font-bold text-[#101828]">${(earningsBreakdown.other / 100).toFixed(2)}</span>
+                          </div>
+                          <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden">
+                             <div className="h-full bg-gray-400 rounded-full" style={{ width: `${Math.round((earningsBreakdown.other / (earningsBreakdown.total||1)) * 100)}%` }}></div>
+                          </div>
+                       </div>
+                    )}
+
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-48 text-gray-400">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                )}
               </div>
 
               {/* Quick Actions */}

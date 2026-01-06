@@ -21,7 +21,10 @@ import {
   Instagram,
   Twitter,
   LogOut,
-  Loader2
+
+  Loader2,
+  Phone,
+  Video
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { getCreatorProfile, updateUserProfile, createCreatorProfile } from '@/lib/db';
@@ -62,6 +65,11 @@ export default function SettingsPage() {
     website: '',
     location: '',
     bio: '',
+  });
+
+  const [callSettings, setCallSettings] = useState({
+    audioPerMinute: 0,
+    videoPerMinute: 0,
   });
 
   const [accountSettings, setAccountSettings] = useState({
@@ -116,6 +124,12 @@ export default function SettingsPage() {
           if (creator) {
             initialData.bio = creator.bio || '';
             initialData.website = creator.website || '';
+            if (creator.callPrices) {
+              setCallSettings({
+                audioPerMinute: creator.callPrices.audioPerMinute || 0,
+                videoPerMinute: creator.callPrices.videoPerMinute || 0,
+              });
+            }
           }
         }
 
@@ -136,7 +150,9 @@ export default function SettingsPage() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'privacy', label: 'Privacy', icon: Lock },
     { id: 'billing', label: 'Billing', icon: DollarSign },
+    { id: 'billing', label: 'Billing', icon: DollarSign },
     { id: 'plans', label: 'Plans', icon: Package },
+    ...(userProfile?.role === 'creator' ? [{ id: 'calls', label: 'Call Settings', icon: Phone }] : []),
   ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -198,6 +214,10 @@ export default function SettingsPage() {
         await createCreatorProfile(user.uid, {
           bio: formData.bio,
           website: formData.website,
+          callPrices: {
+            audioPerMinute: Number(callSettings.audioPerMinute),
+            videoPerMinute: Number(callSettings.videoPerMinute),
+          }
         });
       }
 
@@ -851,6 +871,92 @@ export default function SettingsPage() {
                   </p>
                 </div>
                   )}
+
+              {activeTab === 'calls' && (
+                <div>
+                  <h2 className="text-2xl font-normal text-[#101828] mb-8" style={{ fontFamily: 'Inter, sans-serif' }}>
+                    Call Settings
+                  </h2>
+                  <p className="text-sm font-normal text-[#4a5565] mb-8" style={{ fontFamily: 'Inter, sans-serif' }}>
+                    Set your rates for 1-on-1 calls. You will be paid per minute of the call duration.
+                  </p>
+
+                  <form onSubmit={handleSubmit} className="space-y-6 max-w-xl">
+                    <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6 space-y-6">
+                      
+                      {/* Audio Call Price */}
+                      <div>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
+                            <Phone className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-[#364153]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                              Audio Call Price (per minute)
+                            </label>
+                            <p className="text-xs text-[#667085]">0 to disable audio calls</p>
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={callSettings.audioPerMinute}
+                            onChange={(e) => setCallSettings(prev => ({ ...prev, audioPerMinute: parseFloat(e.target.value) || 0 }))}
+                            className="w-full pl-8 pr-3 py-2 bg-white border border-[#e5e7eb] rounded-[10px] text-sm font-normal text-[#0a0a0a] focus:outline-none focus:ring-2 focus:ring-[#9810fa]"
+                            style={{ fontFamily: 'Inter, sans-serif' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-gray-100"></div>
+
+                      {/* Video Call Price */}
+                      <div>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-pink-50 rounded-lg text-pink-600">
+                             <Video className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-[#364153]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                              Video Call Price (per minute)
+                            </label>
+                            <p className="text-xs text-[#667085]">0 to disable video calls</p>
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={callSettings.videoPerMinute}
+                            onChange={(e) => setCallSettings(prev => ({ ...prev, videoPerMinute: parseFloat(e.target.value) || 0 }))}
+                            className="w-full pl-8 pr-3 py-2 bg-white border border-[#e5e7eb] rounded-[10px] text-sm font-normal text-[#0a0a0a] focus:outline-none focus:ring-2 focus:ring-[#9810fa]"
+                            style={{ fontFamily: 'Inter, sans-serif' }}
+                          />
+                        </div>
+                      </div>
+
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#ad46ff] to-[#f6339a] text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+                        style={{ fontFamily: 'Inter, sans-serif' }}
+                      >
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {saving ? 'Saving...' : 'Save Call Rates'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
                 </>
               )}
             </div>

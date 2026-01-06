@@ -11,7 +11,7 @@ export function useUsersInfo(userIds: string[]) {
 
   useEffect(() => {
     if (!userIds || userIds.length === 0) {
-      setUsers({});
+      // Don't set state synchronously
       return;
     }
 
@@ -51,7 +51,8 @@ export function useUsersInfo(userIds: string[]) {
       unsubscribes.forEach(unsub => unsub());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(userIds)]); // Re-run if ID list changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(userIds)]);
 
   return { users, loading };
 }

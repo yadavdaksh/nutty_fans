@@ -63,6 +63,8 @@ export default function Header() {
   };
 
   if (isAdminPage) return null;
+  // Hide header for regular users as they have the sidebar
+  if (userProfile?.role === 'user') return null;
 
   return (
     <header 
