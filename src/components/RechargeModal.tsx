@@ -119,7 +119,7 @@ export default function RechargeModal({ isOpen, onClose, onSuccess }: RechargeMo
                 type="recharge"
                 creatorId="system"
                 creatorName="NuttyFans Wallet"
-                onSuccess={() => {
+                onSuccess={async () => {
                    toast.success("Wallet recharged successfully! 🚀");
                    onSuccess?.();
                    onClose();

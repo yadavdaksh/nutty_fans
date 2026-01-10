@@ -3,7 +3,7 @@
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
-import { getCreatorProfile, getEarningsBreakdown } from '@/lib/db';
+import { getCreatorProfile, getEarningsBreakdown, getUserFeed, Post, EarningsBreakdown } from '@/lib/db';
 import { useEffect, useState } from 'react';
 import { 
   Upload,
@@ -16,7 +16,6 @@ import {
   Eye,
   TrendingUp,
   Loader2,
-  Plus,
   Sparkles,
   Image as ImageIcon
 } from 'lucide-react';
@@ -31,11 +30,33 @@ import { formatDistanceToNow } from 'date-fns';
 export default function DashboardPage() {
   const { user, userProfile } = useAuth();
   const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
-  const [earningsBreakdown, setEarningsBreakdown] = useState<any>(null);
+  const [earningsBreakdown, setEarningsBreakdown] = useState<EarningsBreakdown | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   
   const { subscribers, loading: subsLoading } = useSubscriptions(undefined, user?.uid);
   const { posts: myPosts, loading: postsLoading } = usePosts(user?.uid);
+  
+  // User Feed State
+  const [feedPosts, setFeedPosts] = useState<Post[]>([]);
+  const [isGlobalFeed, setIsGlobalFeed] = useState(false);
+  const [feedLoading, setFeedLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFeed = async () => {
+      if (user && userProfile?.role !== 'creator') {
+        try {
+          const { posts, isGlobal } = await getUserFeed(user.uid);
+          setFeedPosts(posts);
+          setIsGlobalFeed(isGlobal);
+        } catch (error) {
+          console.error("Failed to load feed:", error);
+        } finally {
+          setFeedLoading(false);
+        }
+      }
+    };
+    loadFeed();
+  }, [user, userProfile]);
 
   useEffect(() => {
     const fetchCreatorProfile = async () => {
@@ -66,24 +87,25 @@ export default function DashboardPage() {
   // Fallback to estimated if 0 (optional, but for now let's show real)
   const totalEarnings = realEarnings;
 
+  // Calculate engagement rate
+  const totalLikes = myPosts.reduce((acc, post) => acc + (post.likesCount || 0), 0);
+  const totalComments = myPosts.reduce((acc, post) => acc + (post.commentsCount || 0), 0);
+  const calculatedEngagement = activeSubsCount > 0 
+    ? ((totalLikes + totalComments) / activeSubsCount) * 100 
+    : 0;
+
   const stats = {
     totalEarnings: totalEarnings,
-    earningsGrowth: 12.5, // Mock for now
+    earningsGrowth: 0,
     subscribers: activeSubsCount,
-    subscriberGrowth: 8.2, // Mock for now
+    subscriberGrowth: 0,
     totalViews: creatorProfile?.profileViews || 0,
-    viewsGrowth: 15.3, // Mock for now
-    engagementRate: 89, // Mock for now
-    engagementGrowth: -2.1, // Mock for now
+    viewsGrowth: 0,
+    engagementRate: calculatedEngagement.toFixed(1),
+    engagementGrowth: 0,
   };
 
-  // Mock revenue data (can be improved later with historical tracking)
-  const revenueData = [
-    { month: 'Jan', amount: totalEarnings * 0.7, progress: 70 },
-    { month: 'Feb', amount: totalEarnings * 0.8, progress: 80 },
-    { month: 'Mar', amount: totalEarnings * 0.9, progress: 90 },
-    { month: 'Current', amount: totalEarnings, progress: 100 },
-  ];
+
 
   const monthlyGoal = {
     current: totalEarnings,
@@ -105,25 +127,68 @@ export default function DashboardPage() {
   if (userProfile?.role !== 'creator') {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-[#f9fafb] py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-2xl mx-auto bg-white rounded-3xl border border-gray-200 p-12 text-center shadow-sm">
-              <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Sparkles className="w-10 h-10 text-purple-600" />
+        <div className="flex min-h-screen bg-[#f9fafb]">
+          <Sidebar />
+          <div className="flex-1">
+            <div className="px-8 py-10 max-w-4xl mx-auto">
+              {/* User Header */}
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-[#101828] mb-2">
+                    {isGlobalFeed ? 'Explore' : 'Your Feed'}
+                  </h1>
+                  <p className="text-[#475467]">
+                    {isGlobalFeed 
+                      ? 'Discover trending content from top creators.' 
+                      : 'Latest posts from creators you subscribe to.'}
+                  </p>
+                </div>
+                 <Link
+                  href="/onboarding/creator"
+                  className="bg-white border border-gray-200 text-[#344054] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  Become a Creator
+                </Link>
               </div>
-              <h1 className="text-3xl font-bold text-[#101828] mb-4">
-                Welcome, {user?.displayName || 'User'}!
-              </h1>
-              <p className="text-lg text-[#475467] mb-10">
-                You&apos;re currently in Fan mode. Start your creator journey today and share your exclusive content with the world.
-              </p>
-              <Link
-                href="/onboarding/creator"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-full font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all"
-              >
-                Become a Creator
-                <Plus className="w-5 h-5" />
-              </Link>
+
+              {/* Feed Content */}
+              {feedLoading ? (
+                <div className="flex justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                </div>
+              ) : feedPosts.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center">
+                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                     <Users className="w-8 h-8 text-gray-400" />
+                   </div>
+                   <h3 className="text-lg font-bold text-[#101828] mb-2">No posts found</h3>
+                   <p className="text-[#475467] mb-6">
+                     {isGlobalFeed ? "Check back later for new content." : "Subscribe to creators to see their posts here!"}
+                   </p>
+                   {!isGlobalFeed && (
+                     <Link
+                      href="/discover"
+                      className="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-purple-700 transition-colors"
+                    >
+                      Browse Creators
+                    </Link>
+                   )}
+                </div>
+              ) : (
+                <>
+                  {isGlobalFeed && (
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-4 mb-8 flex items-start gap-3">
+                      <Sparkles className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-bold text-purple-900 text-sm">You are viewing the Global Feed</h4>
+                        <p className="text-purple-700 text-sm">Subscribe to creators to customize this feed with their exclusive content.</p>
+                      </div>
+                    </div>
+                  )}
+                  <PostGrid posts={feedPosts} />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -164,12 +229,14 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
                     <DollarSign className="w-6 h-6 text-green-600" />
                   </div>
-                  <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-lg">
-                    <ArrowUpRight className="w-3.5 h-3.5 text-green-600" />
-                    <span className="text-xs font-bold text-green-600">
-                      +{stats.earningsGrowth}%
-                    </span>
-                  </div>
+                  {stats.earningsGrowth !== 0 && (
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${stats.earningsGrowth > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                      {stats.earningsGrowth > 0 ? <ArrowUpRight className="w-3.5 h-3.5 text-green-600" /> : <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />}
+                      <span className={`text-xs font-bold ${stats.earningsGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {stats.earningsGrowth > 0 ? '+' : ''}{stats.earningsGrowth}%
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-3xl font-bold text-[#101828] mb-1">
                   ${stats.totalEarnings.toLocaleString()}
@@ -185,12 +252,14 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
                     <Users className="w-6 h-6 text-purple-600" />
                   </div>
-                  <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-lg">
-                    <ArrowUpRight className="w-3.5 h-3.5 text-green-600" />
-                    <span className="text-xs font-bold text-green-600">
-                      +{stats.subscriberGrowth}%
-                    </span>
-                  </div>
+                  {stats.subscriberGrowth !== 0 && (
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${stats.subscriberGrowth > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                      {stats.subscriberGrowth > 0 ? <ArrowUpRight className="w-3.5 h-3.5 text-green-600" /> : <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />}
+                      <span className={`text-xs font-bold ${stats.subscriberGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {stats.subscriberGrowth > 0 ? '+' : ''}{stats.subscriberGrowth}%
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-3xl font-bold text-[#101828] mb-1">
                   {stats.subscribers.toLocaleString()}
@@ -206,12 +275,14 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
                     <Eye className="w-6 h-6 text-blue-600" />
                   </div>
-                  <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-lg">
-                    <ArrowUpRight className="w-3.5 h-3.5 text-green-600" />
-                    <span className="text-xs font-bold text-green-600">
-                      +{stats.viewsGrowth}%
-                    </span>
-                  </div>
+                  {stats.viewsGrowth !== 0 && (
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${stats.viewsGrowth > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                      {stats.viewsGrowth > 0 ? <ArrowUpRight className="w-3.5 h-3.5 text-green-600" /> : <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />}
+                      <span className={`text-xs font-bold ${stats.viewsGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {stats.viewsGrowth > 0 ? '+' : ''}{stats.viewsGrowth}%
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-3xl font-bold text-[#101828] mb-1">
                   {stats.totalViews >= 1000 ? `${(stats.totalViews / 1000).toFixed(1)}K` : stats.totalViews.toLocaleString()}
@@ -227,12 +298,14 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
                     <TrendingUp className="w-6 h-6 text-orange-600" />
                   </div>
-                  <div className="flex items-center gap-1 px-2 py-1 bg-red-50 rounded-lg">
-                    <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />
-                    <span className="text-xs font-bold text-red-600">
-                      {stats.engagementGrowth}%
-                    </span>
-                  </div>
+                  {stats.engagementGrowth !== 0 && (
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${stats.engagementGrowth > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                      {stats.engagementGrowth > 0 ? <ArrowUpRight className="w-3.5 h-3.5 text-green-600" /> : <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />}
+                      <span className={`text-xs font-bold ${stats.engagementGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {stats.engagementGrowth > 0 ? '+' : ''}{stats.engagementGrowth}%
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-3xl font-bold text-[#101828] mb-1">
                   {stats.engagementRate}%

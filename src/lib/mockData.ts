@@ -29,6 +29,9 @@ export const MOCK_CREATORS: (CreatorProfile & { user: UserProfile })[] = [
       photoURL: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
       role: 'creator',
       isAgeVerified: true,
+      emailVerified: true,
+      onboardingCompleted: true,
+      onboardingStep: 8,
       createdAt: createTimestamp(100),
       updatedAt: createTimestamp(0)
     }
@@ -53,6 +56,9 @@ export const MOCK_CREATORS: (CreatorProfile & { user: UserProfile })[] = [
       photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
       role: 'creator',
       isAgeVerified: true,
+      emailVerified: true,
+      onboardingCompleted: true,
+      onboardingStep: 8,
       createdAt: createTimestamp(150),
       updatedAt: createTimestamp(0)
     }
@@ -77,6 +83,9 @@ export const MOCK_CREATORS: (CreatorProfile & { user: UserProfile })[] = [
       photoURL: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop',
       role: 'creator',
       isAgeVerified: true,
+      emailVerified: true,
+      onboardingCompleted: true,
+      onboardingStep: 8,
       createdAt: createTimestamp(200),
       updatedAt: createTimestamp(0)
     }

@@ -68,8 +68,8 @@ export default function SettingsPage() {
   });
 
   const [callSettings, setCallSettings] = useState({
-    audioPerMinute: 0,
-    videoPerMinute: 0,
+    audioPerMinute: 1,
+    videoPerMinute: 1,
   });
 
   const [accountSettings, setAccountSettings] = useState({
@@ -126,8 +126,13 @@ export default function SettingsPage() {
             initialData.website = creator.website || '';
             if (creator.callPrices) {
               setCallSettings({
-                audioPerMinute: creator.callPrices.audioPerMinute || 0,
-                videoPerMinute: creator.callPrices.videoPerMinute || 0,
+                audioPerMinute: creator.callPrices.audioPerMinute || 1,
+                videoPerMinute: creator.callPrices.videoPerMinute || 1,
+              });
+            } else {
+              setCallSettings({
+                audioPerMinute: 1,
+                videoPerMinute: 1,
               });
             }
           }
@@ -211,12 +216,23 @@ export default function SettingsPage() {
 
       // 3. Update Firestore CreatorProfile (if creator)
       if (userProfile?.role === 'creator') {
+        // Validation
+        const audio = Number(callSettings.audioPerMinute);
+        const video = Number(callSettings.videoPerMinute);
+
+        if (audio < 1 || audio > 10) {
+          throw new Error("Audio call price must be between $1 and $10 per minute.");
+        }
+        if (video < 1 || video > 20) {
+          throw new Error("Video call price must be between $1 and $20 per minute.");
+        }
+
         await createCreatorProfile(user.uid, {
           bio: formData.bio,
           website: formData.website,
           callPrices: {
-            audioPerMinute: Number(callSettings.audioPerMinute),
-            videoPerMinute: Number(callSettings.videoPerMinute),
+            audioPerMinute: audio,
+            videoPerMinute: video,
           }
         });
       }
@@ -894,14 +910,15 @@ export default function SettingsPage() {
                             <label className="block text-sm font-semibold text-[#364153]" style={{ fontFamily: 'Inter, sans-serif' }}>
                               Audio Call Price (per minute)
                             </label>
-                            <p className="text-xs text-[#667085]">0 to disable audio calls</p>
+                            <p className="text-xs text-[#667085]">Min $1.00 — Max $10.00 per minute</p>
                           </div>
                         </div>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                           <input
                             type="number"
-                            min="0"
+                            min="1"
+                            max="10"
                             step="0.01"
                             value={callSettings.audioPerMinute}
                             onChange={(e) => setCallSettings(prev => ({ ...prev, audioPerMinute: parseFloat(e.target.value) || 0 }))}
@@ -923,14 +940,15 @@ export default function SettingsPage() {
                             <label className="block text-sm font-semibold text-[#364153]" style={{ fontFamily: 'Inter, sans-serif' }}>
                               Video Call Price (per minute)
                             </label>
-                            <p className="text-xs text-[#667085]">0 to disable video calls</p>
+                            <p className="text-xs text-[#667085]">Min $1.00 — Max $20.00 per minute</p>
                           </div>
                         </div>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                           <input
                             type="number"
-                            min="0"
+                            min="1"
+                            max="20"
                             step="0.01"
                             value={callSettings.videoPerMinute}
                             onChange={(e) => setCallSettings(prev => ({ ...prev, videoPerMinute: parseFloat(e.target.value) || 0 }))}

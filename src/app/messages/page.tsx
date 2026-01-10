@@ -13,7 +13,7 @@ import {
   setUserOnlineStatus,
   unlockMessage
 } from '@/lib/messaging';
-import { getWalletBalance, processTransaction } from '@/lib/db';
+import { getWalletBalance, processTransaction, getCreatorProfile, CreatorProfile, Conversation } from '@/lib/db';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Smile, Send, MessageSquare, Image as ImageIcon, Lock, X, Camera, Phone, Video, Loader2 } from 'lucide-react';
 import { useCall } from '@/hooks/useCall';
@@ -21,7 +21,6 @@ import { format } from 'date-fns';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
-import { Conversation } from '@/lib/db';
 
 type ParticipantMetadata = {
   displayName: string;
@@ -146,6 +145,22 @@ export default function MessagesPage() {
     }
   }, [user]);
 
+  // Fetch Creator Profile for Call Prices
+  const [recipientCreatorProfile, setRecipientCreatorProfile] = useState<CreatorProfile | null>(null);
+  
+  useEffect(() => {
+    const fetchRecipientCreator = async () => {
+      const recipientId = activeConversation?.participants.find((p: string) => p !== user?.uid);
+      if (recipientId) {
+        const profile = await getCreatorProfile(recipientId);
+        setRecipientCreatorProfile(profile);
+      } else {
+        setRecipientCreatorProfile(null);
+      }
+    };
+    fetchRecipientCreator();
+  }, [activeChatId, activeConversation, user]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handlers: Record<string, (e: KeyboardEvent) => void> = {
@@ -160,31 +175,9 @@ export default function MessagesPage() {
   const { uploadFile, isUploading } = useStorage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleVoiceCall = async () => {
-    if (!activeChatId || !user?.uid) return;
-    
-    // Check for minimum balance ($5.00)
-    const balance = await getWalletBalance(user.uid);
-    if (balance < 500) { // 500 cents
-      toast.error("Insufficient balance for call. Minimum $5.00 required.");
-      return;
-    }
 
-    startCall(activeChatId, 'voice');
-  };
 
-  const handleVideoCall = async () => {
-    if (!activeChatId || !user?.uid) return;
 
-    // Check for minimum balance ($10.00 for video)
-    const balance = await getWalletBalance(user.uid);
-    if (balance < 1000) { // 1000 cents
-      toast.error("Insufficient balance for video call. Minimum $10.00 required.");
-      return;
-    }
-
-    startCall(activeChatId, 'video');
-  };
   const handleImageClick = () => {
     fileInputRef.current?.click();
   };
@@ -486,60 +479,76 @@ export default function MessagesPage() {
                           </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {userProfile?.role !== 'creator' && (
-                          <>
-                            <div className="group relative">
-                              <button 
-                                onClick={() => {
-                                   const recipientId = activeConversation?.participants.find((p: string) => p !== user?.uid);
-                                   if (recipientId && user?.uid) {
-                                      startCall(
-                                        user.uid, 
-                                        recipientId, 
-                                        'audio', 
-                                        2.00, 
-                                        user.displayName || 'User',
-                                        user.photoURL || undefined
-                                      );
-                                   }
-                                }}
-                                disabled={callLoading}
-                                className="p-2 text-gray-400 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50"
-                                title="Start Audio Call"
-                              >
-                                {callLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Phone className="w-5 h-5" />}
-                              </button>
-                              <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                                $2.00/min
-                              </span>
-                            </div>
-                            <div className="group relative">
-                              <button 
-                                onClick={() => {
-                                   const recipientId = activeConversation?.participants.find((p: string) => p !== user?.uid);
-                                   if (recipientId && user?.uid) {
-                                      startCall(
-                                        user.uid, 
-                                        recipientId, 
-                                        'video', 
-                                        5.00,
-                                        user.displayName || 'User',
-                                        user.photoURL || undefined
-                                      );
-                                   }
-                                }}
-                                disabled={callLoading}
-                                className="p-2 text-gray-400 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50"
-                                title="Start Video Call"
-                              >
-                                {callLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
-                              </button>
-                              <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                                $5.00/min
-                              </span>
-                            </div>
-                          </>
-                        )}
+                        {(() => {
+                           const recipientId = activeConversation?.participants.find((p: string) => p !== user?.uid);
+                           const recipientUser = recipientId ? liveUsers[recipientId] : null;
+                           const isRecipientCreator = recipientUser?.role === 'creator';
+                           
+                           if (userProfile?.role === 'creator' || !isRecipientCreator) return null;
+
+                           const audioPrice = recipientCreatorProfile?.callPrices?.audioPerMinute ?? 2.00;
+                           const videoPrice = recipientCreatorProfile?.callPrices?.videoPerMinute ?? 5.00;
+
+                           return (
+                             <>
+                               {/* Audio Call Button */}
+                               {audioPrice > 0 && (
+                                 <div className="group relative">
+                                   <button 
+                                     onClick={() => {
+                                       if (recipientId && user?.uid) {
+                                           startCall(
+                                             user.uid, 
+                                             recipientId, 
+                                             'audio', 
+                                             audioPrice, 
+                                             user.displayName || 'User',
+                                             user.photoURL || undefined
+                                           );
+                                       }
+                                     }}
+                                     disabled={callLoading}
+                                     className="p-2 text-gray-400 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50"
+                                     title="Start Audio Call"
+                                   >
+                                     {callLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Phone className="w-5 h-5" />}
+                                   </button>
+                                   <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                     ${audioPrice.toFixed(2)}/min
+                                   </span>
+                                 </div>
+                               )}
+
+                               {/* Video Call Button */}
+                               {videoPrice > 0 && (
+                                 <div className="group relative">
+                                   <button 
+                                     onClick={() => {
+                                       if (recipientId && user?.uid) {
+                                           startCall(
+                                             user.uid, 
+                                             recipientId, 
+                                             'video', 
+                                             videoPrice,
+                                             user.displayName || 'User',
+                                             user.photoURL || undefined
+                                           );
+                                       }
+                                     }}
+                                     disabled={callLoading}
+                                     className="p-2 text-gray-400 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50"
+                                     title="Start Video Call"
+                                   >
+                                     {callLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
+                                   </button>
+                                   <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                     ${videoPrice.toFixed(2)}/min
+                                   </span>
+                                 </div>
+                               )}
+                             </>
+                           );
+                        })()}
                         <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50">
                           <MoreVertical className="w-5 h-5" />
                         </button>

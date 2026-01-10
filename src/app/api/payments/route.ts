@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { squareClient } from '@/lib/square';
-import { getUserProfile, addFunds } from '@/lib/db';
-import { useAuth } from '@/context/AuthContext'; // This is client side, mistake. Need to verify user session server side or trust input for now (MVP). 
+import { addFunds } from '@/lib/db'; 
 // Correction: We cannot use useAuth hook in API route. We will rely on passed userId or verify session if we had session cookies.
 // For now, we will trust the userId passed in body (MVP) or verify firebase token if we implement that.
 
@@ -41,6 +40,7 @@ export async function POST(request: Request) {
     // If response is the body, it has .payment.
     
     // Check if result is wrapped or direct
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payment = (response as any).payment || (response as any).result?.payment || (response as any).body?.payment;
     
     console.log('Payment processed:', { 
@@ -87,10 +87,10 @@ export async function POST(request: Request) {
       ))
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Square Payment Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Payment processing failed' },
+      { error: (error as Error).message || 'Payment processing failed' },
       { status: 500 }
     );
   }

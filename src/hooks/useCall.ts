@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { db } from '@/lib/db';
+import { db, getWalletBalance } from '@/lib/db';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { getConversationId, logSystemMessage } from '@/lib/messaging';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 
 export function useCall() {
   const router = useRouter();
@@ -13,6 +14,16 @@ export function useCall() {
   const startCall = async (callerId: string, receiverId: string, type: 'audio' | 'video', price: number, callerName: string, callerPhotoURL?: string) => {
     try {
       setLoading(true);
+
+      // 1. Wallet Balance Check (Must have at least 1 minute)
+      const balance = await getWalletBalance(callerId);
+      const minRequired = Math.round(price * 100); // 1 minute price in cents
+      
+      if (balance < minRequired) {
+        toast.error(`Insufficient balance. You need at least $${price.toFixed(2)} in your wallet to start this call.`);
+        setLoading(false);
+        return;
+      }
 
       // Check for existing calls (User is caller OR receiver)
       const callsRef = collection(db, 'calls');
@@ -68,7 +79,7 @@ export function useCall() {
       console.log("Blocking active calls:", activeCalls.length);
 
       if (activeCalls.length > 0) {
-        alert("You are already in a call! (Check Console for details)");
+        toast.error("You are already in a call!");
         setLoading(false);
         return;
       }
@@ -97,7 +108,7 @@ export function useCall() {
       }
     } catch (error) {
       console.error("Error starting call:", error);
-      alert("Failed to start call");
+      toast.error("Failed to start call");
     } finally {
       setLoading(false);
     }

@@ -37,22 +37,7 @@ export default function SignupPage() {
         displayName: data.fullName,
       });
 
-      // Send OTP
-      try {
-        await fetch('/api/auth/send-otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            email: userCredential.user.email, 
-            uid: userCredential.user.uid 
-          }),
-        });
-      } catch (e) {
-        console.error("Failed to send initial OTP", e);
-        // Continue anyway, they can resend on the next page
-      }
-
-      router.push('/verify-otp');
+      router.push('/onboarding');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Signup error:', error);

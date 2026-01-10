@@ -50,7 +50,7 @@ export function useUsersInfo(userIds: string[]) {
     return () => {
       unsubscribes.forEach(unsub => unsub());
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(userIds)]);
 

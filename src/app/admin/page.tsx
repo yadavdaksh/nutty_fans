@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import Link from 'next/link';
 import { 
   Users, 
   Star, 
@@ -11,8 +12,19 @@ import {
   Activity,
   ArrowUpRight,
   ArrowDownRight,
-  Loader2
+  Loader2,
+  Clock
 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { Timestamp } from 'firebase/firestore';
+import { startOfMonth, subMonths, endOfMonth } from 'date-fns';
+
+interface SystemActivity {
+  text: string;
+  time: string;
+  type: string;
+  timestamp: number;
+}
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState([
@@ -22,23 +34,130 @@ export default function AdminDashboard() {
     { label: 'Total Subscriptions', value: '0', trend: '...', icon: TrendingUp, positive: true },
   ]);
   const [loading, setLoading] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [activities, setActivities] = useState<SystemActivity[]>([]);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [usersSnap, creatorsSnap, subsSnap] = await Promise.all([
+        const [usersSnap, creatorsSnap, subsSnap, txsAllSnap] = await Promise.all([
           getDocs(collection(db, 'users')),
           getDocs(collection(db, 'creators')),
           getDocs(collection(db, 'subscriptions')),
+          getDocs(collection(db, 'wallet_transactions')),
         ]);
 
-        const totalRevenue = subsSnap.docs.reduce((acc, doc) => acc + Number(doc.data().price || 0), 0);
+        const now = new Date();
+        const thisMonthStart = startOfMonth(now);
+        const lastMonthStart = startOfMonth(subMonths(now, 1));
+        const lastMonthEnd = endOfMonth(subMonths(now, 1));
+
+        // 1. Calculate Monthly Revenue (from subscriptions + transactions if needed)
+        // For now, let's use subscription prices from subsSnap filtered by date
+        const monthlyRevenue = subsSnap.docs.reduce((acc, doc) => {
+          const data = doc.data();
+          const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(0);
+          if (createdAt >= thisMonthStart) {
+            return acc + Number(data.price || 0);
+          }
+          return acc;
+        }, 0);
+
+        const lastMonthRevenue = subsSnap.docs.reduce((acc, doc) => {
+          const data = doc.data();
+          const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(0);
+          if (createdAt >= lastMonthStart && createdAt <= lastMonthEnd) {
+            return acc + Number(data.price || 0);
+          }
+          return acc;
+        }, 0);
+
+        // 2. Calculate User Growth
+        const thisMonthUsers = usersSnap.docs.filter(doc => {
+          const createdAt = doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(0);
+          return createdAt >= thisMonthStart;
+        }).length;
+
+        const lastMonthUsers = usersSnap.docs.filter(doc => {
+          const createdAt = doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(0);
+          return createdAt >= lastMonthStart && createdAt <= lastMonthEnd;
+        }).length;
+
+        const userTrend = lastMonthUsers === 0 ? (thisMonthUsers > 0 ? 100 : 0) : Math.round(((thisMonthUsers - lastMonthUsers) / lastMonthUsers) * 100);
+        const revTrend = lastMonthRevenue === 0 ? (monthlyRevenue > 0 ? 100 : 0) : Math.round(((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100);
+
+        // 3. Pending Creators Count
+        const pendingSnap = await getDocs(query(collection(db, 'users'), where('verificationStatus', '==', 'pending')));
+        setPendingCount(pendingSnap.size);
+
+        // 4. Aggregate Recent Activities (restored from previous logic)
+        const recentActivities: SystemActivity[] = [];
+        // ... (activities logic remains the same, but let's re-add it carefully)
+        
+        // Fetch recent users
+        const usersRecent = usersSnap.docs
+          .sort((a, b) => (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0))
+          .slice(0, 5);
+          
+        usersRecent.forEach(doc => {
+          const data = doc.data();
+          const ts = data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : Date.now();
+          recentActivities.push({
+            text: `New user: ${data.displayName || 'Anonymous'}`,
+            time: formatDistanceToNow(ts) + ' ago',
+            type: 'user',
+            timestamp: ts
+          });
+        });
+
+        // Fetch recent transactions
+        const txRecent = txsAllSnap.docs
+          .sort((a, b) => (b.data().timestamp?.toMillis() || 0) - (a.data().timestamp?.toMillis() || 0))
+          .slice(0, 5);
+
+        txRecent.forEach(doc => {
+          const data = doc.data();
+          const ts = data.timestamp instanceof Timestamp ? data.timestamp.toMillis() : Date.now();
+          recentActivities.push({
+            text: `${data.description} ($${(data.amount / 100).toFixed(2)})`,
+            time: formatDistanceToNow(ts) + ' ago',
+            type: 'transaction',
+            timestamp: ts
+          });
+        });
+
+        const sorted = recentActivities.sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+        setActivities(sorted);
 
         setStats([
-          { label: 'Total Users', value: usersSnap.size.toLocaleString(), trend: '+0%', icon: Users, positive: true },
-          { label: 'Verified Creators', value: creatorsSnap.size.toLocaleString(), trend: '+0%', icon: Star, positive: true },
-          { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, trend: '+0%', icon: DollarSign, positive: true },
-          { label: 'Active Subscriptions', value: subsSnap.size.toLocaleString(), trend: '+0%', icon: TrendingUp, positive: true },
+          { 
+            label: 'Total Users', 
+            value: usersSnap.size.toLocaleString(), 
+            trend: `${userTrend >= 0 ? '+' : ''}${userTrend}%`, 
+            icon: Users, 
+            positive: userTrend >= 0 
+          },
+          { 
+            label: 'Verified Creators', 
+            value: creatorsSnap.size.toLocaleString(), 
+            trend: 'Stable', 
+            icon: Star, 
+            positive: true 
+          },
+          { 
+            label: 'Monthly Revenue', 
+            value: `$${monthlyRevenue.toLocaleString()}`, 
+            trend: `${revTrend >= 0 ? '+' : ''}${revTrend}%`, 
+            icon: DollarSign, 
+            positive: revTrend >= 0 
+          },
+          { 
+            label: 'Active Subscriptions', 
+            value: subsSnap.size.toLocaleString(), 
+            trend: 'Real-time', 
+            icon: TrendingUp, 
+            positive: true 
+          },
         ]);
         setLoading(false);
       } catch (error) {
@@ -99,20 +218,30 @@ export default function AdminDashboard() {
             <button className="text-sm text-indigo-600 font-semibold hover:underline">View All</button>
           </div>
           <div className="space-y-6">
-            {[
-              { text: 'New creator verification requested by Sarah Miller', time: '2 mins ago', type: 'verification' },
-              { text: 'Unusual payout request flagged for user ID #2384', time: '15 mins ago', type: 'alert' },
-              { text: 'System-wide coupon code "WELCOME10" was created', time: '1 hour ago', type: 'system' },
-              { text: 'New platform record: $10k revenue in 24 hours', time: '4 hours ago', type: 'record' },
-            ].map((item, i) => (
-              <div key={i} className="flex items-start gap-4">
-                <div className="w-2 h-2 rounded-full bg-indigo-500 mt-2" />
-                <div className="flex-1">
-                  <p className="text-sm text-gray-800 font-medium">{item.text}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{item.time}</p>
+            {activities.length === 0 ? (
+              <p className="text-gray-400 text-sm italic">No recent activity found.</p>
+            ) : (
+              activities.map((item, i) => (
+                <div key={i} className="flex items-start gap-4 animate-in slide-in-from-left duration-300" style={{ animationDelay: `${i * 100}ms` }}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center mt-1 shrink-0 ${
+                    item.type === 'user' ? 'bg-blue-50 text-blue-500' : 
+                    item.type === 'transaction' ? 'bg-green-50 text-green-500' : 
+                    'bg-purple-50 text-purple-500'
+                  }`}>
+                    {item.type === 'user' ? <Users className="w-4 h-4" /> : 
+                     item.type === 'transaction' ? <DollarSign className="w-4 h-4" /> : 
+                     <Star className="w-4 h-4" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-800 font-medium ">{item.text}</p>
+                    <div className="flex items-center gap-1.5 mt-1 text-gray-500">
+                      <Clock className="w-3.5 h-3.5" />
+                      <p className="text-xs uppercase tracking-wider font-bold opacity-60">{item.time}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -120,12 +249,17 @@ export default function AdminDashboard() {
         <div className="bg-[#1e1e2d] text-white rounded-2xl p-8 shadow-xl">
           <h3 className="text-lg font-bold mb-6">Quick Actions</h3>
           <div className="space-y-4">
-             <button className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-bold transition-colors">
+             <Link href="/admin/coupons" className="block w-full py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-bold transition-colors text-center">
                Create New Coupon
-             </button>
-             <button className="w-full py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-bold transition-colors">
+             </Link>
+             <Link href="/admin/verification" className="block w-full py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-bold transition-colors text-center relative group">
                Review Pending Creators
-             </button>
+               {pendingCount > 0 && (
+                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full shadow-lg border-2 border-[#1e1e2d] animate-bounce">
+                    {pendingCount}
+                  </span>
+               )}
+             </Link>
              <button className="w-full py-3 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded-xl font-bold transition-colors border border-red-500/20">
                System Maintenance
              </button>

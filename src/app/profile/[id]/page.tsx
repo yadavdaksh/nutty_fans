@@ -30,6 +30,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import CheckoutModal from '@/components/CheckoutModal';
 import TipModal from '@/components/TipModal';
+import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
   const { user, userProfile } = useAuth();

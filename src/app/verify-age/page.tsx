@@ -111,7 +111,7 @@ export default function VerifyAgePage() {
   const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
 
   return (
-    <div className="min-h-[calc(100vh-128px)] bg-gray-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gray-50 relative overflow-hidden">
       {/* Background with gradient overlay */}
       <div className="absolute inset-0 w-full h-full">
         <div className="absolute inset-0 w-full h-full">

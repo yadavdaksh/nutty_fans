@@ -13,10 +13,27 @@ import { Timestamp } from 'firebase/firestore';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import Link from 'next/link';
 import Image from 'next/image';
-
+import { cancelSubscription } from '@/lib/db';
+import { useState } from 'react';
 export default function SubscriptionPage() {
   const { user, userProfile } = useAuth();
   const { subscriptions, loading } = useSubscriptions(user?.uid);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  const handleCancel = async (subId: string) => {
+    if (!confirm('Are you sure you want to cancel this subscription?')) return;
+    
+    setCancellingId(subId);
+    try {
+      await cancelSubscription(subId);
+      // alert('Subscription cancelled successfully');
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      alert('Failed to cancel subscription. Please try again.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-[#fdfbfd]" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -137,8 +154,16 @@ export default function SubscriptionPage() {
                           View
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
-                        <button className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors">
-                          Cancel
+                        <button 
+                          onClick={() => handleCancel(sub.id)}
+                          disabled={cancellingId === sub.id}
+                          className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        >
+                          {cancellingId === sub.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            'Cancel'
+                          )}
                         </button>
                       </div>
                     </div>

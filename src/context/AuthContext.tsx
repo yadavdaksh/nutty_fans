@@ -42,11 +42,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const profile = await getUserProfile(uid);
       setUserProfile(profile);
       
-      // Set admin cookie for middleware
+      // Set cookies for middleware
       if (profile?.role === 'admin') {
         Cookies.set('is_admin', 'true', { expires: 7 });
       } else {
         Cookies.remove('is_admin');
+      }
+
+      if (profile?.onboardingCompleted) {
+        Cookies.set('onboarding_completed', 'true', { expires: 7 });
+        Cookies.set('user_role', profile.role, { expires: 7 });
+      } else {
+        Cookies.remove('onboarding_completed');
+        Cookies.remove('user_role');
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);

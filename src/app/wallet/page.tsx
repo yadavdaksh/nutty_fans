@@ -4,7 +4,7 @@ import Sidebar from '@/components/Sidebar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { useState, useEffect } from 'react';
-import { db, getWalletBalance, WalletTransaction } from '@/lib/db';
+import { db, WalletTransaction } from '@/lib/db';
 import { doc, onSnapshot, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { Wallet, Plus, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import RechargeModal from '@/components/RechargeModal';
@@ -114,7 +114,8 @@ export default function WalletPage() {
                             <div>
                                <p className="font-semibold text-gray-900">{tx.description}</p>
                                <p className="text-xs text-gray-500">
-                                 {tx.timestamp?.toDate ? format(tx.timestamp.toDate(), 'MMM d, yyyy h:mm a') : 'Just now'}
+                                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                 {tx.timestamp ? format((tx.timestamp as any)?.toDate?.() || new Date(), 'MMM d, yyyy h:mm a') : 'Just now'}
                                </p>
                             </div>
                          </div>

@@ -33,6 +33,7 @@ export default function SquarePaymentForm({
       <PaymentForm
         applicationId={process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID || ''}
         locationId={process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || ''}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         cardTokenizeResponseReceived={async (token: any, verifiedBuyer) => {
           setLoading(true);
           setError(null);

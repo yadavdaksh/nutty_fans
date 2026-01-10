@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserProfile } from '@/lib/db';
 
@@ -11,7 +11,7 @@ export interface ActiveStream {
   isActive: boolean;
   title: string;
   viewerCount: number;
-  startedAt: any; // Using any to bypass complex Firestore Timestamp type issues for now
+  startedAt: Timestamp | null;
   creator?: UserProfile;
 }
 

@@ -1,7 +1,8 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useChatNotifications } from "@/hooks/useChatNotifications";
@@ -11,11 +12,32 @@ import { Phone, Video, X, Check } from "lucide-react";
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const { user, userProfile, loading } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Verification Guard for Creators
+  useEffect(() => {
+    // Suspension Guard
+    if (!loading && userProfile?.verificationStatus === 'suspended') {
+      if (pathname !== '/suspended') {
+        router.push('/suspended');
+      }
+      return;
+    }
+
+    if (!loading && userProfile?.role === 'creator' && userProfile?.verificationStatus === 'pending') {
+      const allowedPaths = ['/verification-pending'];
+      const isAllowed = allowedPaths.some(path => pathname.startsWith(path));
+      
+      if (!isAllowed) {
+        router.push('/verification-pending');
+      }
+    }
+  }, [userProfile, pathname, loading, router]);
 
   useChatNotifications();
   const { incomingCall, acceptCall, rejectCall } = useIncomingCalls();
   
-  const isOnboarding = pathname.startsWith('/onboarding');
+  const isOnboarding = pathname.startsWith('/onboarding') || pathname.startsWith('/verify-age');
   const isCreator = userProfile?.role === 'creator';
   
   // Routes that have the Sidebar (Dashboard logic)
@@ -24,10 +46,15 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   
   // Routes that should be full screen (no header/footer)
   const isFullScreenPage = pathname === '/live/go-live' || (pathname.startsWith('/live/') && pathname.split('/').length === 3);
+  const isVerificationPending = userProfile?.role === 'creator' && userProfile?.verificationStatus === 'pending';
+  const isSuspended = userProfile?.verificationStatus === 'suspended';
+  const isVerificationPage = pathname.startsWith('/verification-pending');
+  const isSuspendedPage = pathname.startsWith('/suspended');
+  const isAdminPage = pathname.startsWith('/admin');
 
   // Creators should see the Header even on "sidebar pages" because they don't have a sidebar
-  const shouldHideHeader = isOnboarding || isFullScreenPage || (isSidebarPage && !isCreator);
-  const shouldHideFooter = isOnboarding || isFullScreenPage || pathname.startsWith('/messages'); // Hide footer on messages for full height chat
+  const shouldHideHeader = isOnboarding || isFullScreenPage || (isSidebarPage && !isCreator) || isVerificationPage || isVerificationPending || isSuspended || isSuspendedPage || isAdminPage;
+  const shouldHideFooter = isOnboarding || isFullScreenPage || pathname.startsWith('/messages') || isVerificationPage || isVerificationPending || isSuspended || isSuspendedPage || isAdminPage;
 
   if (loading) return null;
 

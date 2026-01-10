@@ -3,12 +3,11 @@
 import { formatDistanceToNow } from 'date-fns';
 import { 
   Heart, 
-  MessageCircle, 
-  Share2, 
   MoreHorizontal,
   Lock,
   Loader2 
 } from 'lucide-react';
+import { Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
@@ -24,7 +23,7 @@ interface Post {
   image?: string;
   likes: number;
   comments: number;
-  timestamp: any;
+  timestamp: Timestamp | Date | { toDate: () => Date };
   isLocked?: boolean;
   price?: number;
 }
@@ -40,6 +39,8 @@ export default function PostCard({ post }: { post: Post }) {
     setIsLiked(!isLiked);
     setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
   };
+
+
 
   const handleUnlock = async () => {
     if (!user) {
@@ -101,7 +102,13 @@ export default function PostCard({ post }: { post: Post }) {
           <div>
             <h3 className="font-bold text-gray-900">{post.creatorName}</h3>
             <p className="text-xs text-gray-500">
-              {formatDistanceToNow(post.timestamp?.toDate ? post.timestamp.toDate() : new Date(), { addSuffix: true })}
+              {formatDistanceToNow(
+                post.timestamp instanceof Date 
+                  ? post.timestamp 
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  : (post.timestamp as any)?.toDate?.() || new Date(), 
+                { addSuffix: true }
+              )}
             </p>
           </div>
         </div>
@@ -144,11 +151,11 @@ export default function PostCard({ post }: { post: Post }) {
       {/* Actions */}
         <div className="flex items-center gap-4 mb-4">
           <button 
-            onClick={() => setIsLiked(!isLiked)}
+            onClick={handleLike}
             className={`flex items-center gap-1.5 ${isLiked ? 'text-pink-600' : 'text-[#344054] hover:text-pink-600'} transition-colors`}
           >
             <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
-            <span className="text-sm font-semibold">{post.likesCount + (isLiked ? 1 : 0)}</span>
+            <span className="text-sm font-semibold">{likesCount + (isLiked ? 1 : 0)}</span>
           </button>
           
 
@@ -160,7 +167,7 @@ export default function PostCard({ post }: { post: Post }) {
         {post.content && (
           <div className="mb-2">
             <span className="font-bold text-[#101828] mr-2">
-              {creator?.displayName || 'Creator'}
+              {post.creatorName || 'Creator'}
             </span>
             <span className="text-[#344054] text-sm">
               {post.content}
@@ -168,6 +175,6 @@ export default function PostCard({ post }: { post: Post }) {
           </div>
         )}
       </div>
-    </div>
+
   );
 }

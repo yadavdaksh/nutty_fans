@@ -27,7 +27,6 @@ export default function CouponManagement() {
     discountType: 'percentage' as 'percentage' | 'fixed',
     discountValue: 0,
     expiryDate: '',
-    usageLimit: 0,
   });
 
   useEffect(() => {
@@ -60,7 +59,7 @@ export default function CouponManagement() {
         expiryDate: Timestamp.fromDate(new Date(newCoupon.expiryDate))
       });
       setIsModalOpen(false);
-      setNewCoupon({ code: '', discountType: 'percentage', discountValue: 0, expiryDate: '', usageLimit: 0 });
+      setNewCoupon({ code: '', discountType: 'percentage', discountValue: 0, expiryDate: '' });
     } catch (error) {
       console.error("Error creating coupon:", error);
       alert("Failed to create coupon");
@@ -137,13 +136,7 @@ export default function CouponManagement() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-gray-700">{coupon.usageCount} / {coupon.usageLimit}</span>
-                      <div className="w-24 h-1.5 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
-                        <div 
-                          className="h-full bg-indigo-500" 
-                          style={{ width: `${Math.min((coupon.usageCount / coupon.usageLimit) * 100, 100)}%` }}
-                        />
-                      </div>
+                      <span className="text-sm font-semibold text-gray-700">{coupon.usageCount} times</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -248,17 +241,6 @@ export default function CouponManagement() {
                     className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-900 placeholder:text-gray-400"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Total Usage Limit</label>
-                <input 
-                  required
-                  type="number" 
-                  value={newCoupon.usageLimit}
-                  placeholder="0"
-                  onChange={e => setNewCoupon({...newCoupon, usageLimit: Number(e.target.value)})}
-                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-900 placeholder:text-gray-400"
-                />
               </div>
               
               <button 

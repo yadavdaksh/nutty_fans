@@ -38,6 +38,7 @@ export interface StreamPurchase {
 }
 
 export type UserRole = 'user' | 'creator' | 'admin';
+export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
 export interface UserProfile {
   uid: string;
@@ -49,7 +50,11 @@ export interface UserProfile {
   photoURL?: string;
   role: UserRole;
   isAgeVerified: boolean;
+  emailVerified: boolean; // Added for strict auth
+  onboardingCompleted: boolean; // Added for strict auth
+  onboardingStep: number; // Added for strict auth
   walletBalance?: number;
+  verificationStatus?: VerificationStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -129,11 +134,22 @@ export const createCreatorProfile = async (userId: string, data: Partial<Creator
     userId,
     subscriberCount: 0,
     subscriptionTiers: [], // Default empty
+    callPrices: {
+      audioPerMinute: 1,
+      videoPerMinute: 1,
+    },
     ...data,
   }, { merge: true });
 
-  // Also update the user role to 'creator'
-  await updateUserProfile(userId, { role: 'creator' });
+  // Only update verification status if it's not already set
+  // This prevents resetting approved creators to 'pending' when they update settings
+  const currentProfile = await getUserProfile(userId);
+  if (currentProfile?.role !== 'creator' || !currentProfile?.verificationStatus) {
+    await updateUserProfile(userId, { 
+      role: 'creator',
+      verificationStatus: 'pending' 
+    });
+  }
 };
 
 export interface Post {
@@ -153,7 +169,7 @@ export interface Subscription {
   userId: string;
   creatorId: string;
   tierId: string;
-  status: 'active' | 'expired' | 'expiring';
+  status: 'active' | 'expired' | 'expiring' | 'cancelled';
   createdAt: Timestamp;
   expiresAt: Timestamp;
   price: string;
@@ -192,7 +208,6 @@ export interface Coupon {
   discountType: 'percentage' | 'fixed';
   discountValue: number;
   expiryDate: Timestamp | FieldValue | null;
-  usageLimit: number;
   usageCount: number;
   status: 'active' | 'inactive';
   createdAt: Timestamp | FieldValue | null;
@@ -281,6 +296,19 @@ export const createSubscription = async (
 };
 
 /**
+ * Cancels a subscription immediately by setting status to 'cancelled'.
+ */
+export const cancelSubscription = async (subscriptionId: string) => {
+  const subRef = doc(db, 'subscriptions', subscriptionId);
+  await updateDoc(subRef, {
+    status: 'cancelled',
+    // We could also set expiresAt to now if we want immediate revocation, 
+    // but typically we might want to keep it until the end of the period.
+    // For this MVP, we just mark it cancelled.
+  });
+};
+
+/**
  * Checks if a user is currently subscribed to a creator.
  */
 export const checkSubscriptionStatus = async (userId: string, creatorId: string): Promise<Subscription | null> => {
@@ -315,9 +343,6 @@ export const validateCoupon = async (code: string): Promise<Coupon | null> => {
   // Check Expiry
   if (coupon.expiryDate instanceof Timestamp && coupon.expiryDate.toDate() < new Date()) return null;
   
-  // Check Usage Limit
-  if (coupon.usageLimit > 0 && coupon.usageCount >= coupon.usageLimit) return null;
-  
   return coupon;
 };
 
@@ -343,6 +368,69 @@ export const createPost = async (postData: Omit<Post, 'id' | 'createdAt' | 'like
   return newPost;
 };
 
+// Get feed for a user
+export const getUserFeed = async (userId: string) => {
+  // 1. Get user's subscriptions
+  const subsRef = collection(db, 'subscriptions');
+  const subsQ = query(
+    subsRef,
+    where('userId', '==', userId),
+    where('status', 'in', ['active', 'expiring']) // active and expiring are valid
+  );
+  
+  const subsSnap = await getDocs(subsQ);
+  const subs = subsSnap.docs.map(doc => doc.data() as Subscription);
+  const creatorIds = subs.map(s => s.creatorId);
+
+  const postsRef = collection(db, 'posts');
+  let postsQ;
+
+  if (creatorIds.length > 0) {
+    // Limited to 10 for 'in' query limitation in Firestore (MVP constraint)
+    // We could chunk this or use a different strategy for production
+    const validCreatorIds = creatorIds.slice(0, 10);
+    postsQ = query(
+      postsRef,
+      where('creatorId', 'in', validCreatorIds),
+      // orderBy requires an index on creatorId + createdAt. 
+      // If index missing, it might error. For now, we fetch and sort in memory if needed,
+      // but let's try ordering.
+      // Firestore requires "Index needed" if we mix equality on creatorId and sort on createdAt.
+      // We often can't do simple ORs. 
+      // Safe bet for MVP: don't orderBy in query if using 'in', just fetch and sort in JS
+      // unless we are sure about indexes.
+    );
+  } else {
+    // Global Feed (Active creators/Recent posts)
+    postsQ = query(
+      postsRef,
+      where('createdAt', '!=', null), // Ensure it exists
+      // orderBy('createdAt', 'desc'), // This requires composite index usually
+      // limit(20)
+    );
+  }
+
+  const postsSnap = await getDocs(postsQ);
+  
+  // Map and sort in memory (safe for MVP sizes)
+  const posts = postsSnap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+  } as Post));
+
+  // Sort by createdAt desc
+  posts.sort((a, b) => {
+     const tA = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : Date.now();
+     const tB = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : Date.now();
+     return tB - tA;
+  });
+
+  return {
+    posts: posts.slice(0, 20), // Limit to 20
+    isGlobal: creatorIds.length === 0
+  };
+};
+
 export interface Call {
   id: string;
   callerId: string;
@@ -363,7 +451,7 @@ export interface WalletTransaction {
   amount: number; // in cents
   description: string;
   timestamp: Timestamp | FieldValue;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export const getWalletBalance = async (userId: string): Promise<number> => {
@@ -375,7 +463,7 @@ export const getWalletBalance = async (userId: string): Promise<number> => {
   return 0;
 };
 
-export const addFunds = async (userId: string, amount: number, paymentId: string, description: string = 'Wallet Recharge', metadata: any = {}) => {
+export const addFunds = async (userId: string, amount: number, paymentId: string, description: string = 'Wallet Recharge', metadata: Record<string, unknown> = {}) => {
   const userRef = doc(db, 'users', userId);
   const transactionRef = collection(db, 'wallet_transactions');
 
@@ -402,10 +490,10 @@ export const addFunds = async (userId: string, amount: number, paymentId: string
   });
 };
 
-export const processTransaction = async (userId: string, amount: number, description: string, metadata: any = {}) => {
+export const processTransaction = async (userId: string, amount: number, description: string, metadata: Record<string, unknown> = {}) => {
   const userRef = doc(db, 'users', userId);
   const txCollectionRef = collection(db, 'wallet_transactions');
-  const creatorId = metadata?.creatorId;
+  const creatorId = metadata?.creatorId as string | undefined;
   const creatorRef = creatorId ? doc(db, 'users', creatorId) : null;
 
   return await runTransaction(db, async (transaction) => {
@@ -439,7 +527,7 @@ export const processTransaction = async (userId: string, amount: number, descrip
      // 2. Credit Creator
      if (creatorDoc && creatorDoc.exists()) {
         const creatorBalance = creatorDoc.data().walletBalance || 0;
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
         transaction.update(creatorRef!, { walletBalance: creatorBalance + amount });
 
         const creditTxRef = doc(txCollectionRef);

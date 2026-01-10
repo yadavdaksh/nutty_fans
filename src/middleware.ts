@@ -33,6 +33,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
+  // If already onboarding completed, redirect away from onboarding routes
+  const onboardingCompleted = request.cookies.get('onboarding_completed');
+  const userRole = request.cookies.get('user_role')?.value;
+  const onboardingRoutes = ['/onboarding', '/verify-otp', '/verify-age'];
+  const isOnboardingRoute = onboardingRoutes.some(route => pathname.startsWith(route));
+
+  if (isOnboardingRoute && onboardingCompleted) {
+    if (userRole === 'creator') {
+      return NextResponse.redirect(new URL('/verification-pending', request.url));
+    }
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
   return NextResponse.next();
 }
 
