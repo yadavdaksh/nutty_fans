@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import { useChatNotifications } from "@/hooks/useChatNotifications";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { Phone, Video, X, Check } from "lucide-react";
+import AdultDisclaimer from "@/components/modals/AdultDisclaimer";
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const { user, userProfile, loading } = useAuth();
@@ -61,6 +62,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   return (
     <>
       {!shouldHideHeader && <Header />}
+      <AdultDisclaimer />
       <main className="flex-grow">
         {children}
       </main>

@@ -484,7 +484,9 @@ export default function MessagesPage() {
                            const recipientUser = recipientId ? liveUsers[recipientId] : null;
                            const isRecipientCreator = recipientUser?.role === 'creator';
                            
-                           if (userProfile?.role === 'creator' || !isRecipientCreator) return null;
+                           const isCallsEnabled = recipientCreatorProfile?.isCallsEnabled !== false;
+                           
+                           if (userProfile?.role === 'creator' || !isRecipientCreator || !isCallsEnabled) return null;
 
                            const audioPrice = recipientCreatorProfile?.callPrices?.audioPerMinute ?? 2.00;
                            const videoPrice = recipientCreatorProfile?.callPrices?.videoPerMinute ?? 5.00;

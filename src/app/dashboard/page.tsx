@@ -3,7 +3,7 @@
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
-import { getCreatorProfile, getEarningsBreakdown, getUserFeed, Post, EarningsBreakdown } from '@/lib/db';
+import { getCreatorProfile, getEarningsBreakdown, getUserFeed, Post, EarningsBreakdown, createPayoutRequest } from '@/lib/db';
 import { useEffect, useState } from 'react';
 import { 
   Upload,
@@ -17,7 +17,11 @@ import {
   TrendingUp,
   Loader2,
   Sparkles,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Wallet,
+  X,
+  CreditCard,
+  AlertCircle
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -26,6 +30,7 @@ import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { usePosts } from '@/hooks/usePosts';
 import PostGrid from '@/components/PostGrid';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'react-hot-toast';
 
 export default function DashboardPage() {
   const { user, userProfile } = useAuth();
@@ -40,6 +45,11 @@ export default function DashboardPage() {
   const [feedPosts, setFeedPosts] = useState<Post[]>([]);
   const [isGlobalFeed, setIsGlobalFeed] = useState(false);
   const [feedLoading, setFeedLoading] = useState(true);
+
+  // Payout State
+  const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [isRequesting, setIsRequesting] = useState(false);
 
   useEffect(() => {
     const loadFeed = async () => {
@@ -104,8 +114,6 @@ export default function DashboardPage() {
     engagementRate: calculatedEngagement.toFixed(1),
     engagementGrowth: 0,
   };
-
-
 
   const monthlyGoal = {
     current: totalEarnings,
@@ -212,13 +220,15 @@ export default function DashboardPage() {
                   Welcome back, {user?.displayName}! Here&apos;s how your content is performing.
                 </p>
               </div>
-              <Link
-                href="/content"
-                className="flex items-center gap-2 bg-[#101828] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
-              >
-                <Upload className="w-4 h-4" />
-                Upload New Content
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/content"
+                  className="flex items-center gap-2 bg-[#101828] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload New Content
+                </Link>
+              </div>
             </div>
 
             {/* Stats Grid */}
@@ -229,21 +239,22 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
                     <DollarSign className="w-6 h-6 text-green-600" />
                   </div>
-                  {stats.earningsGrowth !== 0 && (
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${stats.earningsGrowth > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                      {stats.earningsGrowth > 0 ? <ArrowUpRight className="w-3.5 h-3.5 text-green-600" /> : <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />}
-                      <span className={`text-xs font-bold ${stats.earningsGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {stats.earningsGrowth > 0 ? '+' : ''}{stats.earningsGrowth}%
-                      </span>
-                    </div>
-                  )}
                 </div>
                 <p className="text-3xl font-bold text-[#101828] mb-1">
                   ${stats.totalEarnings.toLocaleString()}
                 </p>
-                <p className="text-sm font-medium text-[#667085]">
-                  Monthly Revenue
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-[#667085]">
+                    Available Balance
+                  </p>
+                  <button 
+                    onClick={() => setIsPayoutModalOpen(true)}
+                    className="text-xs font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1"
+                  >
+                    <Wallet className="w-3 h-3" />
+                    Request
+                  </button>
+                </div>
               </div>
 
               {/* Subscribers */}
@@ -252,14 +263,6 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
                     <Users className="w-6 h-6 text-purple-600" />
                   </div>
-                  {stats.subscriberGrowth !== 0 && (
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${stats.subscriberGrowth > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                      {stats.subscriberGrowth > 0 ? <ArrowUpRight className="w-3.5 h-3.5 text-green-600" /> : <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />}
-                      <span className={`text-xs font-bold ${stats.subscriberGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {stats.subscriberGrowth > 0 ? '+' : ''}{stats.subscriberGrowth}%
-                      </span>
-                    </div>
-                  )}
                 </div>
                 <p className="text-3xl font-bold text-[#101828] mb-1">
                   {stats.subscribers.toLocaleString()}
@@ -275,14 +278,6 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
                     <Eye className="w-6 h-6 text-blue-600" />
                   </div>
-                  {stats.viewsGrowth !== 0 && (
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${stats.viewsGrowth > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                      {stats.viewsGrowth > 0 ? <ArrowUpRight className="w-3.5 h-3.5 text-green-600" /> : <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />}
-                      <span className={`text-xs font-bold ${stats.viewsGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {stats.viewsGrowth > 0 ? '+' : ''}{stats.viewsGrowth}%
-                      </span>
-                    </div>
-                  )}
                 </div>
                 <p className="text-3xl font-bold text-[#101828] mb-1">
                   {stats.totalViews >= 1000 ? `${(stats.totalViews / 1000).toFixed(1)}K` : stats.totalViews.toLocaleString()}
@@ -298,14 +293,6 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
                     <TrendingUp className="w-6 h-6 text-orange-600" />
                   </div>
-                  {stats.engagementGrowth !== 0 && (
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${stats.engagementGrowth > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                      {stats.engagementGrowth > 0 ? <ArrowUpRight className="w-3.5 h-3.5 text-green-600" /> : <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />}
-                      <span className={`text-xs font-bold ${stats.engagementGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {stats.engagementGrowth > 0 ? '+' : ''}{stats.engagementGrowth}%
-                      </span>
-                    </div>
-                  )}
                 </div>
                 <p className="text-3xl font-bold text-[#101828] mb-1">
                   {stats.engagementRate}%
@@ -324,9 +311,6 @@ export default function DashboardPage() {
                   <h2 className="text-xl font-bold text-[#101828]">
                     Revenue Breakdown
                   </h2>
-                  <select className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium outline-none text-[#101828]">
-                    <option>All Time</option>
-                  </select>
                 </div>
                 
                 {earningsBreakdown ? (
@@ -338,7 +322,6 @@ export default function DashboardPage() {
                       { label: 'Calls', key: 'call', color: 'bg-blue-500' },
                     ].map((item) => {
                       const amount = earningsBreakdown[item.key] || 0;
-                      // Avoid division by zero
                       const total = earningsBreakdown.total || 1; 
                       const percentage = Math.round((amount / total) * 100);
                       
@@ -366,20 +349,6 @@ export default function DashboardPage() {
                         </div>
                       );
                     })}
-                    
-                    {/* Other category if relevant */}
-                    {earningsBreakdown.other > 0 && (
-                       <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-bold text-[#475467]">Other</span>
-                            <span className="text-sm font-bold text-[#101828]">${(earningsBreakdown.other / 100).toFixed(2)}</span>
-                          </div>
-                          <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden">
-                             <div className="h-full bg-gray-400 rounded-full" style={{ width: `${Math.round((earningsBreakdown.other / (earningsBreakdown.total||1)) * 100)}%` }}></div>
-                          </div>
-                       </div>
-                    )}
-
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-48 text-gray-400">
@@ -431,88 +400,10 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Recent Subscribers */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-8 mb-8 shadow-sm">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-bold text-[#101828]">
-                  New Subscribers
-                </h2>
-                <Link href="/analytics" className="text-sm font-bold text-purple-600 hover:text-purple-700">
-                  View All
-                </Link>
-              </div>
-              
-              {subscribers.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-[#475467]">
-                  No subscribers yet. Start posting to attract fans!
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {subscribers.slice(0, 5).map((subscriber) => (
-                    <div key={subscriber.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gray-100 relative">
-                          <Image 
-                            src={subscriber.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(subscriber.user.displayName)}`} 
-                            alt={subscriber.user.displayName} 
-                            fill
-                            className="object-cover" 
-                          />
-                        </div>
-                        <div>
-                          <p className="text-base font-bold text-[#101828]">
-                            {subscriber.user.displayName}
-                          </p>
-                          <p className="text-sm font-medium text-[#667085]">
-                            {subscriber.createdAt ? formatDistanceToNow(subscriber.createdAt.toDate(), { addSuffix: true }) : 'Just now'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="px-4 py-1.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100 uppercase tracking-wider">
-                        Active Fan
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Monthly Goal Progress */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm mb-10">
-              <h2 className="text-xl font-bold text-[#101828] mb-8">
-                Monthly Revenue Goal
-              </h2>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-lg font-bold text-[#344054]">
-                  ${monthlyGoal.current.toLocaleString()} <span className="text-[#667085] font-medium text-base">of ${monthlyGoal.target.toLocaleString()} goal</span>
-                </p>
-                <div className="px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-lg relative overflow-hidden">
-                  {monthlyGoal.percentage}%
-                </div>
-              </div>
-              <div className="h-4 bg-gray-50 rounded-full overflow-hidden mb-6">
-                <div 
-                  className="h-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-full transition-all duration-1000"
-                  style={{ width: `${monthlyGoal.percentage}%` }}
-                ></div>
-              </div>
-              <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100 flex items-start gap-3">
-                <Sparkles className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-                <p className="text-sm font-medium text-purple-900 leading-relaxed">
-                  {monthlyGoal.percentage >= 100 
-                    ? "Congratulations! You've hit your monthly goal! 🎉 Ready to aim higher?" 
-                    : `You're $${(monthlyGoal.target - monthlyGoal.current).toLocaleString()} away from your goal! New content usually boosts growth by 15%.`}
-                </p>
-              </div>
-            </div>
-
             {/* My Posts Section */}
             <div className="mb-10">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-[#101828]">My Recent Posts</h2>
-                <Link href="/analytics" className="text-sm font-bold text-purple-600 hover:text-purple-700">
-                  View Analytics
-                </Link>
               </div>
 
               {postsLoading ? (
@@ -525,7 +416,6 @@ export default function DashboardPage() {
                      <ImageIcon className="w-8 h-8 text-gray-400" />
                    </div>
                    <h3 className="text-lg font-bold text-[#101828] mb-2">No posts yet</h3>
-                   <p className="text-[#475467] mb-6">Create your first post to start engaging with fans!</p>
                    <Link
                     href="/content"
                     className="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-purple-700 transition-colors"
@@ -541,6 +431,99 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Payout Request Modal */}
+      {isPayoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 duration-300">
+             <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-6 text-white text-center relative">
+                <button 
+                  onClick={() => setIsPayoutModalOpen(false)}
+                  className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-md">
+                   <Wallet className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold">Request a Payout</h3>
+                <p className="text-white/80 text-sm">Transfer your earnings to your bank account</p>
+             </div>
+             
+             <div className="p-8">
+                <div className="mb-6">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Available Balance</label>
+                  <div className="text-3xl font-black text-gray-900">${realEarnings.toFixed(2)}</div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Payout Amount ($)</label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input 
+                      type="number" 
+                      placeholder="0.00"
+                      value={payoutAmount}
+                      onChange={(e) => setPayoutAmount(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-600 font-bold text-lg"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 font-medium">Min payout: $10.00</p>
+                </div>
+
+                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 mb-8">
+                   <div className="flex gap-3">
+                      <CreditCard className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-blue-900 mb-1">Bank Details Check</p>
+                        <p className="text-[11px] text-blue-700 leading-relaxed font-medium">
+                          {userProfile?.bankDetails 
+                            ? `Withdraw to: ${userProfile.bankDetails.bankName} (****${userProfile.bankDetails.accountNumber.slice(-4)})`
+                            : "No bank details found. Please update your profile settings first."}
+                        </p>
+                      </div>
+                   </div>
+                </div>
+
+                <button 
+                  onClick={async () => {
+                    const amount = parseFloat(payoutAmount);
+                    if (isNaN(amount) || amount < 10) {
+                      return toast.error("Minimum payout amount is $10.00");
+                    }
+                    if (amount > realEarnings) {
+                      return toast.error("Insufficient balance");
+                    }
+                    if (!userProfile?.bankDetails || !userProfile.bankDetails.accountNumber) {
+                      return toast.error("Please add bank details in settings first");
+                    }
+
+                    setIsRequesting(true);
+                    try {
+                      await createPayoutRequest(user!.uid, Math.round(amount * 100), userProfile.bankDetails);
+                      toast.success("Payout request submitted successfully!");
+                      setIsPayoutModalOpen(false);
+                      setPayoutAmount('');
+                    } catch (err: any) {
+                      toast.error(err.message || "Failed to submit payout request");
+                    } finally {
+                      setIsRequesting(false);
+                    }
+                  }}
+                  disabled={isRequesting || !payoutAmount || parseFloat(payoutAmount) < 10}
+                  className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isRequesting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Request"}
+                </button>
+
+                <div className="flex items-center gap-2 justify-center mt-6 text-gray-400">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Processed within 3-5 business days</span>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
     </ProtectedRoute>
   );
 }

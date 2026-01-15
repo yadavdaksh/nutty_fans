@@ -69,6 +69,12 @@ export default function Footer() {
                   Creator Guide
                 </Link>
               </li>
+              <li>
+                <Link href="mailto:support@nuttyfans.com" className="text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  <span className="w-1.5 h-1.5 bg-purple-600 rounded-full"></span>
+                  Need Help?
+                </Link>
+              </li>
             </ul>
           </div>
 

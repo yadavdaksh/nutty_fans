@@ -14,6 +14,15 @@ import AgeVerificationStep from './components/AgeVerificationStep';
 import RoleSelectionStep from './components/RoleSelectionStep';
 import UserProfileStep from './components/UserProfileStep';
 import CreatorSteps from './components/CreatorSteps';
+import BankDetailsStep from './components/BankDetailsStep';
+import { BankDetails } from '@/lib/db';
+import { 
+  validateIBAN, 
+  validateRoutingNumber, 
+  validateIFSC, 
+  validateSwiftBIC,
+  getCountryBankRequirement 
+} from '@/lib/bank-utils';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -157,6 +166,15 @@ export default function OnboardingPage() {
     twitter: '',
     youtube: '',
     website: '',
+  });
+
+  const [bankDetails, setBankDetails] = useState<BankDetails>({
+    accountHolderName: '',
+    accountNumber: '',
+    bankName: '',
+    country: '',
+    routingNumber: '',
+    swiftCode: '',
   });
 
   // OTP State
@@ -323,18 +341,13 @@ export default function OnboardingPage() {
   const handleContinue = async () => {
     // Step 1 is handled by verifyOtp directly
 
-    // Step 2: Role Selection - Wait, Step 2 is Age Verification now.
-    // Step 3 is Role Selection.
-    
-    // Step 2 is Age Verification, handled by verifyAge.
-    
     // Step 3: Role Selection
     if (step === 3) {
       if (!role) return;
       
       if (role === 'user') {
          // User Flow: Move to Profile
-         setStep(4); // Was 3 before change? No, Step 3 is Role. Role select -> Step 4 User Profile.
+         setStep(4);
          await updateUserProfile(user!.uid, { role: 'user', onboardingStep: 4 });
       } else {
          // Creator Flow: Move to Categories
@@ -358,13 +371,11 @@ export default function OnboardingPage() {
               bio: formData.bio,
               role: 'user',
               onboardingCompleted: true,
-              onboardingStep: 5 // Finished? Or Step 5 is Success
+              onboardingStep: 5 
             });
             await refreshProfile();
           }
-          setStep(5); // Success Step (if defined as Step 5 in types?)
-          // Check types: Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
-          // User Flow: 1(OTP) -> 2(Age) -> 3(Role) -> 4(Profile) -> 5(Success)
+          setStep(5);
         } catch (error) {
           console.error('Error updating profile:', error);
         } finally {
@@ -387,22 +398,27 @@ export default function OnboardingPage() {
          if (user) await updateUserProfile(user.uid, { onboardingStep: 6 });
          setStep(6);
        }
-       // Step 6: Cover
+       // Step 6: Cover Image
        else if (step === 6) {
          if (user) await updateUserProfile(user.uid, { onboardingStep: 7 });
          setStep(7);
        }
-       // Step 7: Socials -> Finish
+       // Step 7: Socials -> Bank Details
        else if (step === 7) {
+          if (user) await updateUserProfile(user.uid, { onboardingStep: 8 });
+          setStep(8);
+       }
+       // Step 8: Bank Details -> Finish
+       else if (step === 8) {
         setLoading(true);
         try {
            if (user) {
             await updateUserProfile(user.uid, {
               bio: formData.bio || `Welcome to my page!`,
               role: 'creator',
-              // emailVerified: true, // Already true
-              onboardingCompleted: true, // Mark complete!
-              onboardingStep: 7 // Done
+              bankDetails, // Save bank details
+              onboardingCompleted: true, 
+              onboardingStep: 8 
             });
             await createCreatorProfile(user.uid, {
               categories: selectedCategories,
@@ -423,38 +439,48 @@ export default function OnboardingPage() {
   };
 
   const handleBack = () => {
-    if (step === 1) return; // Cannot go back from OTP
-    if (step === 2) return; // Cannot go back from Age
-    if (step === 3) return; // Cannot go back from Role Selection
+    if (step === 1) return; 
+    if (step === 2) return; 
+    if (step === 3) return; 
     setStep((prev) => (prev - 1) as Step);
   };
 
   const getProgress = () => {
-    const totalSteps = role === 'creator' ? 7 : 5; // Adjusted totals
-    // 1:OTP, 2:Age, 3:Role, 4:Cats, 5:Tiers, 6:Cover, 7:Socials
-    // 1:OTP, 2:Age, 3:Role, 4:Profile, 5:Success
-    const currentStep = step - 1; // Adjust visual progress 
+    const totalSteps = role === 'creator' ? 8 : 5; 
+    const currentStep = step - 1; 
     const progress = (currentStep / totalSteps) * 100;
     return `${Math.round(progress)}%`;
   };
 
   const checkStepValidity = () => {
     if (step === 1) return otp.join('').length === 6;
-    if (step === 2) return day !== '' && month !== '' && year !== ''; // Age
-    if (step === 3) return !!role; // Role
+    if (step === 2) return day !== '' && month !== '' && year !== ''; 
+    if (step === 3) return !!role; 
     
     if (role === 'user') {
       if (step === 4) {
         return formData.displayName.trim() !== '' && formData.bio.trim().length >= 10;
       }
-      return true; // Step 5 (Success) is view only
+      return true; 
     }
     
     if (role === 'creator') {
       if (step === 4) return selectedCategories.length > 0;
-      if (step === 5) return tiers[0].price !== ''; // At least Basic tier needs a price
-      if (step === 6) return !!selectedCoverImage; // Cover image is important
-      if (step === 7) return true; // Socials are optional
+      if (step === 5) return tiers[0].price !== ''; 
+      if (step === 6) return !!selectedCoverImage; 
+      if (step === 7) return true; 
+      if (step === 8) {
+        const { accountHolderName, accountNumber, bankName, country, routingNumber, swiftCode } = bankDetails;
+        if (!accountHolderName || !accountNumber || !bankName || !country) return false;
+        
+        const req = getCountryBankRequirement(country);
+        if (req === 'IBAN' && !validateIBAN(accountNumber)) return false;
+        if (req === 'ABA' && (!routingNumber || !validateRoutingNumber(routingNumber))) return false;
+        if (req === 'IFSC' && (!routingNumber || !validateIFSC(routingNumber))) return false;
+        if (swiftCode && !validateSwiftBIC(swiftCode)) return false;
+        
+        return true;
+      }
     }
     
     return false;
@@ -504,7 +530,7 @@ export default function OnboardingPage() {
         {/* Step Indicator */}
         <div className="w-full max-w-xl mx-auto pt-16 px-6">
           <div className="flex justify-between text-sm font-medium text-gray-500 mb-2 font-inter">
-            <span>Step {step} of {role === 'creator' ? 7 : 5}</span>
+            <span>Step {step} of {role === 'creator' ? 8 : 5}</span>
             <span>{getProgress()}</span>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -551,6 +577,14 @@ export default function OnboardingPage() {
             />
           )}
 
+          {role === 'creator' && step === 8 && (
+            <BankDetailsStep
+              bankDetails={bankDetails}
+              setBankDetails={setBankDetails}
+              loading={loading}
+            />
+          )}
+
           {/* Footer Buttons - Floating Action Bar */}
           <div className="w-full max-w-[1440px] fixed bottom-0 left-0 right-0 p-8 flex justify-center pointer-events-none">
              <div className="w-full max-w-[1000px] flex justify-between items-center pointer-events-auto">
@@ -571,7 +605,7 @@ export default function OnboardingPage() {
                       : 'hover:opacity-90 hover:scale-105'
                   }`}
                 >
-                  {loading ? 'Processing...' : (step === 7 || (role === 'user' && step === 5)) ? 'Get Started' : 'Continue'}
+                  {loading ? 'Processing...' : (step === 8 || (role === 'user' && step === 5)) ? 'Get Started' : 'Continue'}
                   <ArrowRight className="w-5 h-5" />
                 </button>
                 </div>

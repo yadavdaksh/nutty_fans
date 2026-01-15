@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 import { squareClient } from '@/lib/square';
-import { addFunds } from '@/lib/db'; 
-// Correction: We cannot use useAuth hook in API route. We will rely on passed userId or verify session if we had session cookies.
-// For now, we will trust the userId passed in body (MVP) or verify firebase token if we implement that.
+import { addFunds, getUserProfile, updateUserProfile } from '@/lib/db'; 
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sourceId, amount, userId, creatorId, tierId, type } = body; // type added
+    const { sourceId, amount, userId, creatorId, tierId, type } = body; 
 
     if (!sourceId || !amount || !userId) {
       return NextResponse.json(
@@ -16,74 +14,93 @@ export async function POST(request: Request) {
       );
     }
 
-    // In a real app, verify the amount matches the tier price from DB.
-    // For MVP, we use the amount sent from frontend (converted to cents/minor units for Square).
-    
-    // Square expects amount in bigint money (minor units, e.g. cents).
-    // Assuming amount passed is in dollars (string or number), e.g. "5.00"
     const amountMoney = BigInt(Math.round(parseFloat(amount) * 100));
+    const userProfile = await getUserProfile(userId);
 
+    if (!userProfile) {
+       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
+    }
+
+    let squareCustomerId = userProfile.squareCustomerId;
+
+    // 1. Handle Square Customer Creation
+    if (!squareCustomerId) {
+       try {
+          const customerRes = await squareClient.customers.create({
+             emailAddress: userProfile.email,
+             givenName: userProfile.displayName.split(' ')[0] || 'User',
+             idempotencyKey: crypto.randomUUID(),
+          });
+          squareCustomerId = (customerRes as any).customer?.id || (customerRes as any).result?.customer?.id;
+          if (squareCustomerId) {
+             await updateUserProfile(userId, { squareCustomerId });
+          }
+       } catch (err) {
+          console.error('Error creating Square customer:', err);
+       }
+    }
+
+    let paymentSourceId = sourceId;
+
+    // 2. If subscription, we might want to save the card for recurring payments
+    if (type === 'subscription' && squareCustomerId) {
+       try {
+          // Link card to customer for recurring use
+          const cardRes = await squareClient.cards.create({
+            idempotencyKey: crypto.randomUUID(),
+            sourceId: sourceId,
+            card: {
+              customerId: squareCustomerId,
+              cardholderName: userProfile.displayName,
+            }
+          });
+          
+          const cardId = (cardRes as any).card?.id || (cardRes as any).result?.card?.id;
+          if (cardId) {
+             paymentSourceId = cardId;
+             console.log('Card linked to customer for recurring billing:', cardId);
+          }
+       } catch (err) {
+          console.error('Error linking card:', err);
+          // Don't fail the initial payment if card linking fails for some reason
+       }
+    }
+
+    // 3. Process Initial Payment
     const response = await squareClient.payments.create({
       idempotencyKey: crypto.randomUUID(),
-      sourceId: sourceId,
+      sourceId: paymentSourceId,
       amountMoney: {
         currency: 'USD',
         amount: amountMoney,
       },
-      note: `Subscription for creator ${creatorId} tier ${tierId}`,
-      buyerEmailAddress: 'example@test.com', // In real app, fetch user email
+      note: `${type === 'subscription' ? 'Subscription' : 'Recharge'} for ${userId}`,
+      customerId: squareCustomerId,
     });
 
-    // SDK v43 returns the response body directly or properly typed
-    // Note: If BigInt is returned, we need to handle serialization.
-    // Inspecting 'response' to be sure, but assuming it has 'payment'
-    // If response is the body, it has .payment.
-    
-    // Check if result is wrapped or direct
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payment = (response as any).payment || (response as any).result?.payment || (response as any).body?.payment;
     
-    console.log('Payment processed:', { 
-      id: payment?.id, 
-      status: payment?.status, 
-      type, 
-      userId, 
-      amountMoney 
-    });
-
-    if (type === 'recharge' && payment?.status === 'COMPLETED') {
-       console.log('Adding funds to wallet...', { userId, amount: Number(amountMoney) });
-       try {
-         await addFunds(userId, Number(amountMoney), payment.id);
-         console.log('Funds added successfully');
-       } catch (err) {
-         console.error('Error adding funds:', err);
-       }
-    } else if (type === 'subscription' && payment?.status === 'COMPLETED') {
-       console.log('Processing subscription revenue...', { creatorId, amount: Number(amountMoney) });
-       try {
-          // Credit the creator's wallet
+    if (payment?.status === 'COMPLETED') {
+       if (type === 'recharge') {
+          await addFunds(userId, Number(amountMoney), payment.id);
+       } else if (type === 'subscription') {
           if (creatorId) {
              await addFunds(
                creatorId, 
                Number(amountMoney), 
                payment.id, 
                'Subscription Revenue', 
-               { subscriberId: userId, tierId, category: 'subscription' }
+               { subscriberId: userId, tierId, category: 'subscription' },
+               true // applySplit
              );
-             console.log('Creator credited successfully');
-          } else {
-             console.error('No creatorId provided for subscription payment');
           }
-       } catch (err) {
-          console.error('Error crediting creator:', err);
        }
     }
 
     return NextResponse.json({ 
       success: true, 
       payment: JSON.parse(JSON.stringify(payment, (key, value) =>
-        typeof value === 'bigint' ? value.toString() : value // Handle BigInt serialization
+        typeof value === 'bigint' ? value.toString() : value 
       ))
     });
 

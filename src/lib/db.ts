@@ -40,6 +40,9 @@ export interface StreamPurchase {
 export type UserRole = 'user' | 'creator' | 'admin';
 export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
+export const PLATFORM_COMMISSION_PERCENT = 20; // 20% for admin
+export const ADMIN_WALLET_ID = 'PLATFORM_ADMIN_WALLET'; // Placeholder for admin wallet UID
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -55,6 +58,8 @@ export interface UserProfile {
   onboardingStep: number; // Added for strict auth
   walletBalance?: number;
   verificationStatus?: VerificationStatus;
+  squareCustomerId?: string; // Square Customer ID for recurring payments
+  bankDetails?: BankDetails; // Bank details for payouts
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -85,6 +90,7 @@ export interface CreatorProfile {
     audioPerMinute: number;
     videoPerMinute: number;
   };
+  isCallsEnabled?: boolean; // Toggle for audio/video calls
 }
 
 // Create or overwrite a user profile
@@ -463,35 +469,84 @@ export const getWalletBalance = async (userId: string): Promise<number> => {
   return 0;
 };
 
-export const addFunds = async (userId: string, amount: number, paymentId: string, description: string = 'Wallet Recharge', metadata: Record<string, unknown> = {}) => {
+export const addFunds = async (
+  userId: string, 
+  amount: number, 
+  paymentId: string, 
+  description: string = 'Wallet Recharge', 
+  metadata: Record<string, unknown> = {},
+  applySplit: boolean = false
+) => {
   const userRef = doc(db, 'users', userId);
+  const adminRef = doc(db, 'users', ADMIN_WALLET_ID);
   const transactionRef = collection(db, 'wallet_transactions');
 
   await runTransaction(db, async (transaction) => {
+    // 1. Perform ALL Reads first
     const userDoc = await transaction.get(userRef);
+    const adminDoc = applySplit ? await transaction.get(adminRef) : null;
+
     if (!userDoc.exists()) {
       throw new Error("User does not exist!");
     }
 
-    const newBalance = (userDoc.data().walletBalance || 0) + amount;
-    
+    let creatorAmount = amount;
+    let adminAmount = 0;
+
+    if (applySplit) {
+      adminAmount = Math.floor((amount * PLATFORM_COMMISSION_PERCENT) / 100);
+      creatorAmount = amount - adminAmount;
+    }
+
+    // 2. Update User/Creator balance
+    const newBalance = (userDoc.data().walletBalance || 0) + creatorAmount;
     transaction.update(userRef, { walletBalance: newBalance });
     
-    // Add transaction record
+    // Add transaction record for User/Creator
     const newTxRef = doc(transactionRef);
     transaction.set(newTxRef, {
       userId,
       type: 'credit',
-      amount,
+      amount: creatorAmount,
       description,
-      metadata: { ...metadata, paymentId },
+      metadata: { ...metadata, paymentId, originalAmount: amount, commissionApplied: applySplit },
       timestamp: serverTimestamp()
     });
+
+    // 3. Update Admin balance if split applied
+    if (applySplit && adminAmount > 0 && adminDoc) {
+      const adminBalance = adminDoc.exists() ? (adminDoc.data().walletBalance || 0) : 0;
+      
+      if (!adminDoc.exists()) {
+        transaction.set(adminRef, {
+          uid: ADMIN_WALLET_ID,
+          role: 'admin',
+          displayName: 'Platform Admin',
+          walletBalance: adminAmount,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        transaction.update(adminRef, { walletBalance: adminBalance + adminAmount });
+      }
+
+      // Add transaction record for Admin
+      const adminTxRef = doc(transactionRef);
+      transaction.set(adminTxRef, {
+        userId: ADMIN_WALLET_ID,
+        type: 'credit',
+        amount: adminAmount,
+        description: `Commission from: ${description}`,
+        metadata: { ...metadata, paymentId, sourceId: userId, originalAmount: amount },
+        timestamp: serverTimestamp()
+      });
+    }
   });
 };
 
 export const processTransaction = async (userId: string, amount: number, description: string, metadata: Record<string, unknown> = {}) => {
   const userRef = doc(db, 'users', userId);
+  const adminRef = doc(db, 'users', ADMIN_WALLET_ID);
   const txCollectionRef = collection(db, 'wallet_transactions');
   const creatorId = metadata?.creatorId as string | undefined;
   const creatorRef = creatorId ? doc(db, 'users', creatorId) : null;
@@ -500,6 +555,7 @@ export const processTransaction = async (userId: string, amount: number, descrip
      // 1. Perform ALL Reads first
      const userDoc = await transaction.get(userRef);
      const creatorDoc = creatorRef ? await transaction.get(creatorRef) : null;
+     const adminDoc = await transaction.get(adminRef);
 
      if (!userDoc.exists()) throw new Error("User not found");
 
@@ -509,13 +565,17 @@ export const processTransaction = async (userId: string, amount: number, descrip
         throw new Error("Insufficient funds");
      }
 
+     // Calculate split
+     const adminAmount = Math.floor((amount * PLATFORM_COMMISSION_PERCENT) / 100);
+     const creatorAmount = amount - adminAmount;
+
      // 3. Perform ALL Writes
-     // Debit User
+     // Debit User (Total Amount)
      const newBalance = currentBalance - amount;
      transaction.update(userRef, { walletBalance: newBalance });
 
-     const newTxRef = doc(txCollectionRef);
-     transaction.set(newTxRef, {
+     const debitTxRef = doc(txCollectionRef);
+     transaction.set(debitTxRef, {
         userId,
         type: 'debit',
         amount,
@@ -524,24 +584,69 @@ export const processTransaction = async (userId: string, amount: number, descrip
         timestamp: serverTimestamp()
      });
 
-     // 2. Credit Creator
-     if (creatorDoc && creatorDoc.exists()) {
+     // 2. Credit Creator (Split Amount)
+     if (creatorDoc && creatorDoc.exists() && creatorId) {
         const creatorBalance = creatorDoc.data().walletBalance || 0;
-
-        transaction.update(creatorRef!, { walletBalance: creatorBalance + amount });
+        transaction.update(creatorRef!, { walletBalance: creatorBalance + creatorAmount });
 
         const creditTxRef = doc(txCollectionRef);
         transaction.set(creditTxRef, {
            userId: creatorId,
            type: 'credit',
-           amount,
+           amount: creatorAmount,
            description: `Received: ${description}`,
-           metadata: { ...metadata, senderId: userId },
+           metadata: { ...metadata, senderId: userId, commissionApplied: true },
            timestamp: serverTimestamp()
         });
      }
+
+     // 3. Credit Admin (Commission)
+     const adminBalance = adminDoc.exists() ? (adminDoc.data().walletBalance || 0) : 0;
+     if (!adminDoc.exists()) {
+        transaction.set(adminRef, {
+          uid: ADMIN_WALLET_ID,
+          role: 'admin',
+          displayName: 'Platform Admin',
+          walletBalance: adminAmount,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+     } else {
+        transaction.update(adminRef, { walletBalance: adminBalance + adminAmount });
+     }
+
+     const adminTxRef = doc(txCollectionRef);
+     transaction.set(adminTxRef, {
+        userId: ADMIN_WALLET_ID,
+        type: 'credit',
+        amount: adminAmount,
+        description: `Commission from ${description}`,
+        metadata: { ...metadata, senderId: userId, creatorId },
+        timestamp: serverTimestamp()
+     });
   });
 };
+
+export interface BankDetails {
+  accountHolderName: string;
+  accountNumber: string;
+  routingNumber?: string;
+  bankName: string;
+  iban?: string;
+  swiftCode?: string;
+  country: string;
+}
+
+export interface PayoutRequest {
+  id: string;
+  userId: string;
+  amount: number; // in cents
+  status: 'pending' | 'approved' | 'rejected' | 'paid';
+  bankDetails: BankDetails;
+  createdAt: Timestamp;
+  processedAt?: Timestamp;
+  notes?: string;
+}
 
 export interface EarningsBreakdown {
   total: number;
@@ -594,4 +699,102 @@ export const getEarningsBreakdown = async (userId: string): Promise<EarningsBrea
   });
 
   return breakdown;
+};
+
+// --- Payout Management ---
+
+export const createPayoutRequest = async (userId: string, amount: number, bankDetails: BankDetails) => {
+  const payoutRef = collection(db, 'payout_requests');
+  const userRef = doc(db, 'users', userId);
+
+  await runTransaction(db, async (transaction) => {
+    const userDoc = await transaction.get(userRef);
+    if (!userDoc.exists()) throw new Error("User not found");
+
+    const currentBalance = userDoc.data().walletBalance || 0;
+    if (currentBalance < amount) throw new Error("Insufficient funds for payout");
+
+    // Deduct from wallet immediately (hold)
+    transaction.update(userRef, { 
+      walletBalance: currentBalance - amount,
+      updatedAt: serverTimestamp() 
+    });
+
+    const newPayoutRef = doc(payoutRef);
+    transaction.set(newPayoutRef, {
+      userId,
+      amount,
+      bankDetails,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    // Log the hold transaction
+    const txRef = doc(collection(db, 'wallet_transactions'));
+    transaction.set(txRef, {
+      userId,
+      type: 'debit',
+      amount,
+      description: 'Payout Request (Held)',
+      metadata: { payoutRequestId: newPayoutRef.id, category: 'payout' },
+      timestamp: serverTimestamp()
+    });
+  });
+};
+
+export const getPayoutRequests = async (status?: PayoutRequest['status']) => {
+  const payoutRef = collection(db, 'payout_requests');
+  let q = query(payoutRef);
+  
+  if (status) {
+    q = query(payoutRef, where('status', '==', status));
+  }
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  } as PayoutRequest));
+};
+
+export const updatePayoutRequestStatus = async (payoutId: string, status: PayoutRequest['status'], notes?: string) => {
+  const payoutRef = doc(db, 'payout_requests', payoutId);
+  
+  await runTransaction(db, async (transaction) => {
+    const payoutDoc = await transaction.get(payoutRef);
+    if (!payoutDoc.exists()) throw new Error("Payout request not found");
+
+    const data = payoutDoc.data() as PayoutRequest;
+    
+    // If rejecting, return funds to user wallet
+    if (status === 'rejected' && data.status === 'pending') {
+      const userRef = doc(db, 'users', data.userId);
+      const userDoc = await transaction.get(userRef);
+      if (userDoc.exists()) {
+        transaction.update(userRef, { 
+          walletBalance: (userDoc.data().walletBalance || 0) + data.amount,
+          updatedAt: serverTimestamp()
+        });
+
+        // Log the return transaction
+        const txRef = doc(collection(db, 'wallet_transactions'));
+        transaction.set(txRef, {
+          userId: data.userId,
+          type: 'credit',
+          amount: data.amount,
+          description: 'Payout Rejected (Funds Returned)',
+          metadata: { payoutRequestId: payoutId, category: 'payout_return' },
+          timestamp: serverTimestamp()
+        });
+      }
+    }
+
+    transaction.update(payoutRef, {
+      status,
+      notes: notes || data.notes,
+      processedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+  });
 };

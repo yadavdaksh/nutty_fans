@@ -1,6 +1,7 @@
-import React from 'react';
-import { User, Crown, Check, Heart } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, Crown, Check, Heart, ShieldCheck } from 'lucide-react';
 import { Role } from '../onboarding.types';
+import TermsModal from '@/components/modals/TermsModal';
 
 interface RoleSelectionStepProps {
   role: Role | null;
@@ -9,8 +10,9 @@ interface RoleSelectionStepProps {
 
 export default function RoleSelectionStep({
   role,
-  handleRoleSelect
+  handleRoleSelect,
 }: RoleSelectionStepProps) {
+
   return (
     <div className="w-full max-w-5xl text-center">
       <div className="mb-12">
@@ -70,6 +72,7 @@ export default function RoleSelectionStep({
           </p>
         </button>
       </div>
+
     </div>
   );
 }

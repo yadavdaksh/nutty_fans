@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getWalletBalance, processTransaction } from '@/lib/db';
 import { toast } from 'react-hot-toast';
+import WatermarkMedia from './WatermarkMedia';
 
 interface Post {
   id: string;
@@ -142,7 +143,11 @@ export default function PostCard({ post }: { post: Post }) {
                  <Image src={post.image} alt="Locked" fill className="object-cover blur-2xl opacity-50" />
                </div>
              ) : (
-               <Image src={post.image} alt="Post image" fill className="object-cover" />
+               <WatermarkMedia 
+                 src={post.image} 
+                 alt="Post image" 
+                 watermarkText={post.creatorName || 'NuttyFans'} 
+               />
              )}
           </div>
         )}

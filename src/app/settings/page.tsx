@@ -70,6 +70,7 @@ export default function SettingsPage() {
   const [callSettings, setCallSettings] = useState({
     audioPerMinute: 1,
     videoPerMinute: 1,
+    isCallsEnabled: true,
   });
 
   const [accountSettings, setAccountSettings] = useState({
@@ -128,11 +129,13 @@ export default function SettingsPage() {
               setCallSettings({
                 audioPerMinute: creator.callPrices.audioPerMinute || 1,
                 videoPerMinute: creator.callPrices.videoPerMinute || 1,
+                isCallsEnabled: creator.isCallsEnabled !== false,
               });
             } else {
               setCallSettings({
                 audioPerMinute: 1,
                 videoPerMinute: 1,
+                isCallsEnabled: creator.isCallsEnabled !== false,
               });
             }
           }
@@ -233,7 +236,8 @@ export default function SettingsPage() {
           callPrices: {
             audioPerMinute: audio,
             videoPerMinute: video,
-          }
+          },
+          isCallsEnabled: callSettings.isCallsEnabled,
         });
       }
 
@@ -898,6 +902,19 @@ export default function SettingsPage() {
                   </p>
 
                   <form onSubmit={handleSubmit} className="space-y-6 max-w-xl">
+                    
+                    {/* Enable/Disable Calls Toggle */}
+                    <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-[#101828]" style={{ fontFamily: 'Inter, sans-serif' }}>Enable Calls</p>
+                        <p className="text-xs text-[#667085]">Allow fans to start audio and video calls with you</p>
+                      </div>
+                      <Toggle 
+                        checked={callSettings.isCallsEnabled}
+                        onChange={(checked) => setCallSettings(prev => ({ ...prev, isCallsEnabled: checked }))} 
+                      />
+                    </div>
+
                     <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6 space-y-6">
                       
                       {/* Audio Call Price */}
