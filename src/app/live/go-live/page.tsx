@@ -20,6 +20,9 @@ export default function GoLivePage() {
   const [title, setTitle] = useState('');
   const [accessType, setAccessType] = useState<'public' | 'subscribers' | 'paid'>('public');
   const [price, setPrice] = useState('');
+  const [chatPrice, setChatPrice] = useState(''); // Price per message
+  const [showSummary, setShowSummary] = useState(false);
+  const [finalEarnings, setFinalEarnings] = useState(0);
 
   useEffect(() => {
     if (userProfile && userProfile.role !== 'creator') {
@@ -48,6 +51,8 @@ export default function GoLivePage() {
         title: title,
         accessType: accessType,
         price: accessType === 'paid' ? parseFloat(price) : 0,
+        chatPrice: chatPrice ? parseFloat(chatPrice) : 0,
+        totalEarnings: 0,
         viewerCount: 0,
         startedAt: new Date()
       });
@@ -61,7 +66,17 @@ export default function GoLivePage() {
 
   const endStream = async () => {
      try {
-        await updateDoc(doc(db, 'streams', user!.uid), {
+        // Fetch final earnings before closing
+        const streamRef = doc(db, 'streams', user!.uid);
+        // We use getDoc to be sure we have the latest
+        // (Though if we used onSnapshot we'd have it, but let's be safe)
+        // Note: For MVP we just read the doc.
+        const snap = await import('firebase/firestore').then(mod => mod.getDoc(streamRef)); 
+        if (snap.exists()) {
+           setFinalEarnings(snap.data().totalEarnings || 0);
+        }
+
+        await updateDoc(streamRef, {
             isActive: false
         });
      } catch (e) {
@@ -70,10 +85,42 @@ export default function GoLivePage() {
      
      setIsLive(false);
      setToken('');
+     setShowSummary(true);
   };
 
   if (!userProfile) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  }
+
+  if (showSummary) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-black text-white p-4">
+         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-md w-full text-center">
+            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+               <DollarSign className="w-10 h-10 text-green-500" />
+            </div>
+            <h2 className="text-3xl font-bold mb-2">Stream Ended</h2>
+            <p className="text-gray-400 mb-8">Here&apos;s how much you earned from this session:</p>
+            
+            <div className="bg-black/50 rounded-xl p-6 mb-8 border border-gray-800">
+               <div className="text-sm text-gray-500 uppercase tracking-wider font-bold mb-1">Total Earnings</div>
+               <div className="text-4xl font-bold text-green-400">
+                 ${finalEarnings.toFixed(2)}
+               </div>
+            </div>
+
+            <button 
+              onClick={() => router.push('/dashboard')}
+              className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors"
+            >
+              Close & Go to Dashboard
+            </button>
+            <p className="text-xs text-gray-500 mt-4">
+              This summary will disappear once you leave.
+            </p>
+         </div>
+      </div>
+    );
   }
 
   if (isLive && token) {
@@ -173,6 +220,23 @@ export default function GoLivePage() {
                  </div>
               </div>
             )}
+
+            <div className="mb-6">
+                 <label className="block text-sm font-semibold text-gray-700 mb-2">Chat Price (Per Message)</label>
+                 <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input 
+                        type="number" 
+                        min="0"
+                        step="0.5"
+                        value={chatPrice}
+                        onChange={(e) => setChatPrice(e.target.value)}
+                        placeholder="0 (Free)"
+                        className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all text-gray-900"
+                    />
+                 </div>
+                 <p className="text-xs text-gray-500 mt-1">Leave empty or 0 for free chat.</p>
+            </div>
             
             <button
                 onClick={startStream}

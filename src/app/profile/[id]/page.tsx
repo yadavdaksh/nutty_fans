@@ -105,12 +105,13 @@ export default function ProfilePage() {
     setIsCheckoutOpen(true);
   };
 
-  const handleConfirmSubscription = async (finalPrice: string, couponCode?: string) => {
+  const handleConfirmSubscription = async (finalPrice: string, couponCode?: string, subscriptionId?: string) => {
     if (!user || !selectedTier) return;
     
     setIsSubscribing(selectedTier.name);
     try {
-      await createSubscription(user.uid, creatorUid, selectedTier.name, finalPrice, couponCode);
+      await createSubscription(user.uid, creatorUid, selectedTier.name, finalPrice, couponCode, subscriptionId);
+      console.log("SquaresubscriptionId for Webhook Testing:", subscriptionId); // Helpful log for local testing
       toast.success(`Successfully subscribed to ${selectedTier.name}!`, {
         duration: 5000,
         style: {

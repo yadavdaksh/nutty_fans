@@ -11,6 +11,7 @@ interface SquarePaymentFormProps {
   tierId: string;
   creatorName: string;
   type?: 'subscription' | 'recharge'; // Default to subscription
+  discountId?: string;
   onSuccess: (result: unknown) => Promise<void>;
   onCancel?: () => void;
 }
@@ -22,6 +23,7 @@ export default function SquarePaymentForm({
   tierId, 
   creatorName, 
   type = 'subscription', 
+  discountId,
   onSuccess, 
   onCancel 
 }: SquarePaymentFormProps) {
@@ -38,20 +40,30 @@ export default function SquarePaymentForm({
           setLoading(true);
           setError(null);
           try {
-            const response = await fetch('/api/payments', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
+            const endpoint = type === 'subscription' ? '/api/payments/subscribe' : '/api/payments';
+            
+            // Payload differs slightly for subscription (needs tierName explicitly for plan creation)
+            const body = type === 'subscription' ? {
+                sourceId: token.token,
+                userId,
+                creatorId,
+                tierName: tierId, // passing tierId as name
+                price: amount
+            } : {
                 sourceId: token.token,
                 verificationToken: verifiedBuyer?.token,
-                amount: amount,
-                userId: userId,
-                creatorId: creatorId,
-                tierId: tierId,
-                type: type, 
-              }),
+                amount,
+                userId,
+                creatorId,
+                tierId,
+                type, 
+                discountId
+            };
+
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
             });
 
             const data = await response.json();

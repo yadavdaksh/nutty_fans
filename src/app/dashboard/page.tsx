@@ -9,8 +9,6 @@ import {
   Upload,
   MessageSquare,
   BarChart3,
-  ArrowUpRight,
-  ArrowDownRight,
   DollarSign,
   Users,
   Eye,
@@ -21,15 +19,14 @@ import {
   Wallet,
   X,
   CreditCard,
-  AlertCircle
+  AlertCircle,
+  Mail
 } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { CreatorProfile } from '@/lib/db';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { usePosts } from '@/hooks/usePosts';
 import PostGrid from '@/components/PostGrid';
-import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-hot-toast';
 
 export default function DashboardPage() {
@@ -115,11 +112,7 @@ export default function DashboardPage() {
     engagementGrowth: 0,
   };
 
-  const monthlyGoal = {
-    current: totalEarnings,
-    target: Math.max(totalEarnings * 1.5, 1000),
-    percentage: Math.min(Math.round((totalEarnings / Math.max(totalEarnings * 1.5, 1000)) * 100), 100),
-  };
+
 
   if (loading) {
     return (
@@ -386,6 +379,17 @@ export default function DashboardPage() {
                     </span>
                   </Link>
                   <Link
+                    href="/dashboard/newsletter"
+                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                      <Mail className="w-5 h-5 text-gray-600 group-hover:text-purple-600" />
+                    </div>
+                    <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
+                      Send Newsletter
+                    </span>
+                  </Link>
+                  <Link
                     href="/settings"
                     className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
                   >
@@ -504,8 +508,8 @@ export default function DashboardPage() {
                       toast.success("Payout request submitted successfully!");
                       setIsPayoutModalOpen(false);
                       setPayoutAmount('');
-                    } catch (err: any) {
-                      toast.error(err.message || "Failed to submit payout request");
+                    } catch (err: unknown) {
+                      toast.error((err as Error).message || "Failed to submit payout request");
                     } finally {
                       setIsRequesting(false);
                     }

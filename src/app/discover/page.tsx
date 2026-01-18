@@ -125,9 +125,9 @@ export default function DiscoverPage() {
                                  : creator.subscriberCount}
                              </span>
                              <span>
-                               {creator.subscriptionTiers?.[0] 
-                                 ? `$${creator.subscriptionTiers[0].price}/mo` 
-                                 : 'Price N/A'}
+                               {creator.subscriptionTiers && creator.subscriptionTiers.length > 0 
+                                 ? `$${[...creator.subscriptionTiers].sort((a, b) => parseFloat(a.price) - parseFloat(b.price))[0].price}/mo` 
+                                 : 'Free'}
                              </span>
                            </div>
 

@@ -13,14 +13,15 @@ import {
   setUserOnlineStatus,
   unlockMessage
 } from '@/lib/messaging';
-import { getWalletBalance, processTransaction, getCreatorProfile, CreatorProfile, Conversation } from '@/lib/db';
+import { db, getWalletBalance, processTransaction, CreatorProfile, Conversation } from '@/lib/db';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Smile, Send, MessageSquare, Image as ImageIcon, Lock, X, Camera, Phone, Video, Loader2 } from 'lucide-react';
 import { useCall } from '@/hooks/useCall';
+import WatermarkMedia from '@/components/WatermarkMedia';
 import { format } from 'date-fns';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, doc, onSnapshot } from 'firebase/firestore';
 
 type ParticipantMetadata = {
   displayName: string;
@@ -145,20 +146,31 @@ export default function MessagesPage() {
     }
   }, [user]);
 
-  // Fetch Creator Profile for Call Prices
+
+  // Real-time Creator Profile for Call Prices & Availability
   const [recipientCreatorProfile, setRecipientCreatorProfile] = useState<CreatorProfile | null>(null);
   
   useEffect(() => {
-    const fetchRecipientCreator = async () => {
-      const recipientId = activeConversation?.participants.find((p: string) => p !== user?.uid);
-      if (recipientId) {
-        const profile = await getCreatorProfile(recipientId);
-        setRecipientCreatorProfile(profile);
+    const recipientId = activeConversation?.participants.find((p: string) => p !== user?.uid);
+    
+    if (!recipientId) {
+      setRecipientCreatorProfile(null);
+      return;
+    }
+
+    // Subscribe to Creator Profile changes in real-time
+    const creatorRef = doc(db, 'creators', recipientId);
+    const unsubscribe = onSnapshot(creatorRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setRecipientCreatorProfile(docSnap.data() as CreatorProfile);
       } else {
         setRecipientCreatorProfile(null);
       }
-    };
-    fetchRecipientCreator();
+    }, (error) => {
+      console.error("Error listening to creator profile:", error);
+    });
+
+    return () => unsubscribe();
   }, [activeChatId, activeConversation, user]);
 
   // Keyboard shortcuts
@@ -607,11 +619,11 @@ export default function MessagesPage() {
                                           
                                           return (
                                             <>
-                                              <Image 
-                                                src={msg.text} 
+                                              <WatermarkMedia
+                                                src={msg.text}
                                                 alt="Shared image"
-                                                fill
-                                                className="object-cover opacity-90"
+                                                className="w-full h-full object-cover opacity-90"
+                                                watermarkText={user?.displayName || 'Private Content'}
                                               />
                                               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-[1px]">
                                                 <div className="bg-black/60 rounded-full px-3 py-1 mb-2 flex items-center gap-1.5 backdrop-blur-md">
@@ -659,11 +671,11 @@ export default function MessagesPage() {
                                        }
 
                                        return (
-                                          <Image 
+                                          <WatermarkMedia
                                             src={msg.text} // In 'image' type, 'text' field holds the URL
                                             alt="Shared image"
-                                            fill
-                                            className={`object-cover ${isLocked && !isUnlocked ? 'blur-xl' : ''}`}
+                                            className={`w-full h-full object-cover ${isLocked && !isUnlocked ? 'blur-xl' : ''}`}
+                                            watermarkText={user?.displayName || 'Private Content'}
                                           />
                                        );
                                      })()}

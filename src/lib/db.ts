@@ -27,6 +27,8 @@ export interface Stream {
   startedAt: Timestamp | FieldValue;
   accessType: 'public' | 'subscribers' | 'paid';
   price?: number;
+  chatPrice?: number; // Price per message (0 = free)
+  totalEarnings?: number; // Total earnings for this specific stream session
 }
 
 export interface StreamPurchase {
@@ -74,6 +76,7 @@ export interface CreatorProfile {
     price: string;
     description?: string;
     benefits: string[];
+    squarePlanId?: string;
   }[];
   subscriberCount: number;
   postCount?: number;
@@ -180,6 +183,7 @@ export interface Subscription {
   expiresAt: Timestamp;
   price: string;
   appliedCoupon?: string | null;
+  squareSubscriptionId?: string | null;
 }
 
 export interface Conversation {
@@ -235,7 +239,8 @@ export const createSubscription = async (
   creatorId: string,
   tierId: string,
   price: string,
-  couponCode?: string
+  couponCode?: string,
+  squareSubscriptionId?: string
 ) => {
   const subId = `${userId}_${creatorId}`;
   const subRef = doc(db, 'subscriptions', subId) as DocumentReference<Subscription>;
@@ -280,7 +285,8 @@ export const createSubscription = async (
       createdAt: serverTimestamp(),
       expiresAt: Timestamp.fromDate(expiresAt),
       price,
-      appliedCoupon: couponCode || null
+      appliedCoupon: couponCode || null,
+      squareSubscriptionId: squareSubscriptionId || null
     });
 
     // 4. Update creator stats only if new
@@ -796,5 +802,13 @@ export const updatePayoutRequestStatus = async (payoutId: string, status: Payout
       processedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+  });
+};
+
+// Record earnings for a specific stream
+export const recordStreamEarning = async (creatorId: string, amount: number) => {
+  const streamRef = doc(db, 'streams', creatorId);
+  await updateDoc(streamRef, {
+    totalEarnings: increment(amount)
   });
 };

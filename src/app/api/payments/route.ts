@@ -5,7 +5,7 @@ import { addFunds, getUserProfile, updateUserProfile } from '@/lib/db';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sourceId, amount, userId, creatorId, tierId, type } = body; 
+    const { sourceId, amount, userId, creatorId, tierId, type, discountId } = body; 
 
     if (!sourceId || !amount || !userId) {
       return NextResponse.json(
@@ -14,7 +14,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const amountMoney = BigInt(Math.round(parseFloat(amount) * 100));
     const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
@@ -66,31 +65,71 @@ export async function POST(request: Request) {
        }
     }
 
-    // 3. Process Initial Payment
-    const response = await squareClient.payments.create({
+    // 3. Create Order to apply discounts natively
+    const basePriceMoney = BigInt(Math.round(parseFloat(amount) * 100)); // The non-discounted price
+    
+    // Construct line items
+    const lineItem: any = {
+      name: `${type === 'subscription' ? 'Subscription' : 'Recharge'} - ${tierId || 'Generic'}`,
+      quantity: '1',
+      basePriceMoney: {
+        amount: basePriceMoney,
+        currency: 'USD'
+      }
+    };
+
+    // Construct taxes/discounts
+    const discounts = discountId ? [{ catalogObjectId: discountId }] : undefined;
+
+    const orderReq = {
+      idempotencyKey: crypto.randomUUID(),
+      order: {
+        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || '',
+        customerId: squareCustomerId,
+        lineItems: [lineItem],
+        discounts: discounts
+      }
+    };
+
+    const orderRes = await squareClient.orders.create(orderReq);
+    const order = (orderRes as any).order || (orderRes as any).result?.order;
+    
+    if (!order) {
+       throw new Error("Failed to create Square Order");
+    }
+
+    // 4. Process Payment for the Order
+    // The order.totalMoney will reflect the discounted price
+    const finalAmountMoney = order.totalMoney.amount;
+    
+    const paymentRes = await squareClient.payments.create({
       idempotencyKey: crypto.randomUUID(),
       sourceId: paymentSourceId,
       amountMoney: {
         currency: 'USD',
-        amount: amountMoney,
+        amount: finalAmountMoney,
       },
+      orderId: order.id, // Link to the order
       note: `${type === 'subscription' ? 'Subscription' : 'Recharge'} for ${userId}`,
       customerId: squareCustomerId,
     });
 
-    const payment = (response as any).payment || (response as any).result?.payment || (response as any).body?.payment;
+    const payment = (paymentRes as any).payment || (paymentRes as any).result?.payment || (paymentRes as any).body?.payment;
     
     if (payment?.status === 'COMPLETED') {
+       // Convert back to number for DB logic
+       const finalAmountNumber = Number(finalAmountMoney);
+
        if (type === 'recharge') {
-          await addFunds(userId, Number(amountMoney), payment.id);
+          await addFunds(userId, finalAmountNumber, payment.id);
        } else if (type === 'subscription') {
           if (creatorId) {
              await addFunds(
                creatorId, 
-               Number(amountMoney), 
+               finalAmountNumber, 
                payment.id, 
                'Subscription Revenue', 
-               { subscriberId: userId, tierId, category: 'subscription' },
+               { subscriberId: userId, tierId, category: 'subscription', orderId: order.id, discountId },
                true // applySplit
              );
           }

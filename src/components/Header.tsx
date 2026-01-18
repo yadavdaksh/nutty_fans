@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Bell, Search, Menu, LogOut, User, Settings, LayoutDashboard } from 'lucide-react';
+import { Bell, Search, Menu, LogOut, User, Settings, LayoutDashboard, Phone, PhoneOff } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { useMessaging } from '@/hooks/useMessaging';
+import { createCreatorProfile, getCreatorProfile } from '@/lib/db';
+import { toast } from 'react-hot-toast';
 
 
 export default function Header() {
@@ -21,6 +23,15 @@ export default function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCallsEnabled, setIsCallsEnabled] = useState(false);
+
+  useEffect(() => {
+    if (userProfile?.role === 'creator' && user) {
+      getCreatorProfile(user.uid).then((profile) => {
+        if (profile) setIsCallsEnabled(profile.isCallsEnabled ?? false);
+      });
+    }
+  }, [userProfile, user]);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -164,26 +175,60 @@ export default function Header() {
           {/* Right side - Icons and Profile */}
           {!isAuthPage && (
             <div className="flex items-center h-10 gap-0">
-              {/* Search Icon with Expansion */}
-              <div className="relative flex items-center" ref={searchRef}>
-                <div className={`flex items-center overflow-hidden transition-all duration-300 ${isSearchOpen ? 'w-64 opacity-100' : 'w-0 opacity-0'}`}>
-                   <input 
-                     type="text"
-                     placeholder="Search fans or categories..."
-                     value={searchQuery}
-                     onChange={(e) => setSearchQuery(e.target.value)}
-                     className="w-full bg-[#f9fafb] border border-gray-200 rounded-full px-4 py-1.5 text-[14px] text-[#101828] placeholder:text-[#98a2b3] focus:border-[#9810fa] focus:bg-white outline-none transition-all shadow-sm"
-                     style={{ fontFamily: 'Inter, sans-serif' }}
-                   />
-                </div>
-                <button 
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isSearchOpen ? 'text-purple-600' : 'text-[#4a5565] hover:text-[#101828]'}`}
-                  onClick={() => setIsSearchOpen(!isSearchOpen)}
-                  aria-label="Search"
+              {/* Creator Call Toggle or Search Icon */}
+              {userProfile?.role === 'creator' ? (
+                <button
+                  onClick={async () => {
+                    if (!user) return;
+                    const newState = !isCallsEnabled;
+                    setIsCallsEnabled(newState); // Optimistic update
+                    try {
+                      await createCreatorProfile(user.uid, { isCallsEnabled: newState });
+                      toast.success(newState ? 'Calls Enabled' : 'Calls Disabled');
+                    } catch {
+                      setIsCallsEnabled(!newState);
+                      toast.error('Failed to update status');
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                    isCallsEnabled 
+                      ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' 
+                      : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                  }`}
                 >
-                  <Search className="w-4 h-4" />
+                  {isCallsEnabled ? (
+                    <>
+                      <Phone className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Calls Active</span>
+                    </>
+                  ) : (
+                    <>
+                      <PhoneOff className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Calls Disabled</span>
+                    </>
+                  )}
                 </button>
-              </div>
+              ) : (
+                <div className="relative flex items-center" ref={searchRef}>
+                  <div className={`flex items-center overflow-hidden transition-all duration-300 ${isSearchOpen ? 'w-64 opacity-100' : 'w-0 opacity-0'}`}>
+                    <input 
+                      type="text"
+                      placeholder="Search fans or categories..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-[#f9fafb] border border-gray-200 rounded-full px-4 py-1.5 text-[14px] text-[#101828] placeholder:text-[#98a2b3] focus:border-[#9810fa] focus:bg-white outline-none transition-all shadow-sm"
+                      style={{ fontFamily: 'Inter, sans-serif' }}
+                    />
+                  </div>
+                  <button 
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isSearchOpen ? 'text-purple-600' : 'text-[#4a5565] hover:text-[#101828]'}`}
+                    onClick={() => setIsSearchOpen(!isSearchOpen)}
+                    aria-label="Search"
+                  >
+                    <Search className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
 
               {/* Notifications Icon with Dropdown */}
               <div className="relative ml-4" ref={notificationsRef}>

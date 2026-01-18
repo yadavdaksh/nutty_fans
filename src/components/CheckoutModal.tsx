@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { X, Ticket, Check, Loader2, Sparkles, CreditCard, ChevronLeft } from 'lucide-react';
-import { validateCoupon } from '@/lib/db';
 import { Coupon } from '@/lib/db';
 import SquarePaymentForm from './SquarePaymentForm';
 import { useAuth } from '@/context/AuthContext';
@@ -16,7 +15,7 @@ interface CheckoutModalProps {
     description?: string;
     benefits: string[];
   };
-  onConfirm: (finalPrice: string, couponCode?: string) => Promise<void>;
+  onConfirm: (finalPrice: string, couponCode?: string, subscriptionId?: string) => Promise<void>;
   creatorName: string;
   creatorId: string;
 }
@@ -25,7 +24,7 @@ export default function CheckoutModal({ isOpen, onClose, tier, onConfirm, creato
   const { user } = useAuth();
   const [couponCode, setCouponCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
-  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountId: string; type: string; value: number } | null>(null);
   const [error, setError] = useState('');
   const [showPayment, setShowPayment] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -36,10 +35,10 @@ export default function CheckoutModal({ isOpen, onClose, tier, onConfirm, creato
   let finalPrice = originalPrice;
 
   if (appliedCoupon) {
-    if (appliedCoupon.discountType === 'percentage') {
-      finalPrice = originalPrice * (1 - appliedCoupon.discountValue / 100);
+    if (appliedCoupon.type === 'PERCENTAGE') {
+      finalPrice = originalPrice * (1 - appliedCoupon.value / 100);
     } else {
-      finalPrice = Math.max(0, originalPrice - appliedCoupon.discountValue);
+      finalPrice = Math.max(0, originalPrice - appliedCoupon.value);
     }
   }
 
@@ -48,13 +47,25 @@ export default function CheckoutModal({ isOpen, onClose, tier, onConfirm, creato
     setIsValidating(true);
     setError('');
     try {
-      const coupon = await validateCoupon(couponCode);
-      if (coupon) {
-        setAppliedCoupon(coupon);
+      const res = await fetch('/api/payments/validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode })
+      });
+      
+      const data = await res.json();
+
+      if (res.ok && data.valid) {
+        setAppliedCoupon({
+          code: couponCode,
+          discountId: data.id,
+          type: data.type,
+          value: data.value
+        });
         setCouponCode('');
         setError('');
       } else {
-        setError('Invalid or expired coupon code.');
+        setError(data.error || 'Invalid or expired coupon code.');
         setAppliedCoupon(null);
       }
     } catch {
@@ -65,11 +76,21 @@ export default function CheckoutModal({ isOpen, onClose, tier, onConfirm, creato
     }
   };
 
-  const handlePaymentSuccess = async () => {
+  interface CheckoutModalProps {
+    // ...
+    onConfirm: (finalPrice: string, couponCode?: string, subscriptionId?: string) => Promise<void>;
+    // ...
+  }
+
+  // ...
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handlePaymentSuccess = async (result: any) => {
     setIsProcessing(true);
     try {
       // Payment successful, now create subscription record in DB
-      await onConfirm(finalPrice.toFixed(2), appliedCoupon?.code);
+      // result.subscriptionId comes from the new subscribe endpoint
+      await onConfirm(finalPrice.toFixed(2), appliedCoupon?.code, result.subscriptionId);
       onClose();
     } catch (err) {
       console.error(err);
@@ -164,7 +185,7 @@ export default function CheckoutModal({ isOpen, onClose, tier, onConfirm, creato
                 {appliedCoupon && (
                   <p className="text-green-600 text-xs mt-2 font-bold px-1 flex items-center gap-1 animate-in slide-in-from-top-1">
                     <Check className="w-3 h-3" />
-                    Coupon Applied: {appliedCoupon.discountType === 'percentage' ? `${appliedCoupon.discountValue}%` : `$${appliedCoupon.discountValue}`} OFF
+                    Coupon Applied: {appliedCoupon.type === 'PERCENTAGE' ? `${appliedCoupon.value}%` : `$${appliedCoupon.value}`} OFF
                   </p>
                 )}
               </div>
@@ -178,7 +199,7 @@ export default function CheckoutModal({ isOpen, onClose, tier, onConfirm, creato
                 {appliedCoupon && (
                   <div className="flex justify-between items-center text-sm font-bold text-green-600">
                     <span>Discount Applied</span>
-                    <span>-{appliedCoupon.discountType === 'percentage' ? `${appliedCoupon.discountValue}%` : `$${appliedCoupon.discountValue}`}</span>
+                    <span>-{appliedCoupon.type === 'PERCENTAGE' ? `${appliedCoupon.value}%` : `$${appliedCoupon.value}`}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-2 border-t border-gray-100 mt-2">
@@ -208,6 +229,7 @@ export default function CheckoutModal({ isOpen, onClose, tier, onConfirm, creato
                 creatorId={creatorId}
                 tierId={tier.name}
                 type="subscription"
+                discountId={appliedCoupon?.discountId}
                 onSuccess={handlePaymentSuccess} 
                 onCancel={() => setShowPayment(false)} 
               />

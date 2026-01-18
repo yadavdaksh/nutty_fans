@@ -53,11 +53,15 @@ const Toggle = ({
   </div>
 );
 
+import SubscriptionPlansEditor from '@/components/SubscriptionPlansEditor';
+
 export default function SettingsPage() {
   const { user, userProfile, signOut, refreshProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [creatorProfile, setCreatorProfile] = useState<any>(null);
   const [formData, setFormData] = useState({
     username: '',
     displayName: '',
@@ -123,6 +127,7 @@ export default function SettingsPage() {
         if (userProfile?.role === 'creator') {
           const creator = await getCreatorProfile(user.uid);
           if (creator) {
+            setCreatorProfile(creator); // Store full profile for plans editor
             initialData.bio = creator.bio || '';
             initialData.website = creator.website || '';
             if (creator.callPrices) {
@@ -157,7 +162,6 @@ export default function SettingsPage() {
     { id: 'account', label: 'Account', icon: CreditCard },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'privacy', label: 'Privacy', icon: Lock },
-    { id: 'billing', label: 'Billing', icon: DollarSign },
     { id: 'billing', label: 'Billing', icon: DollarSign },
     { id: 'plans', label: 'Plans', icon: Package },
     ...(userProfile?.role === 'creator' ? [{ id: 'calls', label: 'Call Settings', icon: Phone }] : []),
@@ -883,14 +887,47 @@ export default function SettingsPage() {
 
               {activeTab === 'plans' && (
                 <div>
-                  <h2 className="text-2xl font-normal text-[#101828] mb-8" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  <h2 className="text-2xl font-normal text-[#101828] mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
                     Subscription Plans
                   </h2>
-                  <p className="text-sm font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                    Subscription plans content will be here
+                  <p className="text-sm font-normal text-[#4a5565] mb-8" style={{ fontFamily: 'Inter, sans-serif' }}>
+                    Create and manage your subscription tiers. These will be visible on your profile and Discover page.
                   </p>
+                  
+                  <SubscriptionPlansEditor 
+                    initialTiers={creatorProfile?.subscriptionTiers || []}
+                    onSave={async (tiers) => {
+                      if (!user) return;
+                      setSaving(true);
+                      try {
+                         // Call API to sync with Square immediately
+                         const res = await fetch('/api/creators/plans', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: user.uid, tiers })
+                         });
+
+                         if (!res.ok) throw new Error('Failed to sync plans with Square');
+                         
+                         const data = await res.json();
+                         const updatedTiers = data.tiers;
+
+                         // Update local state
+                         const updatedProfile = { ...creatorProfile, subscriptionTiers: updatedTiers };
+                         setCreatorProfile(current => ({ ...current, ...updatedProfile } as any));
+                         await refreshProfile();
+                         alert("Subscription plans saved and synced with Square!");
+                      } catch (err) {
+                        console.error("Error saving plans:", err);
+                        alert("Failed to save plans.");
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    saving={saving}
+                  />
                 </div>
-                  )}
+              )}
 
               {activeTab === 'calls' && (
                 <div>

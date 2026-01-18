@@ -408,11 +408,29 @@ export default function OnboardingPage() {
           if (user) await updateUserProfile(user.uid, { onboardingStep: 8 });
           setStep(8);
        }
-       // Step 8: Bank Details -> Finish
-       else if (step === 8) {
+        // Step 8: Bank Details -> Finish
+        else if (step === 8) {
         setLoading(true);
         try {
            if (user) {
+            // 1. Sync Plans with Square FIRST
+            let syncedTiers = tiers;
+            try {
+                const res = await fetch('/api/creators/plans', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.uid, tiers })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    syncedTiers = data.tiers;
+                } else {
+                    console.error("Failed to sync plans during onboarding, proceeding with local...");
+                }
+            } catch (err) {
+                console.error("Error syncing plans during onboarding:", err);
+            }
+
             await updateUserProfile(user.uid, {
               bio: formData.bio || `Welcome to my page!`,
               role: 'creator',
@@ -420,10 +438,12 @@ export default function OnboardingPage() {
               onboardingCompleted: true, 
               onboardingStep: 8 
             });
+            
+            // Save Creator Profile with Synced Tiers (containing squarePlanIDs)
             await createCreatorProfile(user.uid, {
               categories: selectedCategories,
               socialLinks: socials,
-              subscriptionTiers: tiers,
+              subscriptionTiers: syncedTiers,
               bio: formData.bio || `Welcome to my page!`,
             });
             await refreshProfile();
@@ -542,7 +562,8 @@ export default function OnboardingPage() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 -mt-10 overflow-y-auto">
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col items-center px-4 pt-12 pb-32 overflow-y-auto">
           
           {step === 3 && (
             <RoleSelectionStep
@@ -585,8 +606,8 @@ export default function OnboardingPage() {
             />
           )}
 
-          {/* Footer Buttons - Floating Action Bar */}
-          <div className="w-full max-w-[1440px] fixed bottom-0 left-0 right-0 p-8 flex justify-center pointer-events-none">
+          {/* Footer Buttons - Action Bar */}
+          <div className="w-full absolute bottom-0 left-0 right-0 p-8 flex justify-center pointer-events-none z-10">
              <div className="w-full max-w-[1000px] flex justify-between items-center pointer-events-auto">
                <button 
                   onClick={handleBack}
