@@ -18,12 +18,20 @@ import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 
 import { useSubscriptions } from '@/hooks/useSubscriptions';
+import MediaLightbox from '@/components/MediaLightbox';
+import { useState } from 'react';
+
+type LightboxState = {
+  src: string;
+  type: 'image' | 'video';
+} | null;
 
 export default function LoggedInHome() {
   const { user, userProfile } = useAuth();
   const { posts, loading: feedLoading } = useFeed();
   const { creators, loading: creatorsLoading } = useCreators();
   const { subscriptions, loading: subsLoading } = useSubscriptions(user?.uid);
+  const [lightboxMedia, setLightboxMedia] = useState<LightboxState>(null);
 
   const liveModels = creators.filter(c => c.isLive);
   const recommendedCreators = creators
@@ -121,9 +129,19 @@ export default function LoggedInHome() {
                   <p className="text-[#101828] text-sm whitespace-pre-line">{post.content}</p>
                 </div>
 
-                <div className="aspect-video relative bg-black overflow-hidden group">
+                <div 
+                  className="aspect-video relative bg-black overflow-hidden group cursor-zoom-in"
+                  onClick={() => {
+                    if (!post.isLocked) {
+                      setLightboxMedia({ src: post.mediaURL, type: post.type });
+                    }
+                  }}
+                >
                   {post.isLocked ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm z-10 transition-colors group-hover:bg-black/50">
+                    <div 
+                      className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm z-10 transition-colors group-hover:bg-black/50 cursor-default"
+                      onClick={(e) => e.stopPropagation()} // Prevent lightbox on locked content click
+                    >
                       <Lock className="w-12 h-12 text-white mb-3" />
                       <p className="text-white font-medium text-sm mb-4">Subscriber Only Content</p>
                       <button className="px-6 py-2 bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white rounded-full text-sm font-bold shadow-lg transform hover:scale-105 transition-all">
@@ -252,6 +270,14 @@ export default function LoggedInHome() {
 
         </div>
       </main>
+
+      {lightboxMedia && (
+        <MediaLightbox 
+          src={lightboxMedia.src} 
+          type={lightboxMedia.type} 
+          onClose={() => setLightboxMedia(null)} 
+        />
+      )}
     </div>
   );
 }

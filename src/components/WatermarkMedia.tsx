@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
+import MediaLightbox from './MediaLightbox';
 
 interface WatermarkMediaProps {
   src: string;
@@ -18,6 +19,8 @@ export default function WatermarkMedia({
   watermarkText = 'NuttyFans.com',
   className = '',
 }: WatermarkMediaProps) {
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  
   
   const preventCaptureProps = {
     onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
@@ -25,7 +28,14 @@ export default function WatermarkMedia({
   };
 
   return (
-    <div {...preventCaptureProps} className={`relative overflow-hidden group select-none ${className}`}>
+    <div 
+      {...preventCaptureProps} 
+      className={`relative overflow-hidden group select-none cursor-zoom-in ${className}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsLightboxOpen(true);
+      }}
+    >
       {/* The Actual Media */}
       {type === 'image' ? (
         <Image 
@@ -65,6 +75,15 @@ export default function WatermarkMedia({
         className="absolute inset-0 z-30 select-none bg-transparent" 
         onContextMenu={(e) => e.preventDefault()}
       />
+
+      {isLightboxOpen && (
+        <MediaLightbox 
+          src={src} 
+          type={type} 
+          alt={alt} 
+          onClose={() => setIsLightboxOpen(false)} 
+        />
+      )}
     </div>
   );
 }
