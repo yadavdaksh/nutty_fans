@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, Mail } from "lucide-react";
 
 export default function ResetDbButton() {
   const [loading, setLoading] = useState(false);
@@ -51,7 +51,29 @@ export default function ResetDbButton() {
   // For now, render always.
 
   return (
-    <div className="fixed bottom-4 left-4 z-50">
+    <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-2">
+      <button
+        onClick={async () => {
+          const toastId = toast.loading("Sending OTP...");
+          try {
+            const res = await fetch('/api/auth/send-otp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: 'user_nutty_fans1@yopmail.com', uid: 'test-global-uid' })
+            });
+            if (!res.ok) throw new Error('Failed');
+            toast.success('OTP sent to user_nutty_fans1@yopmail.com', { id: toastId });
+          } catch {
+            toast.error('Failed to send OTP', { id: toastId });
+          }
+        }}
+        className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-lg transition-colors font-medium border border-purple-500"
+        title="Send Test OTP"
+      >
+        <Mail className="w-5 h-5" />
+        <span className="hidden md:inline">Test OTP</span>
+      </button>
+
       <button
         onClick={handleReset}
         disabled={loading}

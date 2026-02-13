@@ -61,6 +61,7 @@ export interface UserProfile {
   walletBalance?: number;
   verificationStatus?: VerificationStatus;
   squareCustomerId?: string; // Square Customer ID for recurring payments
+  mercuryRecipientId?: string; // Mercury Recipient ID for payouts
   bankDetails?: BankDetails; // Bank details for payouts
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -161,6 +162,14 @@ export const createCreatorProfile = async (userId: string, data: Partial<Creator
   }
 };
 
+// Increment profile view count
+export const incrementProfileView = async (userId: string) => {
+  const creatorRef = doc(db, 'creators', userId);
+  await updateDoc(creatorRef, {
+    profileViews: increment(1)
+  });
+};
+
 export interface Post {
   id: string;
   creatorId: string;
@@ -245,6 +254,8 @@ export const createSubscription = async (
   const subId = `${userId}_${creatorId}`;
   const subRef = doc(db, 'subscriptions', subId) as DocumentReference<Subscription>;
   const creatorRef = doc(db, 'creators', creatorId) as DocumentReference<CreatorProfile>;
+  const creatorUserRef = doc(db, 'users', creatorId) as DocumentReference<UserProfile>;
+  const adminRef = doc(db, 'platform', 'finances') as DocumentReference<{ walletBalance: number; lastUpdated?: any }>;
 
   // 1. If couponCode provided, find the coupon document first
   let couponRef: DocumentReference<Coupon> | null = null;
@@ -257,20 +268,27 @@ export const createSubscription = async (
   }
 
   await runTransaction(db, async (transaction) => {
-    // 2. Get creator profile, sub, and coupon (if provided)
+    // 2. Get creator profile, user profile, sub, and coupon (if provided)
     const gets: Promise<DocumentSnapshot<unknown>>[] = [
       transaction.get(creatorRef),
-      transaction.get(subRef)
+      transaction.get(subRef),
+      transaction.get(creatorUserRef),
+      transaction.get(adminRef)
     ];
     if (couponRef) gets.push(transaction.get(couponRef));
 
     const snaps = await Promise.all(gets);
     const creatorSnap = snaps[0] as DocumentSnapshot<CreatorProfile>;
     const subSnap = snaps[1] as DocumentSnapshot<Subscription>;
-    const couponSnap = couponRef ? snaps[2] as DocumentSnapshot<Coupon> : null;
+    const creatorUserSnap = snaps[2] as DocumentSnapshot<UserProfile>;
+    const adminSnap = snaps[3] as DocumentSnapshot<UserProfile>;
+    const couponSnap = couponRef ? snaps[4] as DocumentSnapshot<Coupon> : null;
     
     if (!creatorSnap.exists()) throw new Error("Creator not found");
+    if (!creatorUserSnap.exists()) throw new Error("Creator user profile not found");
+    
     const isNewSubscription = !subSnap.exists();
+    const priceCents = Math.round(parseFloat(price) * 100);
     
     // 3. Create/Update subscription record
     const expiresAt = new Date();
@@ -289,10 +307,80 @@ export const createSubscription = async (
       squareSubscriptionId: squareSubscriptionId || null
     });
 
-    // 4. Update creator stats only if new
+    // 4. Update counts and balances only if new
     if (isNewSubscription) {
+      // Update creator stats
       transaction.update(creatorRef, {
         subscriberCount: (creatorSnap.data()?.subscriberCount || 0) + 1
+      });
+
+      // Calculate Split
+      const adminAmount = Math.floor((priceCents * PLATFORM_COMMISSION_PERCENT) / 100);
+      const creatorAmount = priceCents - adminAmount;
+
+      // Update creator wallet
+      const newCreatorBalance = (creatorUserSnap.data()?.walletBalance || 0) + creatorAmount;
+      transaction.update(creatorUserRef, { walletBalance: newCreatorBalance });
+
+      // Update admin wallet
+      const adminBalance = adminSnap.exists() ? (adminSnap.data()?.walletBalance || 0) : 0;
+      if (!adminSnap.exists()) {
+        transaction.set(adminRef, {
+          walletBalance: adminAmount,
+          lastUpdated: serverTimestamp()
+        });
+      } else {
+        transaction.update(adminRef, { 
+          walletBalance: adminBalance + adminAmount,
+          lastUpdated: serverTimestamp()
+        });
+      }
+
+      // Record transaction for creator (Gross Credit)
+      const creatorTxRef = doc(collection(db, 'wallet_transactions'));
+      transaction.set(creatorTxRef, {
+        userId: creatorId,
+        type: 'credit',
+        amount: priceCents, // Record full price for transparency
+        description: `Subscription Received: ${tierId} Tier`,
+        timestamp: serverTimestamp(),
+        metadata: {
+          category: 'subscription',
+          subscriberId: userId,
+          tierId: tierId,
+          fullPrice: priceCents
+        }
+      });
+
+      // Record transaction for creator (Platform Fee Debit)
+      const creatorFeeTxRef = doc(collection(db, 'wallet_transactions'));
+      transaction.set(creatorFeeTxRef, {
+        userId: creatorId,
+        type: 'debit',
+        amount: adminAmount,
+        description: `Platform Fee (20%) - Subscription`,
+        timestamp: serverTimestamp(),
+        metadata: {
+          category: 'platform_fee',
+          sourceUserId: userId,
+          subscriptionId: `${userId}_${creatorId}`
+        }
+      });
+
+      // Record transaction for admin
+      const adminTxRef = doc(collection(db, 'wallet_transactions'));
+      transaction.set(adminTxRef, {
+        userId: ADMIN_WALLET_ID,
+        type: 'credit',
+        amount: adminAmount,
+        description: `Platform Fee: Subscription (${creatorId})`,
+        timestamp: serverTimestamp(),
+        metadata: {
+          category: 'platform_fee',
+          sourceUserId: userId,
+          creatorId: creatorId,
+          fullPrice: priceCents
+        }
       });
     }
 
@@ -312,11 +400,34 @@ export const createSubscription = async (
  */
 export const cancelSubscription = async (subscriptionId: string) => {
   const subRef = doc(db, 'subscriptions', subscriptionId);
+  const subSnap = await getDoc(subRef);
+  
+  if (!subSnap.exists()) throw new Error("Subscription not found");
+  const subData = subSnap.data() as Subscription;
+
+  // Sync with Square if ID exists
+  if (subData.squareSubscriptionId) {
+    try {
+      // In Next.js with App Router, we can safely use absolute or relative URLs if calling from client
+      // or use fetch in server actions. Here, it's called from SubscriptionPage (Client).
+      const response = await fetch('/api/payments/subscribe/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ squareSubscriptionId: subData.squareSubscriptionId })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Failed to cancel on Square:", errorData);
+      }
+    } catch (error) {
+      console.error("Network error syncing with Square:", error);
+    }
+  }
+
   await updateDoc(subRef, {
     status: 'cancelled',
-    // We could also set expiresAt to now if we want immediate revocation, 
-    // but typically we might want to keep it until the end of the period.
-    // For this MVP, we just mark it cancelled.
+    // We keep expiresAt as is so they have access until the end
   });
 };
 
@@ -329,8 +440,8 @@ export const checkSubscriptionStatus = async (userId: string, creatorId: string)
   
   if (subSnap.exists()) {
     const data = subSnap.data() as Subscription;
-    // Check if subscription is still valid
-    if (data.status === 'active' && data.expiresAt.toDate() > new Date()) {
+    // Check if subscription is still valid (Active or Cancelled but not yet expired)
+    if ((data.status === 'active' || data.status === 'cancelled') && data.expiresAt.toDate() > new Date()) {
       return data;
     }
   }
@@ -387,11 +498,15 @@ export const getUserFeed = async (userId: string) => {
   const subsQ = query(
     subsRef,
     where('userId', '==', userId),
-    where('status', 'in', ['active', 'expiring']) // active and expiring are valid
+    where('status', 'in', ['active', 'expiring', 'cancelled']) // cancelled are valid until expiry
   );
   
   const subsSnap = await getDocs(subsQ);
-  const subs = subsSnap.docs.map(doc => doc.data() as Subscription);
+  const now = new Date();
+  const subs = subsSnap.docs
+    .map(doc => doc.data() as Subscription)
+    .filter(s => s.expiresAt.toDate() > now); // Ensure not expired
+    
   const creatorIds = subs.map(s => s.creatorId);
 
   const postsRef = collection(db, 'posts');
@@ -484,7 +599,7 @@ export const addFunds = async (
   applySplit: boolean = false
 ) => {
   const userRef = doc(db, 'users', userId);
-  const adminRef = doc(db, 'users', ADMIN_WALLET_ID);
+  const adminRef = doc(db, 'platform', 'finances');
   const transactionRef = collection(db, 'wallet_transactions');
 
   await runTransaction(db, async (transaction) => {
@@ -525,15 +640,14 @@ export const addFunds = async (
       
       if (!adminDoc.exists()) {
         transaction.set(adminRef, {
-          uid: ADMIN_WALLET_ID,
-          role: 'admin',
-          displayName: 'Platform Admin',
           walletBalance: adminAmount,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          lastUpdated: serverTimestamp()
         });
       } else {
-        transaction.update(adminRef, { walletBalance: adminBalance + adminAmount });
+        transaction.update(adminRef, { 
+          walletBalance: adminBalance + adminAmount,
+          lastUpdated: serverTimestamp()
+        });
       }
 
       // Add transaction record for Admin
@@ -552,7 +666,7 @@ export const addFunds = async (
 
 export const processTransaction = async (userId: string, amount: number, description: string, metadata: Record<string, unknown> = {}) => {
   const userRef = doc(db, 'users', userId);
-  const adminRef = doc(db, 'users', ADMIN_WALLET_ID);
+  const adminRef = doc(db, 'platform', 'finances');
   const txCollectionRef = collection(db, 'wallet_transactions');
   const creatorId = metadata?.creatorId as string | undefined;
   const creatorRef = creatorId ? doc(db, 'users', creatorId) : null;
@@ -590,35 +704,54 @@ export const processTransaction = async (userId: string, amount: number, descrip
         timestamp: serverTimestamp()
      });
 
-     // 2. Credit Creator (Split Amount)
+     // 2. Credit Creator (Gross Amount)
      if (creatorDoc && creatorDoc.exists() && creatorId) {
         const creatorBalance = creatorDoc.data().walletBalance || 0;
         transaction.update(creatorRef!, { walletBalance: creatorBalance + creatorAmount });
 
+        // Record Gross Credit
         const creditTxRef = doc(txCollectionRef);
         transaction.set(creditTxRef, {
            userId: creatorId,
            type: 'credit',
-           amount: creatorAmount,
+           amount: amount, // Full amount
            description: `Received: ${description}`,
-           metadata: { ...metadata, senderId: userId, commissionApplied: true },
+           metadata: { 
+             ...metadata, 
+             type: 'earning',
+             senderId: userId 
+           },
+           timestamp: serverTimestamp()
+        });
+
+        // Record Platform Fee Debit
+        const feeTxRef = doc(txCollectionRef);
+        transaction.set(feeTxRef, {
+           userId: creatorId,
+           type: 'debit',
+           amount: adminAmount,
+           description: `Platform Fee (20%) - ${description}`,
+           metadata: { 
+             ...metadata, 
+             category: 'platform_fee',
+             sourceUserId: userId 
+           },
            timestamp: serverTimestamp()
         });
      }
 
      // 3. Credit Admin (Commission)
-     const adminBalance = adminDoc.exists() ? (adminDoc.data().walletBalance || 0) : 0;
+     const adminBalance = adminDoc.exists() ? (adminDoc.data() as { walletBalance: number }).walletBalance || 0 : 0;
      if (!adminDoc.exists()) {
         transaction.set(adminRef, {
-          uid: ADMIN_WALLET_ID,
-          role: 'admin',
-          displayName: 'Platform Admin',
           walletBalance: adminAmount,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          lastUpdated: serverTimestamp()
         });
      } else {
-        transaction.update(adminRef, { walletBalance: adminBalance + adminAmount });
+        transaction.update(adminRef, { 
+          walletBalance: adminBalance + adminAmount,
+          lastUpdated: serverTimestamp()
+        });
      }
 
      const adminTxRef = doc(txCollectionRef);
@@ -663,6 +796,7 @@ export interface EarningsBreakdown {
   call: number;
   video_call: number;
   other: number;
+  platform_fee: number; // Added for transparency
   [key: string]: number;
 }
 
@@ -670,8 +804,8 @@ export const getEarningsBreakdown = async (userId: string): Promise<EarningsBrea
   const txCollectionRef = collection(db, 'wallet_transactions');
   const q = query(
     txCollectionRef, 
-    where('userId', '==', userId), 
-    where('type', '==', 'credit')
+    where('userId', '==', userId)
+    // Removed 'type' == 'credit' to fetch both credits and debits (fees)
   );
 
   const snapshot = await getDocs(q);
@@ -679,28 +813,37 @@ export const getEarningsBreakdown = async (userId: string): Promise<EarningsBrea
     total: 0,
     subscription: 0,
     tip: 0,
-    message_unlock: 0, // content_unlock
+    message_unlock: 0,
     post_unlock: 0,
     call: 0,
     video_call: 0,
-    other: 0
+    other: 0,
+    platform_fee: 0
   };
 
   snapshot.docs.forEach(doc => {
     const data = doc.data();
     const amount = data.amount || 0; // in cents
     const cat = data.metadata?.category;
+    const type = data.type;
 
-    breakdown.total += amount;
+    if (type === 'credit') {
+      breakdown.total += amount;
 
-    if (breakdown[cat] !== undefined) {
-       breakdown[cat] += amount;
-    } else {
-       // Fallback for older transactions or different names
-       if (data.description.toLowerCase().includes('tip')) breakdown.tip += amount;
-       else if (data.description.toLowerCase().includes('subscription')) breakdown.subscription += amount;
-       else if (data.description.toLowerCase().includes('unlock')) breakdown.message_unlock += amount; // Generic unlock
-       else breakdown.other += amount;
+      if (breakdown[cat] !== undefined) {
+         breakdown[cat] += amount;
+      } else {
+         // Fallback for older transactions or different names
+         if (data.description.toLowerCase().includes('tip')) breakdown.tip += amount;
+         else if (data.description.toLowerCase().includes('subscription')) breakdown.subscription += amount;
+         else if (data.description.toLowerCase().includes('unlock')) breakdown.message_unlock += amount; // Generic unlock
+         else breakdown.other += amount;
+      }
+    } else if (type === 'debit' && (cat === 'platform_fee' || data.description.toLowerCase().includes('platform fee'))) {
+      breakdown.platform_fee += amount;
+      // Note: total is net earnings, so we don't subtract here if total is sum of credits.
+      // However, if we want total to be gross, we'd add it.
+      // For now, let's keep total as NET (sum of credits) to match Available Balance.
     }
   });
 

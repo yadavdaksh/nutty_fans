@@ -43,13 +43,13 @@ export function useSubscriptions(userId?: string, creatorId?: string) {
       q = query(
         collection(db, 'subscriptions'),
         where('userId', '==', userId),
-        where('status', 'in', ['active', 'expiring'])
+        where('status', 'in', ['active', 'expiring', 'cancelled'])
       );
     } else {
       q = query(
         collection(db, 'subscriptions'),
         where('creatorId', '==', creatorId),
-        where('status', 'in', ['active', 'expiring'])
+        where('status', 'in', ['active', 'expiring', 'cancelled'])
       );
     }
     

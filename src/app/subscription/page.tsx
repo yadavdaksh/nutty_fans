@@ -126,8 +126,10 @@ export default function SubscriptionPage() {
                       <div className="flex-1">
                         <div className="flex justify-between items-end mb-2">
                           <div>
-                            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 mb-1">
-                              {sub.tierId || 'Basic'}
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold mb-1 ${
+                              sub.status === 'cancelled' ? 'bg-orange-50 text-orange-700' : 'bg-purple-50 text-purple-700'
+                            }`}>
+                              {sub.status === 'cancelled' ? 'Ending Soon' : (sub.tierId || 'Basic')}
                             </span>
                             <p className="text-xl font-bold text-[#101828] text-sm">
                               ${price}
@@ -135,7 +137,9 @@ export default function SubscriptionPage() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs font-medium text-[#475467] mb-1">Renewal Date</p>
+                            <p className="text-xs font-medium text-[#475467] mb-1">
+                              {sub.status === 'cancelled' ? 'Expires on' : 'Renewal Date'}
+                            </p>
                             <div className="flex items-center gap-1.5 text-sm font-semibold text-[#101828]">
                               <Calendar className="w-4 h-4 text-[#475467]" />
                               {expires.toLocaleDateString()}
@@ -156,11 +160,13 @@ export default function SubscriptionPage() {
                         </Link>
                         <button 
                           onClick={() => handleCancel(sub.id)}
-                          disabled={cancellingId === sub.id}
-                          className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                          disabled={cancellingId === sub.id || sub.status === 'cancelled'}
+                          className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center p-2"
                         >
                           {cancellingId === sub.id ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : sub.status === 'cancelled' ? (
+                            'Cancelled'
                           ) : (
                             'Cancel'
                           )}

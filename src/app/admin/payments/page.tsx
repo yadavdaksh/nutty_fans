@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getPayoutRequests, updatePayoutRequestStatus, PayoutRequest } from '@/lib/db';
+import { useAuth } from '@/context/AuthContext';
 import { 
   CreditCard, 
   Clock, 
@@ -16,6 +17,7 @@ import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 
 export default function PendingPaymentsPage() {
+  const { user } = useAuth();
   const [requests, setRequests] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -37,14 +39,38 @@ export default function PendingPaymentsPage() {
   };
 
   const handleUpdateStatus = async (id: string, status: PayoutRequest['status']) => {
+    if (!user) {
+      toast.error('You must be logged in');
+      return;
+    }
+
     setProcessingId(id);
     try {
-      await updatePayoutRequestStatus(id, status);
-      toast.success(`Request ${status} successfully`);
+      if (status === 'approved') {
+        // Use the automated Mercury API for approvals
+        const res = await fetch('/api/admin/payouts/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            payoutRequestId: id,
+            adminUserId: user.uid
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Payout failed');
+        
+        toast.success('Payout automated via Mercury successfully!');
+      } else {
+        // Regular manual rejection/status update
+        await updatePayoutRequestStatus(id, status);
+        toast.success(`Request ${status} successfully`);
+      }
+      
       setRequests(requests.filter(r => r.id !== id));
     } catch (err) {
       console.error(err);
-      toast.error('Operation failed');
+      toast.error((err as Error).message || 'Operation failed');
     } finally {
       setProcessingId(null);
     }
@@ -155,11 +181,8 @@ export default function PendingPaymentsPage() {
                <ExternalLink className="w-6 h-6 text-indigo-400" />
             </div>
             <div>
-               <h4 className="text-white font-bold mb-1">Manual Action Required</h4>
-               <p className="text-sm leading-relaxed max-w-2xl opacity-80">
-                 Approving a payout request here only marks it as &quot;Approved&quot; and deducts the funds from the system hold. 
-                 You must still process the actual bank transfer via your bank or payment processor. Use the details above for the transfer.
-               </p>
+                 Approving a payout request here will **automatically** trigger an ACH transfer via Mercury. 
+                 Ensure the bank details above are correct before clicking &quot;Approve & Pay&quot;.
             </div>
          </div>
       </div>

@@ -5,7 +5,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 
 export async function POST(request: Request) {
   try {
-    const { subject, content, target } = await request.json();
+    const { subject, content, target, imageUrl } = await request.json();
 
     if (!subject || !content) {
       return NextResponse.json({ error: 'Missing subject or content' }, { status: 400 });
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
     // 3. Send Batch Emails (Simulated for safety in this task, but fully implemented)
     // Note: We use Promise.all for speed, but in production we should use a queue.
-    console.log(`Sending newsletter to ${emails.length} users...`);
+    console.log(`Sending newsletter to ${emails.length} users with image: ${!!imageUrl}...`);
     
     // For demo purposes, we log instead of sending thousands of real emails if not configured
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
@@ -57,6 +57,11 @@ export async function POST(request: Request) {
                 <h1 style="color: white; margin: 0; font-size: 28px;">NuttyFans Updates</h1>
               </div>
               <div style="padding: 40px; background: white; border: 1px solid #eee; border-top: none; border-radius: 0 0 20px 20px;">
+                ${imageUrl ? `
+                  <div style="margin-bottom: 24px;">
+                    <img src="${imageUrl}" alt="Newsletter Image" style="max-width: 100%; border-radius: 12px; display: block;" />
+                  </div>
+                ` : ''}
                 ${content}
               </div>
               <div style="padding: 20px; text-align: center; font-size: 12px; color: #999;">

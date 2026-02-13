@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // Make sure this exports your firestore instance
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { sendEmail } from '@/lib/email';
+import { getOtpEmailTemplate } from '@/lib/email-templates';
 
 
 // We will use the standard db instance if available or initialize it. 
@@ -32,14 +33,7 @@ export async function POST(request: Request) {
     });
 
     // Send Email
-    const emailHtml = `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Verify your email</h2>
-        <p>Your verification code for NuttyFans is:</p>
-        <h1 style="color: #9810fa; letter-spacing: 5px; font-size: 32px;">${otp}</h1>
-        <p>This code will expire in 10 minutes.</p>
-      </div>
-    `;
+    const emailHtml = getOtpEmailTemplate(otp);
 
     await sendEmail(email, 'Verify your Email - NuttyFans', emailHtml);
 

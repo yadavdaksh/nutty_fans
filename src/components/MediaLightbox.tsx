@@ -24,7 +24,10 @@ export default function MediaLightbox({ src, type, onClose, alt = 'Media content
   return (
     <div 
       className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
-      onClick={onClose}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
     >
       <button 
         onClick={onClose}

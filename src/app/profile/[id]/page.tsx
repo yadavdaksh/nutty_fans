@@ -10,7 +10,8 @@ import {
   getUserProfile, 
   UserProfile, 
   createSubscription,
-  Subscription
+  Subscription,
+  incrementProfileView
 } from '@/lib/db';
 import { 
   startConversation, 
@@ -30,6 +31,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import CheckoutModal from '@/components/CheckoutModal';
 import TipModal from '@/components/TipModal';
+import WatermarkMedia from '@/components/WatermarkMedia';
 import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
@@ -67,6 +69,13 @@ export default function ProfilePage() {
       }
       setLoading(false);
     });
+
+    // 2.5 Increment view count (only if not own profile)
+    if (user && user.uid !== creatorUid) {
+       // Simple implementation: increment on every visit
+       // In production, we'd use a session or cookie check to prevent spam
+       incrementProfileView(creatorUid).catch(console.error);
+    }
 
     // 3. Subscribe to subscription status
     let unsubSub = () => {};
@@ -504,31 +513,12 @@ export default function ProfilePage() {
                             </div>
                           </>
                         ) : (
-                          <>
-                            {item.type === 'image' ? (
-                              <Image 
-                                src={item.mediaURL} 
-                                alt="Post content" 
-                                fill 
-                                className="object-cover" 
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-black flex items-center justify-center">
-                                <video src={item.mediaURL} className="w-full h-full object-cover" />
-                              </div>
-                            )}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                              <div className="flex items-center gap-4 text-white">
-                                <div className="flex items-center gap-1">
-                                  <Heart className="w-4 h-4" />
-                                  <span className="text-sm font-normal" style={{ fontFamily: 'Inter, sans-serif' }}>
-                                    {item.likesCount}
-                                  </span>
-                                </div>
-
-                              </div>
-                            </div>
-                          </>
+                          <WatermarkMedia
+                            src={item.mediaURL}
+                            type={item.type as 'image' | 'video'}
+                            alt="Post content"
+                            className="w-full h-full"
+                          />
                         )}
                       </div>
                     ))}

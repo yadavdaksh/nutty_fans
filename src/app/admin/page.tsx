@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import { 
@@ -18,6 +18,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { startOfMonth, subMonths, endOfMonth } from 'date-fns';
+import { toast } from 'react-hot-toast';
 
 interface SystemActivity {
   text: string;
@@ -30,8 +31,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState([
     { label: 'Total Users', value: '0', trend: '...', icon: Users, positive: true },
     { label: 'Verified Creators', value: '0', trend: '...', icon: Star, positive: true },
-    { label: 'Monthly Revenue', value: '$0', trend: '...', icon: DollarSign, positive: true },
-    { label: 'Total Subscriptions', value: '0', trend: '...', icon: TrendingUp, positive: true },
+    { label: 'Gross Volume', value: '$0', trend: '...', icon: DollarSign, positive: true },
+    { label: 'Platform Commission', value: '$0', trend: '...', icon: TrendingUp, positive: true },
   ]);
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
@@ -40,11 +41,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [usersSnap, creatorsSnap, subsSnap, txsAllSnap] = await Promise.all([
+        const [usersSnap, creatorsSnap, subsSnap, txsAllSnap, platformSnap] = await Promise.all([
           getDocs(collection(db, 'users')),
           getDocs(collection(db, 'creators')),
           getDocs(collection(db, 'subscriptions')),
           getDocs(collection(db, 'wallet_transactions')),
+          getDoc(doc(db, 'platform', 'finances'))
         ]);
 
         const now = new Date();
@@ -129,6 +131,16 @@ export default function AdminDashboard() {
         const sorted = recentActivities.sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
         setActivities(sorted);
 
+        const platformCommission = platformSnap.exists() ? (platformSnap.data()?.walletBalance || 0) / 100 : 0;
+        const grossVolume = txsAllSnap.docs.reduce((acc, doc) => {
+          const data = doc.data();
+          // Sum only credits to creators or tips to counts as volume
+          if (data.type === 'credit' && data.metadata?.type === 'earning') {
+             return acc + (data.amount || 0);
+          }
+          return acc;
+        }, 0) / 100;
+
         setStats([
           { 
             label: 'Total Users', 
@@ -145,15 +157,15 @@ export default function AdminDashboard() {
             positive: true 
           },
           { 
-            label: 'Monthly Revenue', 
-            value: `$${monthlyRevenue.toLocaleString()}`, 
+            label: 'Gross Volume', 
+            value: `$${grossVolume.toLocaleString()}`, 
             trend: `${revTrend >= 0 ? '+' : ''}${revTrend}%`, 
             icon: DollarSign, 
             positive: revTrend >= 0 
           },
           { 
-            label: 'Active Subscriptions', 
-            value: subsSnap.size.toLocaleString(), 
+            label: 'Platform Commission', 
+            value: `$${platformCommission.toLocaleString()}`, 
             trend: 'Real-time', 
             icon: TrendingUp, 
             positive: true 
@@ -260,9 +272,13 @@ export default function AdminDashboard() {
                   </span>
                )}
              </Link>
+             <Link href="/admin/payments" className="block w-full py-3 bg-green-600/20 text-green-400 hover:bg-green-600/30 rounded-xl font-bold transition-colors border border-green-500/20 text-center">
+               Review Pending Payouts
+             </Link>
              <button className="w-full py-3 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded-xl font-bold transition-colors border border-red-500/20">
                System Maintenance
              </button>
+
           </div>
           <div className="mt-8 pt-8 border-t border-gray-700/50">
             <p className="text-xs text-gray-400 leading-relaxed">

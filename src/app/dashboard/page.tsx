@@ -3,7 +3,15 @@
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
-import { getCreatorProfile, getEarningsBreakdown, getUserFeed, Post, EarningsBreakdown, createPayoutRequest } from '@/lib/db';
+import { 
+  getCreatorProfile, 
+  getEarningsBreakdown, 
+  getUserFeed, 
+  Post, 
+  EarningsBreakdown, 
+  createPayoutRequest,
+  CreatorProfile 
+} from '@/lib/db';
 import { useEffect, useState } from 'react';
 import { 
   Upload,
@@ -20,14 +28,15 @@ import {
   X,
   CreditCard,
   AlertCircle,
-  Mail
+  Mail,
+  Settings
 } from 'lucide-react';
 import Link from 'next/link';
-import { CreatorProfile } from '@/lib/db';
+import Image from 'next/image';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { usePosts } from '@/hooks/usePosts';
 import PostGrid from '@/components/PostGrid';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 export default function DashboardPage() {
   const { user, userProfile } = useAuth();
@@ -298,111 +307,213 @@ export default function DashboardPage() {
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-              {/* Revenue Overview */}
-              <div className="lg:col-span-2 bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
-                <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-xl font-bold text-[#101828]">
-                    Revenue Breakdown
-                  </h2>
-                </div>
-                
-                {earningsBreakdown ? (
-                  <div className="space-y-6">
-                    {[
-                      { label: 'Subscriptions', key: 'subscription', color: 'bg-purple-600' },
-                      { label: 'Tips & Donations', key: 'tip', color: 'bg-yellow-500' },
-                      { label: 'Message Unlocks', key: 'message_unlock', color: 'bg-pink-500' },
-                      { label: 'Calls', key: 'call', color: 'bg-blue-500' },
-                    ].map((item) => {
-                      const amount = earningsBreakdown[item.key] || 0;
-                      const total = earningsBreakdown.total || 1; 
-                      const percentage = Math.round((amount / total) * 100);
-                      
-                      return (
-                        <div key={item.key}>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-bold text-[#475467]">
-                              {item.label}
-                            </span>
+              
+              {/* Left Column (2/3) */}
+              <div className="lg:col-span-2">
+                  <div className="bg-white border border-gray-100 rounded-2xl p-8 mb-8 shadow-sm">
+                   <h2 className="text-xl font-bold text-[#101828] mb-6">Revenue Breakdown</h2>
+                   {earningsBreakdown ? (
+                     <div className="space-y-6">
+                       {/* Subscriptions */}
+                       <div>
+                         <div className="flex justify-between items-end mb-2">
+                           <span className="text-sm font-medium text-[#344054]">Subscriptions</span>
+                           <div className="text-right">
+                             <span className="text-sm font-bold text-[#101828] block">
+                               ${(earningsBreakdown.subscription / 100).toFixed(2)}
+                             </span>
+                             <span className="text-xs text-[#667085]">
+                               {earningsBreakdown.total > 0 ? ((earningsBreakdown.subscription / earningsBreakdown.total) * 100).toFixed(0) : 0}%
+                             </span>
+                           </div>
+                         </div>
+                         <div className="w-full bg-gray-100 rounded-full h-2">
+                           <div 
+                             className="bg-purple-600 h-2 rounded-full transition-all duration-1000"
+                             style={{ width: `${earningsBreakdown.total > 0 ? (earningsBreakdown.subscription / earningsBreakdown.total) * 100 : 0}%` }}
+                           ></div>
+                         </div>
+                       </div>
+                       
+                       {/* Tips */}
+                       <div>
+                         <div className="flex justify-between items-end mb-2">
+                           <span className="text-sm font-medium text-[#344054]">Tips & Donations</span>
+                           <div className="text-right">
+                             <span className="text-sm font-bold text-[#101828] block">
+                               ${(earningsBreakdown.tip / 100).toFixed(2)}
+                             </span>
+                             <span className="text-xs text-[#667085]">
+                               {earningsBreakdown.total > 0 ? ((earningsBreakdown.tip / earningsBreakdown.total) * 100).toFixed(0) : 0}%
+                             </span>
+                           </div>
+                         </div>
+                         <div className="w-full bg-gray-100 rounded-full h-2">
+                           <div 
+                             className="bg-green-500 h-2 rounded-full transition-all duration-1000"
+                             style={{ width: `${earningsBreakdown.total > 0 ? (earningsBreakdown.tip / earningsBreakdown.total) * 100 : 0}%` }}
+                           ></div>
+                         </div>
+                       </div>
+
+                        {/* Unlocks */}
+                        <div>
+                          <div className="flex justify-between items-end mb-2">
+                            <span className="text-sm font-medium text-[#344054]">Message Unlocks</span>
                             <div className="text-right">
                               <span className="text-sm font-bold text-[#101828] block">
-                                ${(amount / 100).toFixed(2)}
+                                ${(earningsBreakdown.message_unlock / 100).toFixed(2)}
                               </span>
-                              <span className="text-xs text-gray-500 font-medium">
-                                {percentage}%
+                              <span className="text-xs text-[#667085]">
+                                {earningsBreakdown.total > 0 ? ((earningsBreakdown.message_unlock / earningsBreakdown.total) * 100).toFixed(0) : 0}%
                               </span>
                             </div>
                           </div>
-                          <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden">
+                          <div className="w-full bg-gray-100 rounded-full h-2">
                             <div 
-                              className={`h-full ${item.color} rounded-full transition-all duration-1000`}
-                              style={{ width: `${percentage}%` }}
+                              className="bg-purple-600 h-2 rounded-full transition-all duration-1000 opacity-60"
+                              style={{ width: `${earningsBreakdown.total > 0 ? (earningsBreakdown.message_unlock / earningsBreakdown.total) * 100 : 0}%` }}
                             ></div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-48 text-gray-400">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  </div>
-                )}
+
+                        {/* Platform Fees */}
+                        <div className="pt-4 border-t border-dashed border-gray-100">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#667085]">Platform Fees (20%)</span>
+                              <div className="group relative">
+                                <div className="p-0.5 rounded-full bg-gray-100 cursor-help">
+                                  <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                </div>
+                                <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 p-2 bg-gray-900 text-white text-[10px] rounded shadow-xl z-10">
+                                  NuttyFans takes a 20% platform fee to cover server costs, security, and payment processing.
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-sm font-bold text-red-500">
+                              -${(earningsBreakdown.platform_fee / 100 || (earningsBreakdown.total * 0.25) / 100).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Calls */}
+                       <div>
+                         <div className="flex justify-between items-end mb-2">
+                           <span className="text-sm font-medium text-[#344054]">Calls & Video</span>
+                           <div className="text-right">
+                             <span className="text-sm font-bold text-[#101828] block">
+                               ${((earningsBreakdown.call + earningsBreakdown.video_call) / 100).toFixed(2)}
+                             </span>
+                             <span className="text-xs text-[#667085]">
+                               {earningsBreakdown.total > 0 ? (((earningsBreakdown.call + earningsBreakdown.video_call) / earningsBreakdown.total) * 100).toFixed(0) : 0}%
+                             </span>
+                           </div>
+                         </div>
+                         <div className="w-full bg-gray-100 rounded-full h-2">
+                           <div 
+                             className="bg-orange-500 h-2 rounded-full transition-all duration-1000"
+                             style={{ width: `${earningsBreakdown.total > 0 ? (((earningsBreakdown.call + earningsBreakdown.video_call) / earningsBreakdown.total) * 100) : 0}%` }}
+                           ></div>
+                         </div>
+                       </div>
+
+                     </div>
+                   ) : (
+                     <div className="text-center py-8 text-gray-500">No earnings yet</div>
+                   )}
+                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
-                <h2 className="text-xl font-bold text-[#101828] mb-8">
-                  Quick Actions
-                </h2>
-                <div className="space-y-4">
-                  <Link
-                    href="/content"
-                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
-                      <Upload className="w-5 h-5 text-gray-600 group-hover:text-purple-600" />
-                    </div>
-                    <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
-                      Post New Content
-                    </span>
-                  </Link>
-                  <Link
-                    href="/messages"
-                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
-                      <MessageSquare className="w-5 h-5 text-gray-600 group-hover:text-purple-600" />
-                    </div>
-                    <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
-                      Message Fans
-                    </span>
-                  </Link>
-                  <Link
-                    href="/dashboard/newsletter"
-                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
-                      <Mail className="w-5 h-5 text-gray-600 group-hover:text-purple-600" />
-                    </div>
-                    <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
-                      Send Newsletter
-                    </span>
-                  </Link>
-                  <Link
-                    href="/settings"
-                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
-                      <BarChart3 className="w-5 h-5 text-gray-600 group-hover:text-purple-600" />
-                    </div>
-                    <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
-                      Account Settings
-                    </span>
-                  </Link>
+              {/* Right Column (1/3) */}
+              <div className="space-y-8">
+                
+                {/* Recent Subscribers Widget */}
+                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                   <div className="flex items-center justify-between mb-6">
+                     <h2 className="text-lg font-bold text-[#101828]">Recent Subscribers</h2>
+                     <Link href="/dashboard/subscribers" className="text-sm font-semibold text-purple-600 hover:text-purple-700">
+                       View All
+                     </Link>
+                   </div>
+                   
+                   <div className="space-y-4">
+                     {subscribers.length === 0 ? (
+                       <p className="text-sm text-gray-500 italic text-center py-4">No active subscribers yet.</p>
+                     ) : (
+                       subscribers.slice(0, 5).map((sub) => (
+                         <div key={sub.id} className="flex items-center justify-between group">
+                           <div className="flex items-center gap-3">
+                             <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden relative border border-gray-100">
+                               <Image 
+                                 src={sub.user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(sub.user?.displayName || 'User')}`}
+                                 alt={sub.user?.displayName || 'User'}
+                                 fill
+                                 className="object-cover"
+                               />
+                             </div>
+                             <div>
+                               <p className="text-sm font-semibold text-[#101828] group-hover:text-purple-600 transition-colors">
+                                 {sub.user?.displayName || 'Anonymous User'}
+                               </p>
+                               <p className="text-xs text-[#667085]">
+                                 {sub.tierId} Tier • ${sub.price}
+                               </p>
+                             </div>
+                           </div>
+                           <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                             Active
+                           </span>
+                         </div>
+                       ))
+                     )}
+                   </div>
+                </div>
+
+                {/* Quick Actions (Moved from below) */}
+                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                  <h2 className="text-lg font-bold text-[#101828] mb-6">
+                    Quick Actions
+                  </h2>
+                  <div className="space-y-3">
+                    <Link
+                      href="/content"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                        <Upload className="w-4 h-4 text-gray-600 group-hover:text-purple-600" />
+                      </div>
+                      <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
+                        Post New Content
+                      </span>
+                    </Link>
+                    <Link
+                      href="/messages"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                        <MessageSquare className="w-4 h-4 text-gray-600 group-hover:text-purple-600" />
+                      </div>
+                      <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
+                        Message Fans
+                      </span>
+                    </Link>
+                    <Link
+                      href="/settings"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                        <Settings className="w-4 h-4 text-gray-600 group-hover:text-purple-600" />
+                      </div>
+                      <span className="text-sm font-bold text-[#344054] group-hover:text-purple-700">
+                        Account Settings
+                      </span>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
+
 
             {/* My Posts Section */}
             <div className="mb-10">
@@ -464,13 +575,13 @@ export default function DashboardPage() {
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Payout Amount ($)</label>
                   <div className="relative">
                     <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input 
-                      type="number" 
-                      placeholder="0.00"
-                      value={payoutAmount}
-                      onChange={(e) => setPayoutAmount(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-600 font-bold text-lg"
-                    />
+                     <input 
+                       type="number" 
+                       placeholder="0.00"
+                       value={payoutAmount}
+                       onChange={(e) => setPayoutAmount(e.target.value)}
+                       className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-600 font-bold text-lg text-[#101828]"
+                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-2 font-medium">Min payout: $10.00</p>
                 </div>

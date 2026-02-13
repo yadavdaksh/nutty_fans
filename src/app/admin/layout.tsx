@@ -30,7 +30,8 @@ import {
   ShieldAlert, 
   Settings,
   ArrowLeft,
-  LogOut
+  LogOut,
+  Banknote
 } from 'lucide-react';
 
 function AdminSidebar() {
@@ -41,6 +42,7 @@ function AdminSidebar() {
     { label: 'Dashboard', icon: BarChart3, href: '/admin' },
     { label: 'User Management', icon: Users, href: '/admin/users' },
     { label: 'Verification Queue', icon: CheckCircle2, href: '/admin/verification' },
+    { label: 'Pending Payments', icon: Banknote, href: '/admin/payments' },
     { label: 'Coupon System', icon: Ticket, href: '/admin/coupons' },
     { label: 'Content Moderation', icon: ShieldAlert, href: '/admin/content' },
     { label: 'System Settings', icon: Settings, href: '/admin/settings' },

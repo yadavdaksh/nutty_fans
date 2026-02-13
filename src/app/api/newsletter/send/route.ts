@@ -5,7 +5,7 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 
 export async function POST(request: Request) {
   try {
-    const { subject, content, target, creatorId } = await request.json();
+    const { subject, content, target, creatorId, imageUrl } = await request.json();
 
     if (!subject || !content || !creatorId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log(`Sending creator newsletter to ${emails.length} users...`);
+    console.log(`Sending creator newsletter to ${emails.length} users with image: ${!!imageUrl}...`);
     
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
        console.warn('EMAIL_USER or EMAIL_PASS not set. Simulated send successful.');
@@ -93,6 +93,11 @@ export async function POST(request: Request) {
                 <h1 style="color: #9810fa; margin: 0; font-size: 24px;">New Update from Creator</h1>
               </div>
               <div style="padding: 40px; background: white; border: 1px solid #eee; border-top: none; border-radius: 0 0 20px 20px;">
+                ${imageUrl ? `
+                  <div style="margin-bottom: 24px;">
+                    <img src="${imageUrl}" alt="Update Image" style="max-width: 100%; border-radius: 12px; display: block;" />
+                  </div>
+                ` : ''}
                 <h2 style="margin-top: 0;">${subject}</h2>
                 <div style="line-height: 1.6; color: #555;">
                   ${content}

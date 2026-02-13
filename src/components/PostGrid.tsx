@@ -2,7 +2,7 @@
 
 import { Post } from '@/lib/db';
 import { Play, Lock } from 'lucide-react';
-import Image from 'next/image';
+import WatermarkMedia from './WatermarkMedia';
 
 interface PostGridProps {
   posts: Post[];
@@ -19,19 +19,23 @@ export default function PostGrid({ posts, onPostClick }: PostGridProps) {
           onClick={() => onPostClick?.(post)}
         >
           {/* Media */}
-          {post.type === 'video' ? (
-             <video 
-               src={post.mediaURL} 
-               className="w-full h-full object-cover"
+          <div className="w-full h-full" onClick={() => {
+             // If we have an external handler, let it handle the click (and prevent lightbox if needed)
+             // But here we want lightbox. WatermarkMedia handles its own click.
+             // If onPostClick is present, we might want to prioritize it? 
+             // Usually PostGrid is for navigation OR viewing. 
+             // If onPostClick is passed, it's likely for navigation. 
+             // But if we want lightbox, we should let WatermarkMedia handle it.
+             // Let's just render WatermarkMedia. The container's onClick will catch bubbles if WatermarkMedia doesn't stop prop.
+             // WatermarkMedia DOES stop propagation.
+          }} >
+             <WatermarkMedia
+                src={post.mediaURL}
+                type={post.type as 'image' | 'video'}
+                alt={post.content || 'Post media'}
+                className="w-full h-full"
              />
-          ) : (
-            <Image 
-              src={post.mediaURL} 
-              alt={post.content || 'Post image'} 
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-110"
-            />
-          )}
+          </div>
 
           {/* Overlays */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />

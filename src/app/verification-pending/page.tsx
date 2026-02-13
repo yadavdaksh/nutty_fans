@@ -13,9 +13,14 @@ export default function VerificationPendingPage() {
   useEffect(() => {
     if (userProfile?.role === 'creator' && userProfile?.verificationStatus === 'approved') {
        router.push('/dashboard');
+       return; // Stop execution here
     }
-    // If not a creator or somehow on this page as an approved user/admin
-    if (userProfile && (userProfile.role !== 'creator' || userProfile.verificationStatus === 'approved')) {
+    
+    // Only redirect to home if they are NOT a creator, or if they are a creator but NOT pending/approved (e.g. suspended?)
+    // Actually, if they are 'approved' we handled it above.
+    // If they are 'pending', they should stay here.
+    // So we only redirect if they are NOT a creator.
+    if (userProfile && userProfile.role !== 'creator') {
        router.push('/');
     }
   }, [userProfile, router]);

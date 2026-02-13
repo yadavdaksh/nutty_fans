@@ -21,6 +21,7 @@ import WatermarkMedia from '@/components/WatermarkMedia';
 import { format } from 'date-fns';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Timestamp, doc, onSnapshot } from 'firebase/firestore';
 
 type ParticipantMetadata = {
@@ -405,38 +406,38 @@ export default function MessagesPage() {
                          onClick={() => setActiveChatId(conv.id)}
                          className={`p-4 flex gap-3 cursor-pointer transition-colors hover:bg-gray-50 ${isActive ? 'bg-gray-50' : ''}`}
                        >
-                         <div className="relative flex-shrink-0">
-                           <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
-                             <Image 
-                               src={displayPhoto} 
-                               alt={displayName} 
-                               fill
-                               className="object-cover" 
-                             />
-                           </div>
-                         </div>
-                         <div className="flex-1 min-w-0">
-                           <div className="flex justify-between items-start mb-0.5">
-                             <h3 className={`text-sm ${hasUnread ? 'font-bold' : 'font-semibold'} text-[#101828]`}>
-                               {displayName}
-                             </h3>
-                             {conv.lastTimestamp && (
-                               <span className="text-[10px] text-gray-400">
-                                 {format(conv.lastTimestamp instanceof Timestamp ? conv.lastTimestamp.toDate() : new Date(), 'h:mm a')}
-                               </span>
-                             )}
-                           </div>
-                            <p className={`text-xs ${hasUnread ? 'text-[#101828] font-medium' : 'text-[#475467]'} truncate leading-relaxed flex items-center gap-1`}>
-                              {conv.lastMessageType === 'image' || (!conv.lastMessageType && conv.lastMessage && conv.lastMessage.startsWith('https://firebasestorage')) ? (
-                                <>
-                                  <ImageIcon className="w-3 h-3" />
-                                  <span>Image</span>
-                                </>
-                              ) : (
-                                conv.lastMessage
+                          <div className="relative flex-shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
+                              <Image 
+                                src={displayPhoto} 
+                                alt={displayName} 
+                                fill
+                                className="object-cover" 
+                              />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start mb-0.5">
+                              <h3 className={`text-sm ${hasUnread ? 'font-bold' : 'font-semibold'} text-[#101828]`}>
+                                {displayName}
+                              </h3>
+                              {conv.lastTimestamp && (
+                                <span className="text-[10px] text-gray-400">
+                                  {format(conv.lastTimestamp instanceof Timestamp ? conv.lastTimestamp.toDate() : new Date(), 'h:mm a')}
+                                </span>
                               )}
-                            </p>
-                         </div>
+                            </div>
+                             <p className={`text-xs ${hasUnread ? 'text-[#101828] font-medium' : 'text-[#475467]'} truncate leading-relaxed flex items-center gap-1`}>
+                               {conv.lastMessageType === 'image' || (!conv.lastMessageType && conv.lastMessage && conv.lastMessage.startsWith('https://firebasestorage')) ? (
+                                 <>
+                                   <ImageIcon className="w-3 h-3" />
+                                   <span>Image</span>
+                                 </>
+                               ) : (
+                                 conv.lastMessage
+                               )}
+                             </p>
+                          </div>
                          {hasUnread && (
                            <div className="w-2 h-2 bg-purple-600 rounded-full self-center"></div>
                          )}
@@ -453,43 +454,41 @@ export default function MessagesPage() {
                  <>
                    {/* Chat Header */}
                    <div className="p-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
-                      <div className="flex items-center gap-3">
-                         <div className="relative">
-                           <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
-                             {(() => {
-                               const otherUserId = activeConversation?.participants.find(id => id !== user?.uid);
-                               const liveUser = otherUserId ? liveUsers[otherUserId] : null;
-                               const staticMeta = otherUserId ? activeConversation?.participantMetadata[otherUserId] : null;
+                       <div className="flex items-center gap-3">
+                          {(() => {
+                            const otherUserId = activeConversation?.participants.find(id => id !== user?.uid);
+                            const liveUser = otherUserId ? liveUsers[otherUserId] : null;
+                            const staticMeta = otherUserId ? activeConversation?.participantMetadata[otherUserId] : null;
+                            const displayName = liveUser?.displayName || staticMeta?.displayName || 'User';
+                            const photoURL = liveUser?.photoURL || staticMeta?.photoURL || 'https://i.pravatar.cc/150';
 
-                               return (
-                                 <Image 
-                                   src={liveUser?.photoURL || staticMeta?.photoURL || 'https://i.pravatar.cc/150'} 
-                                   alt="Recipient" 
-                                   fill
-                                   className="object-cover" 
-                                 />
-                               );
-                             })()}
-                            </div>
-
-                         </div>
-                          <div>
-                            <h3 className="font-semibold text-[#101828] text-sm">
-                              {(() => {
-                                const otherUserId = activeConversation?.participants.find(id => id !== user?.uid);
-                                const liveUser = otherUserId ? liveUsers[otherUserId] : null;
-                                const staticMeta = otherUserId ? activeConversation?.participantMetadata[otherUserId] : null;
-                                return liveUser?.displayName || staticMeta?.displayName || 'User';
-                              })()}
-                            </h3>
-                            <div className="flex items-center gap-1.5">
-                              <span className={`w-1.5 h-1.5 rounded-full ${(recipientPresence as UserPresence)?.state === 'online' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                              <span className="text-xs text-[#475467]">
-                                {(recipientPresence as UserPresence)?.state === 'online' ? 'Online' : 'Offline'}
-                              </span>
-                            </div>
-                          </div>
-                      </div>
+                            return (
+                              <Link href={`/profile/${otherUserId}`} className="flex items-center gap-3 group">
+                                <div className="relative">
+                                  <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
+                                    <Image 
+                                      src={photoURL} 
+                                      alt={displayName} 
+                                      fill
+                                      className="object-cover" 
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-[#101828] text-sm group-hover:text-purple-600 transition-colors">
+                                    {displayName}
+                                  </h3>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${(recipientPresence as UserPresence)?.state === 'online' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                                    <span className="text-xs text-[#475467]">
+                                      {(recipientPresence as UserPresence)?.state === 'online' ? 'Online' : 'Offline'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </Link>
+                            );
+                          })()}
+                       </div>
                       <div className="flex items-center gap-2">
                         {(() => {
                            const recipientId = activeConversation?.participants.find((p: string) => p !== user?.uid);
@@ -498,10 +497,13 @@ export default function MessagesPage() {
                            
                            const isCallsEnabled = recipientCreatorProfile?.isCallsEnabled !== false;
                            
-                           if (userProfile?.role === 'creator' || !isRecipientCreator || !isCallsEnabled) return null;
+                           // Display logic: only show if user is creator (viewing subscriber) OR subscriber viewing creator
+                           if (userProfile?.role === 'creator' || !isRecipientCreator) return null;
 
                            const audioPrice = recipientCreatorProfile?.callPrices?.audioPerMinute ?? 2.00;
                            const videoPrice = recipientCreatorProfile?.callPrices?.videoPerMinute ?? 5.00;
+
+                           const disabledTooltip = !isCallsEnabled ? "Creator has disabled calls for now" : "";
 
                            return (
                              <>
@@ -510,7 +512,7 @@ export default function MessagesPage() {
                                  <div className="group relative">
                                    <button 
                                      onClick={() => {
-                                       if (recipientId && user?.uid) {
+                                       if (recipientId && user?.uid && isCallsEnabled) {
                                            startCall(
                                              user.uid, 
                                              recipientId, 
@@ -521,15 +523,22 @@ export default function MessagesPage() {
                                            );
                                        }
                                      }}
-                                     disabled={callLoading}
-                                     className="p-2 text-gray-400 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50"
-                                     title="Start Audio Call"
+                                     disabled={callLoading || !isCallsEnabled}
+                                     className="p-2 text-gray-400 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                     title={disabledTooltip || "Start Audio Call"}
                                    >
                                      {callLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Phone className="w-5 h-5" />}
                                    </button>
-                                   <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                                     ${audioPrice.toFixed(2)}/min
-                                   </span>
+                                   {!isCallsEnabled && (
+                                      <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                        {disabledTooltip}
+                                      </span>
+                                   )}
+                                   {isCallsEnabled && (
+                                     <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                       ${audioPrice.toFixed(2)}/min
+                                     </span>
+                                   )}
                                  </div>
                                )}
 
@@ -538,7 +547,7 @@ export default function MessagesPage() {
                                  <div className="group relative">
                                    <button 
                                      onClick={() => {
-                                       if (recipientId && user?.uid) {
+                                       if (recipientId && user?.uid && isCallsEnabled) {
                                            startCall(
                                              user.uid, 
                                              recipientId, 
@@ -549,15 +558,22 @@ export default function MessagesPage() {
                                            );
                                        }
                                      }}
-                                     disabled={callLoading}
-                                     className="p-2 text-gray-400 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50"
-                                     title="Start Video Call"
+                                     disabled={callLoading || !isCallsEnabled}
+                                     className="p-2 text-gray-400 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                     title={disabledTooltip || "Start Video Call"}
                                    >
                                      {callLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
                                    </button>
-                                   <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                                     ${videoPrice.toFixed(2)}/min
-                                   </span>
+                                   {!isCallsEnabled && (
+                                      <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                        {disabledTooltip}
+                                      </span>
+                                   )}
+                                   {isCallsEnabled && (
+                                     <span className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                       ${videoPrice.toFixed(2)}/min
+                                     </span>
+                                   )}
                                  </div>
                                )}
                              </>
