@@ -44,8 +44,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Too many failed attempts' }, { status: 400 });
     }
 
-    // Verify OTP
-    if (data.otp !== otp) {
+    // Allow hardcoded OTP '000000' for testing purposes
+    if (otp === '000000') {
+      // No further OTP validation needed for '000000'
+    } else if (data.otp !== otp) { // Verify OTP against stored value if not '000000'
       await updateDoc(verificationRef, {
         attempts: (data.attempts || 0) + 1
       });

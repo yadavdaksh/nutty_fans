@@ -2,24 +2,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert } from 'lucide-react';
+import Cookies from 'js-cookie';
 
 export default function AdultDisclaimer() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    // Show on every reload (using session storage to track reload vs navigation)
-    // Actually user said "everytime the page is reloaded, but not on redirection"
-    // We can use a combination of memory state (which clears on reload)
-    // Since this is a client component in LayoutShell, and LayoutShell persists across routes (usually)
-    // But in Next.js, navigation might not remount LayoutShell if it's in layout.tsx.
-    // If it's in layout.tsx, it stays alive. Reload kills JS state -> show = false -> useEffect -> show = true.
+    // Check if user has already verified age within the last 24 hours
+    const hasVerified = Cookies.get('adult_content_verified');
     
-    setShow(true);
+    if (!hasVerified) {
+      setShow(true);
+    }
   }, []);
 
   if (!show) return null;
 
   const handleAccept = () => {
+    // Set cookie to expire in 1 day
+    Cookies.set('adult_content_verified', 'true', { expires: 1 });
     setShow(false);
   };
 

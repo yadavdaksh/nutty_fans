@@ -13,16 +13,7 @@ import OTPStep from './components/OTPStep';
 import AgeVerificationStep from './components/AgeVerificationStep';
 import RoleSelectionStep from './components/RoleSelectionStep';
 import UserProfileStep from './components/UserProfileStep';
-import CreatorSteps from './components/CreatorSteps';
-import BankDetailsStep from './components/BankDetailsStep';
-import { BankDetails } from '@/lib/db';
-import { 
-  validateIBAN, 
-  validateRoutingNumber, 
-  validateIFSC, 
-  validateSwiftBIC,
-  getCountryBankRequirement 
-} from '@/lib/bank-utils';
+
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -31,7 +22,6 @@ export default function OnboardingPage() {
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedCoverImage, setSelectedCoverImage] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // State Restoration & Initialization
@@ -153,29 +143,7 @@ export default function OnboardingPage() {
     bio: '',
   });
   
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  
-  const [tiers, setTiers] = useState([
-    { name: 'Basic', price: '', description: '', benefits: [''] },
-    { name: 'Premium', price: '', description: '', benefits: [''] },
-    { name: 'VIP', price: '', description: '', benefits: [''] },
-  ]);
 
-  const [socials, setSocials] = useState({
-    instagram: '',
-    twitter: '',
-    youtube: '',
-    website: '',
-  });
-
-  const [bankDetails, setBankDetails] = useState<BankDetails>({
-    accountHolderName: '',
-    accountNumber: '',
-    bankName: '',
-    country: '',
-    routingNumber: '',
-    swiftCode: '',
-  });
 
   // OTP State
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -319,22 +287,13 @@ export default function OnboardingPage() {
     setRole(selectedRole);
   };
 
-  const toggleCategory = (id: string) => {
-    if (selectedCategories.includes(id)) {
-      setSelectedCategories(selectedCategories.filter(c => c !== id));
-    } else {
-      if (selectedCategories.length < 5) {
-        setSelectedCategories([...selectedCategories, id]);
-      }
-    }
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cover') => {
     const file = e.target.files?.[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
       if (type === 'profile') setSelectedImage(imageUrl);
-      else setSelectedCoverImage(imageUrl);
+      // Cover image logic removed for user flow
     }
   };
 
@@ -350,9 +309,31 @@ export default function OnboardingPage() {
          setStep(4);
          await updateUserProfile(user!.uid, { role: 'user', onboardingStep: 4 });
       } else {
-         // Creator Flow: Move to Categories
-         setStep(4);
-         await updateUserProfile(user!.uid, { role: 'creator', onboardingStep: 4 });
+         // Creator Flow: Redirect to Verification Pending IMMEDIATELY
+         setLoading(true);
+         try {
+             // Set them as pending and role=creator. 
+             // onboardingCompleted = false means they still need to do the setup on the pending page.
+             await updateUserProfile(user!.uid, { 
+                 role: 'creator', 
+                 verificationStatus: 'pending',
+                 onboardingStep: 4,
+                 onboardingCompleted: false 
+             });
+             // Also create the creator profile stub so checking it doesn't fail
+             await createCreatorProfile(user!.uid, {
+                 subscriberCount: 0,
+                 subscriptionTiers: [], 
+                 // We don't have these yet, they will be filled in the pending page
+             });
+             
+             await refreshProfile();
+             router.push('/verification-pending');
+         } catch (error) {
+             console.error("Error setting up creator:", error);
+         } finally {
+             setLoading(false);
+         }
       }
     }
     
@@ -385,77 +366,6 @@ export default function OnboardingPage() {
         router.push('/');
       }
     } 
-    
-    // Creator Flow Steps
-    else if (role === 'creator') {
-       // Step 4: Categories
-       if (step === 4) {
-         if (user) await updateUserProfile(user.uid, { onboardingStep: 5 });
-         setStep(5);
-       }
-       // Step 5: Tiers
-       else if (step === 5) {
-         if (user) await updateUserProfile(user.uid, { onboardingStep: 6 });
-         setStep(6);
-       }
-       // Step 6: Cover Image
-       else if (step === 6) {
-         if (user) await updateUserProfile(user.uid, { onboardingStep: 7 });
-         setStep(7);
-       }
-       // Step 7: Socials -> Bank Details
-       else if (step === 7) {
-          if (user) await updateUserProfile(user.uid, { onboardingStep: 8 });
-          setStep(8);
-       }
-        // Step 8: Bank Details -> Finish
-        else if (step === 8) {
-        setLoading(true);
-        try {
-           if (user) {
-            // 1. Sync Plans with Square FIRST
-            let syncedTiers = tiers;
-            try {
-                const res = await fetch('/api/creators/plans', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.uid, tiers })
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    syncedTiers = data.tiers;
-                } else {
-                    console.error("Failed to sync plans during onboarding, proceeding with local...");
-                }
-            } catch (err) {
-                console.error("Error syncing plans during onboarding:", err);
-            }
-
-            await updateUserProfile(user.uid, {
-              bio: formData.bio || `Welcome to my page!`,
-              role: 'creator',
-              bankDetails, // Save bank details
-              onboardingCompleted: true, 
-              onboardingStep: 8 
-            });
-            
-            // Save Creator Profile with Synced Tiers (containing squarePlanIDs)
-            await createCreatorProfile(user.uid, {
-              categories: selectedCategories,
-              socialLinks: socials,
-              subscriptionTiers: syncedTiers,
-              bio: formData.bio || `Welcome to my page!`,
-            });
-            await refreshProfile();
-           }
-           router.push('/verification-pending');
-        } catch (error) {
-           console.error('Error:', error);
-        } finally {
-           setLoading(false);
-        }
-      }
-    }
   };
 
   const handleBack = () => {
@@ -466,7 +376,8 @@ export default function OnboardingPage() {
   };
 
   const getProgress = () => {
-    const totalSteps = role === 'creator' ? 8 : 5; 
+    // Creator flow ends at step 3 in this file now (redirects)
+    const totalSteps = role === 'creator' ? 3 : 5; 
     const currentStep = step - 1; 
     const progress = (currentStep / totalSteps) * 100;
     return `${Math.round(progress)}%`;
@@ -484,25 +395,7 @@ export default function OnboardingPage() {
       return true; 
     }
     
-    if (role === 'creator') {
-      if (step === 4) return selectedCategories.length > 0;
-      if (step === 5) return tiers[0].price !== ''; 
-      if (step === 6) return !!selectedCoverImage; 
-      if (step === 7) return true; 
-      if (step === 8) {
-        const { accountHolderName, accountNumber, bankName, country, routingNumber, swiftCode } = bankDetails;
-        if (!accountHolderName || !accountNumber || !bankName || !country) return false;
-        
-        const req = getCountryBankRequirement(country);
-        if (req === 'IBAN' && !validateIBAN(accountNumber)) return false;
-        if (req === 'ABA' && (!routingNumber || !validateRoutingNumber(routingNumber))) return false;
-        if (req === 'IFSC' && (!routingNumber || !validateIFSC(routingNumber))) return false;
-        if (swiftCode && !validateSwiftBIC(swiftCode)) return false;
-        
-        return true;
-      }
-    }
-    
+    // Creator steps are no longer here
     return false;
   };
 
@@ -550,7 +443,7 @@ export default function OnboardingPage() {
         {/* Step Indicator */}
         <div className="w-full max-w-xl mx-auto pt-16 px-6">
           <div className="flex justify-between text-sm font-medium text-gray-500 mb-2 font-inter">
-            <span>Step {step} of {role === 'creator' ? 8 : 5}</span>
+            <span>Step {step} of {role === 'creator' ? 3 : 5}</span>
             <span>{getProgress()}</span>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -561,7 +454,6 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        {/* Content Area */}
         {/* Content Area */}
         <div className="flex-1 flex flex-col items-center px-4 pt-12 pb-32 overflow-y-auto">
           
@@ -580,28 +472,6 @@ export default function OnboardingPage() {
               setFormData={setFormData}
               selectedImage={selectedImage}
               handleImageUpload={handleImageUpload}
-              loading={loading}
-            />
-          )}
-
-          {role === 'creator' && step >= 4 && (
-            <CreatorSteps
-              step={step}
-              selectedCategories={selectedCategories}
-              toggleCategory={toggleCategory}
-              tiers={tiers}
-              setTiers={setTiers}
-              selectedCoverImage={selectedCoverImage}
-              handleImageUpload={handleImageUpload}
-              socials={socials}
-              setSocials={setSocials}
-            />
-          )}
-
-          {role === 'creator' && step === 8 && (
-            <BankDetailsStep
-              bankDetails={bankDetails}
-              setBankDetails={setBankDetails}
               loading={loading}
             />
           )}
@@ -626,7 +496,7 @@ export default function OnboardingPage() {
                       : 'hover:opacity-90 hover:scale-105'
                   }`}
                 >
-                  {loading ? 'Processing...' : (step === 8 || (role === 'user' && step === 5)) ? 'Get Started' : 'Continue'}
+                  {loading ? 'Processing...' : (step === 3 && role === 'creator' ? 'Continue Setup' : (role === 'user' && step === 5) ? 'Get Started' : 'Continue')}
                   <ArrowRight className="w-5 h-5" />
                 </button>
                 </div>
