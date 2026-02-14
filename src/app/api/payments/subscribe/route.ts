@@ -3,17 +3,37 @@ import { squareClient } from '@/lib/square';
 import { getUserProfile, updateUserProfile } from '@/lib/db';
 import { getOrCreateSubscriptionPlan } from '@/lib/square-plans';
 
+import { verifyAuth } from '@/lib/api-auth';
+import { getCreatorProfile } from '@/lib/db';
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    // discountId is optional, but Square Subscriptions API handles discounts differently (phases).
-    // For simplicity V1: We apply discounts to the 'order' or we might need complex plan phases.
-    // LIMITATION: Standard Square Subscriptions don't easily take a one-off "coupon" for the *recurring* price 
-    // without creating a totally different plan or adding a discount to the subscription object.
-    const { sourceId, userId, creatorId, tierName, price } = body; 
+    // 1. [SECURITY] Auth Verification
+    const { user, error } = await verifyAuth(request);
+    if (error) return error;
 
-    if (!sourceId || !price || !userId || !tierName) {
+    const body = await request.json();
+    const { sourceId, creatorId, tierName, price } = body; 
+    const userId = user.uid; // Always use verified UID
+
+    if (!sourceId || !price || !creatorId || !tierName) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // 2. [SECURITY] Price Verification
+    const creatorData = await getCreatorProfile(creatorId);
+    const tier = creatorData?.subscriptionTiers.find((t: { name: string; price: string }) => t.name === tierName);
+    
+    if (!tier) {
+      return NextResponse.json({ error: 'Subscription tier not found' }, { status: 400 });
+    }
+
+    const expectedPrice = parseFloat(tier.price);
+    const submittedPrice = parseFloat(price);
+
+    if (Math.abs(expectedPrice - submittedPrice) > 0.01) {
+      console.warn(`[SECURITY] Price mismatch in subscribe API. Expected: ${expectedPrice}, Submitted: ${submittedPrice}`);
+      return NextResponse.json({ error: 'Price mismatch detected' }, { status: 400 });
     }
 
     const userProfile = await getUserProfile(userId);
@@ -68,18 +88,14 @@ export async function POST(request: Request) {
     // 3. Get proper Plan ID
     // Check if Creator has this tier synced
     
-    // Lazy load creator profile
-    const { getCreatorProfile } = await import('@/lib/db');
-    const creatorData = await getCreatorProfile(creatorId);
-    
     let planId: string | undefined;
 
     // Try to find existing plan ID in Creator's profile
     if (creatorData && creatorData.subscriptionTiers) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tier = creatorData.subscriptionTiers.find((t: any) => t.name === tierName);
-        if (tier && tier.squarePlanId) {
-            planId = tier.squarePlanId;
+        const t = creatorData.subscriptionTiers.find((t: any) => t.name === tierName);
+        if (t && t.squarePlanId) {
+            planId = t.squarePlanId;
             console.log(`Using existing Square Plan ID: ${planId} for tier ${tierName}`);
         }
     }

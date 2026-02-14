@@ -1,4 +1,4 @@
-import { db, storage } from './firebase';
+import { db, storage, auth } from './firebase';
 export { db };
 import { 
   doc, 
@@ -16,7 +16,8 @@ import {
   query,
   where,
   getDocs,
-  deleteDoc
+  deleteDoc,
+  arrayUnion
 } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 
@@ -118,6 +119,7 @@ export interface CreatorProfile {
     videoPerMinute: number;
   };
   isCallsEnabled?: boolean; // Toggle for audio/video calls
+  chatPrice?: number; // Price per message (0 = free)
 }
 
 // Create a notification for a user
@@ -480,9 +482,14 @@ export const cancelSubscription = async (subscriptionId: string) => {
     try {
       // In Next.js with App Router, we can safely use absolute or relative URLs if calling from client
       // or use fetch in server actions. Here, it's called from SubscriptionPage (Client).
+      // or use fetch in server actions. Here, it's called from SubscriptionPage (Client).
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/payments/subscribe/cancel', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ squareSubscriptionId: subData.squareSubscriptionId })
       });
       
@@ -713,6 +720,9 @@ export const addFunds = async (
   metadata: Record<string, unknown> = {},
   applySplit: boolean = false
 ) => {
+  if (amount <= 0) {
+    throw new Error("Amount must be greater than zero");
+  }
   const userRef = doc(db, 'users', userId);
   const adminRef = doc(db, 'platform', 'finances');
   const transactionRef = collection(db, 'wallet_transactions');
@@ -793,6 +803,9 @@ export const addFunds = async (
 };
 
 export const processTransaction = async (userId: string, amount: number, description: string, metadata: Record<string, unknown> = {}) => {
+  if (amount <= 0) {
+    throw new Error("Amount must be greater than zero");
+  }
   const userRef = doc(db, 'users', userId);
   const adminRef = doc(db, 'platform', 'finances');
   const txCollectionRef = collection(db, 'wallet_transactions');
@@ -915,6 +928,76 @@ export const processTransaction = async (userId: string, amount: number, descrip
         metadata: { ...metadata, senderId: userId, creatorId },
         timestamp: serverTimestamp()
      });
+  });
+};
+
+/**
+ * Unlocks a locked post for a specific user.
+ * Performs a financial transaction before granting access via unlockedBy array.
+ */
+export const unlockPost = async (
+  userId: string,
+  postId: string,
+  creatorId: string,
+  amount: number
+) => {
+  if (amount <= 0) throw new Error("Amount must be greater than zero");
+  
+  const userRef = doc(db, 'users', userId);
+  const postRef = doc(db, 'posts', postId);
+  
+  return await runTransaction(db, async (transaction) => {
+    // 1. Reads
+    const userDoc = await transaction.get(userRef);
+    const postDoc = await transaction.get(postRef);
+
+    if (!userDoc.exists()) throw new Error("User not found");
+    if (!postDoc.exists()) throw new Error("Post not found");
+
+    const currentBalance = userDoc.data().walletBalance || 0;
+    if (currentBalance < amount) {
+       throw new Error("Insufficient funds");
+    }
+
+    // 2. Logic: Debit user and add to unlockedBy
+    transaction.update(userRef, { walletBalance: currentBalance - amount });
+    transaction.update(postRef, {
+      unlockedBy: arrayUnion(userId)
+    });
+
+    // 3. Record Transaction
+    const txCollectionRef = collection(db, 'wallet_transactions');
+    const debitTxRef = doc(txCollectionRef);
+    transaction.set(debitTxRef, {
+       userId,
+       type: 'debit',
+       amount,
+       description: 'Unlock Post',
+       metadata: { postId, creatorId, type: 'post_unlock' },
+       timestamp: serverTimestamp()
+    });
+
+    // Also credit the creator (net amount)
+    const creatorRef = doc(db, 'users', creatorId);
+    const creatorDoc = await transaction.get(creatorRef);
+    if (creatorDoc.exists()) {
+       const PLATFORM_COMMISSION_PERCENT = 20; 
+       const adminAmount = Math.floor((amount * PLATFORM_COMMISSION_PERCENT) / 100);
+       const creatorAmount = amount - adminAmount;
+       const currentCreatorBalance = creatorDoc.data().walletBalance || 0;
+       
+       transaction.update(creatorRef, { walletBalance: currentCreatorBalance + creatorAmount });
+       
+       const creditTxRef = doc(txCollectionRef);
+       transaction.set(creditTxRef, {
+          userId: creatorId,
+          type: 'credit',
+          amount: creatorAmount,
+          description: 'Post Unlock Revenue',
+          metadata: { postId, senderId: userId, type: 'earning' },
+          timestamp: serverTimestamp()
+       });
+    }
   });
 };
 

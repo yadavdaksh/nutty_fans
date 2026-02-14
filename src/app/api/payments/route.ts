@@ -1,18 +1,52 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { squareClient } from '@/lib/square';
-import { addFunds, getUserProfile, updateUserProfile } from '@/lib/db'; 
+import { addFunds, getUserProfile, updateUserProfile, getCreatorProfile } from '@/lib/db'; 
+
+import { verifyAuth } from '@/lib/api-auth';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { sourceId, amount, userId, creatorId, tierId, type, discountId } = body; 
+    // 1. [SECURITY] Auth Verification
+    const { user, error } = await verifyAuth(request);
+    if (error) {
+      console.error('Payment Auth Error:', await error.json());
+      return error;
+    }
 
-    if (!sourceId || !amount || !userId) {
+    const body = await request.json();
+    console.log('Payment Request Body:', JSON.stringify(body, null, 2));
+
+    const { sourceId, amount, creatorId, tierId, type, discountId, verificationToken } = body; 
+    const userId = user.uid; // Always use verified UID
+
+    if (!sourceId || !amount) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
+    }
+
+    // [SECURITY] Server-side Price Verification for Subscriptions
+    let finalPayloadAmount = amount;
+    if (type === 'subscription' && creatorId && tierId) {
+      const creatorProfile = await getCreatorProfile(creatorId);
+      const tier = creatorProfile?.subscriptionTiers.find(t => t.name.toLowerCase() === tierId.toLowerCase());
+      
+      if (!tier) {
+        return NextResponse.json({ error: 'Subscription tier not found' }, { status: 400 });
+      }
+
+      const expectedPrice = parseFloat(tier.price);
+      const submittedPrice = parseFloat(amount);
+
+      // Allow small float epsilon or exact match
+      if (Math.abs(expectedPrice - submittedPrice) > 0.01) {
+        console.warn(`[SECURITY] Price mismatch detected for ${userId}. Expected: ${expectedPrice}, Submitted: ${submittedPrice}`);
+        return NextResponse.json({ error: 'Price mismatch detected' }, { status: 400 });
+      }
+      
+      finalPayloadAmount = tier.price; // Use the verified price
     }
 
     const userProfile = await getUserProfile(userId);
@@ -67,7 +101,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Create Order to apply discounts natively
-    const basePriceMoney = BigInt(Math.round(parseFloat(amount) * 100)); // The non-discounted price
+    const basePriceMoney = BigInt(Math.round(parseFloat(finalPayloadAmount) * 100)); // The non-discounted price
     
     // Construct line items
     const lineItem: any = {
@@ -126,12 +160,12 @@ export async function POST(request: Request) {
        } else if (type === 'subscription') {
           if (creatorId) {
              await addFunds(
-               creatorId, 
-               finalAmountNumber, 
-               payment.id, 
-               'Subscription Revenue', 
-               { subscriberId: userId, tierId, category: 'subscription', orderId: order.id, discountId },
-               true // applySplit
+                creatorId, 
+                finalAmountNumber, 
+                payment.id, 
+                'Subscription Revenue', 
+                { subscriberId: userId, tierId, category: 'subscription', orderId: order.id, discountId },
+                true // applySplit
              );
           }
        }
@@ -145,7 +179,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Square Payment Error:', error);
+    console.error('Payment Processing Error:', error);
     return NextResponse.json(
       { error: (error as Error).message || 'Payment processing failed' },
       { status: 500 }

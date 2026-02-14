@@ -1,28 +1,19 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { verifyAuth } from '@/lib/api-auth';
 
 export async function POST(request: Request) {
   try {
-    const { email, otp, uid } = await request.json();
+    // 1. [SECURITY] Auth Verification
+    const { user, error } = await verifyAuth(request);
+    if (error) return error;
 
-    if (!email || !otp || !uid) {
+    const { email, otp } = await request.json();
+    const uid = user.uid; // Always use verified UID
+
+    if (!email || !otp) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    // Fallback/Test OTP Bypass
-    if (otp === '111111') {
-      const userRef = doc(db, 'users', uid);
-      await updateDoc(userRef, {
-        emailVerified: true
-      }).catch(e => console.log('User doc update failed in fallback:', e));
-      
-      // Also cleanup any pending verification doc to be clean
-      try {
-        await deleteDoc(doc(db, 'email_verifications', uid));
-      } catch {}
-
-      return NextResponse.json({ success: true });
     }
 
     const verificationRef = doc(db, 'email_verifications', uid);
@@ -44,10 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Too many failed attempts' }, { status: 400 });
     }
 
-    // Allow hardcoded OTP '000000' for testing purposes
-    if (otp === '000000') {
-      // No further OTP validation needed for '000000'
-    } else if (data.otp !== otp) { // Verify OTP against stored value if not '000000'
+    if (data.otp !== otp) { // Verify OTP against stored value
       await updateDoc(verificationRef, {
         attempts: (data.attempts || 0) + 1
       });

@@ -3,19 +3,19 @@ import { db, getUserProfile, updatePayoutRequestStatus } from '@/lib/db';
 import { createMercuryRecipient, triggerMercuryPayout } from '@/lib/mercury';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
+import { verifyAuth } from '@/lib/api-auth';
+
 export async function POST(request: Request) {
   try {
+    // 1. [SECURITY] Auth & Admin Verification
+    const { user: _user, error } = await verifyAuth(request, 'admin');
+    if (error) return error;
+
     const body = await request.json();
-    const { payoutRequestId, adminUserId } = body;
+    const { payoutRequestId } = body;
 
-    if (!payoutRequestId || !adminUserId) {
+    if (!payoutRequestId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    // 1. Verify Admin Status
-    const adminProfile = await getUserProfile(adminUserId);
-    if (adminProfile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
     }
 
     // 2. Fetch Payout Request

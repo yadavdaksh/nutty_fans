@@ -19,7 +19,7 @@ export default function Header() {
   const pathname = usePathname();
   const { user, userProfile, signOut } = useAuth();
   const { totalUnreadCount } = useMessaging(user?.uid);
-  const { notifications, unreadCount: notificationsUnreadCount, markAsRead, markAllAsRead, dismissNotification } = useNotifications();
+  const { notifications, unreadCount: notificationsUnreadCount, markAllAsRead, dismissNotification } = useNotifications();
   const isAdminPage = pathname.startsWith('/admin');
   const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/verify-otp' || pathname === '/verify-age';
 

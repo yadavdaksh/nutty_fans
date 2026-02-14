@@ -13,7 +13,7 @@ import {
   setUserOnlineStatus,
   unlockMessage
 } from '@/lib/messaging';
-import { db, getWalletBalance, processTransaction, CreatorProfile, Conversation } from '@/lib/db';
+import { db, getWalletBalance, CreatorProfile, Conversation } from '@/lib/db';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Smile, Send, MessageSquare, Image as ImageIcon, Lock, X, Camera, Phone, Video, Loader2, DollarSign } from 'lucide-react';
 import { useCall } from '@/hooks/useCall';
@@ -291,17 +291,9 @@ export default function MessagesPage() {
       onConfirm: async () => {
         setUnlockingMessageId(messageId);
         try {
-          // 2. Process Transaction
+          // 2. Unlock Content (Now handles payment internally)
           const recipientId = activeConversation?.participants.find(p => p !== user.uid);
-          await processTransaction(
-            user.uid,
-            priceCents,
-            `Unlock message`,
-            { contentType: 'message_unlock', contentId: messageId, creatorId: recipientId, category: 'message_unlock' }
-          );
-          
-          // 3. Unlock Content
-          await unlockMessage(activeChatId, messageId, user.uid);
+          await unlockMessage(activeChatId, messageId, user.uid, recipientId || '', priceCents);
           toast.success("Content unlocked!");
         } catch (error) {
           console.error("Error unlocking message:", error);

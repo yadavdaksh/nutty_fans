@@ -9,8 +9,7 @@ import {
   doc, 
   updateDoc,
   writeBatch,
-  deleteDoc,
-  Timestamp
+  deleteDoc
 } from 'firebase/firestore';
 import { db, Notification } from '../lib/db';
 import { useAuth } from '../context/AuthContext';

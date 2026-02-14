@@ -48,9 +48,13 @@ export default function PendingPaymentsPage() {
     try {
       if (status === 'approved') {
         // Use the automated Mercury API for approvals
+        const token = await user.getIdToken();
         const res = await fetch('/api/admin/payouts/complete', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
             payoutRequestId: id,
             adminUserId: user.uid

@@ -3,7 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Clock, LogOut, Mail, ShieldCheck, ArrowRight, ArrowLeft, PenLine } from 'lucide-react';
+import { Clock, LogOut, Mail, ShieldCheck, ArrowRight, ArrowLeft, PenLine, CheckCircle } from 'lucide-react';
 import { updateUserProfile, createCreatorProfile, BankDetails } from '@/lib/db';
 import { useStorage } from '@/hooks/useStorage';
 import { toast } from 'react-hot-toast';
@@ -53,11 +53,20 @@ export default function VerificationPendingPage() {
   });
 
   // If approved, redirect to dashboard
+  // If approved AND completed, redirect to dashboard. 
+  // If approved but NOT completed, allow them to finish setup here.
   useEffect(() => {
-    if (userProfile?.role === 'creator' && userProfile?.verificationStatus === 'approved') {
+    if (!loading && !user) {
+      router.push('/login');
+      return;
+    }
+
+    if (userProfile?.role === 'creator' && 
+        userProfile?.verificationStatus === 'approved' && 
+        userProfile?.onboardingCompleted) {
        router.push('/dashboard');
     }
-  }, [userProfile, router]);
+  }, [user, userProfile, router, loading]);
 
 
   // Sync state with profile on load if needed
@@ -148,9 +157,13 @@ export default function VerificationPendingPage() {
             // 1. Sync Plans with Square
             let syncedTiers = tiers;
             try {
+                const idToken = await user.getIdToken();
                 const res = await fetch('/api/creators/plans', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${idToken}`
+                    },
                     body: JSON.stringify({ userId: user.uid, tiers })
                 });
                 if (res.ok) {
@@ -291,7 +304,7 @@ export default function VerificationPendingPage() {
           Thanks for joining NuttyFans! Your creator profile is currently being reviewed by our team.
         </p>
 
-        {!onboardingCompleted && (
+        {!onboardingCompleted && userProfile?.verificationStatus !== 'approved' && (
             <div className="mb-10 bg-purple-50 border border-purple-100 rounded-2xl p-6 text-left">
                 <div className="flex items-start gap-4">
                     <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0">
@@ -319,10 +332,34 @@ export default function VerificationPendingPage() {
                      <ShieldCheck className="w-5 h-5 text-green-600" />
                  </div>
                  <div>
-                     <h3 className="font-bold text-gray-900 font-inter">Profile Setup Complete</h3>
+                     <h3 className="font-bold text-gray-900 font-inter">Profile Setup Complete & Approved</h3>
                      <p className="text-sm text-gray-600 font-inter">
-                         We have all your details. You&apos;ll be notified via email once approved.
+                         You are ready to go! Redirecting to dashboard...
                      </p>
+                 </div>
+             </div>
+        )}
+        
+        {/* Approved but incomplete setup */}
+        {userProfile?.verificationStatus === 'approved' && !onboardingCompleted && (
+             <div className="mb-10 bg-green-50 border border-green-100 rounded-2xl p-6 text-left">
+                 <div className="flex items-start gap-4">
+                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0">
+                         <CheckCircle className="w-6 h-6 text-green-600" />
+                     </div>
+                     <div className="flex-1">
+                         <h3 className="font-bold text-gray-900 font-inter mb-1 text-lg">🎉 You are Verified!</h3>
+                         <p className="text-sm text-gray-700 font-inter mb-4 leading-relaxed">
+                             Congratulations! Your account has been approved. Please finish setting up your banking details and subscription tiers to start earning.
+                         </p>
+                         <button 
+                             onClick={() => setIsWizardOpen(true)}
+                             className="w-full sm:w-auto px-8 py-3 bg-green-600 text-white font-bold rounded-xl text-sm hover:bg-green-700 transition-colors shadow-lg shadow-green-500/20 flex items-center justify-center gap-2"
+                         >
+                             Complete Profile Setup
+                             <ArrowRight className="w-4 h-4" />
+                         </button>
+                     </div>
                  </div>
              </div>
         )}

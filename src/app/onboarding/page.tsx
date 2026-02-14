@@ -35,7 +35,8 @@ export default function OnboardingPage() {
         // Redirect if already completed
         if (userProfile?.onboardingCompleted) {
           if (userProfile.role === 'creator') {
-            if (userProfile.verificationStatus === 'approved') {
+            // Creators always manage their setup/status in /verification-pending until approved & completed
+            if (userProfile.verificationStatus === 'approved' && userProfile.onboardingCompleted) {
                 router.push('/dashboard');
             } else {
                 router.push('/verification-pending');
@@ -44,6 +45,12 @@ export default function OnboardingPage() {
             router.push('/');
           }
           return;
+        }
+
+        // Additional check: If role is creator but onboardingCompleted is false (e.g. came back)
+        if (userProfile && userProfile.role === 'creator') {
+             router.push('/verification-pending');
+             return;
         }
 
         if (!userProfile) {
@@ -237,8 +244,13 @@ export default function OnboardingPage() {
     setLoading(true);
     setOtpError('');
     try {
+      const idToken = await user.getIdToken();
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({ email: user.email, uid: user.uid }),
       });
       if (!res.ok) throw new Error('Failed to send OTP');
@@ -267,8 +279,13 @@ export default function OnboardingPage() {
     setLoading(true);
     setOtpError('');
     try {
+      const idToken = await user.getIdToken();
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({ email: user.email, uid: user.uid, otp: code }),
       });
       const data = await res.json();

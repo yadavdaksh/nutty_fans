@@ -46,9 +46,14 @@ export default function GoLivePage() {
     const room = `stream-${user.uid}-${Date.now()}`;
 
     try {
-      const creatorIdentity = `${user.uid}-creator`;
+      const idToken = await user.getIdToken();
       const resp = await fetch(
-        `/api/livekit/auth?room=${room}&username=${creatorIdentity}&participantName=${encodeURIComponent(user.displayName)}&mode=publisher`
+        `/api/livekit/auth?room=${room}&participantName=${encodeURIComponent(user.displayName)}&mode=publisher`,
+        {
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          }
+        }
       );
       const data = await resp.json();
       setToken(data.token);

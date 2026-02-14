@@ -1,7 +1,21 @@
-import { useRouter } from 'next/navigation';
+'use client';
+
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { 
+  Loader2,
+  BarChart3, 
+  Users, 
+  CheckCircle2, 
+  Ticket, 
+  ShieldAlert, 
+  Settings,
+  ArrowLeft,
+  LogOut,
+  Banknote
+} from 'lucide-react';
+import Link from 'next/link';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, userProfile, loading } = useAuth();
@@ -45,21 +59,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   );
 }
-
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { 
-  BarChart3, 
-  Users, 
-  CheckCircle2, 
-  Ticket, 
-  ShieldAlert, 
-  Settings,
-  ArrowLeft,
-  LogOut,
-  Banknote
-} from 'lucide-react';
 
 function AdminSidebar() {
   const pathname = usePathname();
@@ -112,7 +111,10 @@ function AdminSidebar() {
           })}
           <li>
             <button
-              onClick={() => signOut()}
+              onClick={async () => {
+                await signOut();
+                router.push('/login');
+              }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-gray-400 hover:bg-red-500/10 hover:text-red-500 group"
             >
               <LogOut className="w-5 h-5 text-gray-500 group-hover:text-red-500" />

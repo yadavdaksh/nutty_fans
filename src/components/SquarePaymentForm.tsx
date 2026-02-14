@@ -1,4 +1,4 @@
-'use client';
+import { useAuth } from '@/context/AuthContext';
 
 import { CreditCard, PaymentForm, ApplePay, GooglePay } from 'react-square-web-payments-sdk';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -27,6 +27,7 @@ export default function SquarePaymentForm({
   onSuccess, 
   onCancel 
 }: SquarePaymentFormProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +42,7 @@ export default function SquarePaymentForm({
           setError(null);
           try {
             const endpoint = type === 'subscription' ? '/api/payments/subscribe' : '/api/payments';
+            const idToken = await user?.getIdToken();
             
             // Payload differs slightly for subscription (needs tierName explicitly for plan creation)
             const body = type === 'subscription' ? {
@@ -62,7 +64,10 @@ export default function SquarePaymentForm({
 
             const response = await fetch(endpoint, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+              },
               body: JSON.stringify(body),
             });
 

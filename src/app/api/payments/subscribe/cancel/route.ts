@@ -1,11 +1,29 @@
 import { NextResponse } from 'next/server';
+import { verifyAuth } from '@/lib/api-auth';
+import { adminDb } from '@/lib/firebase-admin';
 
 export async function POST(request: Request) {
   try {
+    // 1. [SECURITY] Auth Verification
+    const { user, error } = await verifyAuth(request);
+    if (error) return error;
+
     const { squareSubscriptionId } = await request.json();
 
     if (!squareSubscriptionId) {
       return NextResponse.json({ error: 'Missing squareSubscriptionId' }, { status: 400 });
+    }
+
+    // 2. [SECURITY] Ownership Verification
+    // Verify this subscription belongs to the user
+    const subSnap = await adminDb.collection('subscriptions')
+        .where('userId', '==', user.uid)
+        .where('squareSubscriptionId', '==', squareSubscriptionId)
+        .get();
+
+    if (subSnap.empty) {
+        console.error(`[SECURITY] Attempt to cancel unauthorized subscription: ${squareSubscriptionId} by user ${user.uid}`);
+        return NextResponse.json({ error: 'Unauthorized or subscription not found' }, { status: 403 });
     }
 
     const isProduction = process.env.SQUARE_ENVIRONMENT === 'production';

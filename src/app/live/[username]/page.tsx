@@ -104,10 +104,14 @@ export default function ViewerPage() {
     if (hasAccess && streamData && user) {
         const getToken = async () => {
             try {
-                // Append -viewer-timestamp to ensure unique identity if testing with same account
-                const viewerIdentity = `${user.uid}-viewer-${Date.now()}`;
+                const idToken = await user.getIdToken();
                 const resp = await fetch(
-                    `/api/livekit/auth?room=${streamData.id}&username=${viewerIdentity}&participantName=${encodeURIComponent(user.displayName || 'Viewer')}&mode=subscriber`
+                    `/api/livekit/auth?room=${streamData.id}&participantName=${encodeURIComponent(user.displayName || 'Viewer')}&mode=subscriber`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${idToken}`
+                        }
+                    }
                 );
                 const data = await resp.json();
                 setToken(data.token);

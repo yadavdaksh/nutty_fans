@@ -27,7 +27,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         router.push('/dashboard');
       }
     }
-  }, [user, userProfile, loading, router]);
+  }, [user, userProfile, loading, router, pathname]);
 
   if (loading) {
     return (

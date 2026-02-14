@@ -2,12 +2,19 @@ import { NextResponse } from 'next/server';
 import { getUserProfile, createCreatorProfile } from '@/lib/db';
 import { getOrCreateSubscriptionPlan } from '@/lib/square-plans';
 
+import { verifyAuth } from '@/lib/api-auth';
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { userId, tiers } = body;
+    // 1. [SECURITY] Auth & Role Verification
+    const { user, error } = await verifyAuth(request, 'creator');
+    if (error) return error;
 
-    if (!userId || !tiers || !Array.isArray(tiers)) {
+    const body = await request.json();
+    const { tiers } = body;
+    const userId = user.uid; // Always use verified UID
+
+    if (!tiers || !Array.isArray(tiers)) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 

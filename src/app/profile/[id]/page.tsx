@@ -32,6 +32,7 @@ import Image from 'next/image';
 import CheckoutModal from '@/components/CheckoutModal';
 import TipModal from '@/components/TipModal';
 import WatermarkMedia from '@/components/WatermarkMedia';
+import ImageModal from '@/components/modals/ImageModal';
 import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
@@ -52,6 +53,8 @@ export default function ProfilePage() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<CreatorProfile['subscriptionTiers'][number] | null>(null);
   const [isTipOpen, setIsTipOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const { posts, loading: postsLoading } = usePosts(creatorUid);
 
@@ -100,8 +103,8 @@ export default function ProfilePage() {
   }, [creatorUid, user]);
 
   const handleSubscribe = async (tier: CreatorProfile['subscriptionTiers'][number]) => {
-    if (!user || userProfile?.role !== 'user') {
-      toast.error("Only fans can subscribe to creators.");
+    if (!user || (userProfile?.role !== 'user' && userProfile?.role !== 'admin')) {
+      toast.error("Only fans and admins can subscribe to creators.");
       return;
     }
 
@@ -148,9 +151,9 @@ export default function ProfilePage() {
   const handleMessageClick = async () => {
     if (!user || !userProfile || !targetUser) return;
     
-    // Rule: Only users (subscribers) can initiate chats with creators
-    if (userProfile.role !== 'user') {
-      toast.error("Only subscribers can initiate messages with creators.");
+    // Rule: Only users (subscribers) and admins can initiate chats with creators
+    if (userProfile.role !== 'user' && userProfile.role !== 'admin') {
+      toast.error("Only subscribers and admins can initiate messages with creators.");
       return;
     }
 
@@ -310,18 +313,32 @@ export default function ProfilePage() {
                 {/* Avatar */}
                 <div className="relative -mt-20 flex-shrink-0">
                   <div 
-                    className="w-[160px] h-[160px] rounded-full border-[6px] border-white shadow-lg overflow-hidden flex items-center justify-center"
+                    onClick={() => targetUser.photoURL && !imgError && setIsImageModalOpen(true)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        if (targetUser.photoURL && !imgError) {
+                          setIsImageModalOpen(true);
+                        }
+                      }
+                    }}
+                    className="w-[160px] h-[160px] rounded-full border-[6px] border-white shadow-lg overflow-hidden flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer focus:outline-none"
                     style={{
                       background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
                       boxShadow: '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                      borderRadius: '50%', // Explicitly enforce circle shape
+                      isolation: 'isolate', // Fix for Safari overflow clipping
+                      transform: 'translateZ(0)', // Force hardware acceleration to respect border-radius
                     }}
                   >
-                    {targetUser.photoURL ? (
+                    {targetUser.photoURL && !imgError ? (
                       <Image 
                         src={targetUser.photoURL} 
                         alt={targetUser.displayName} 
                         fill 
                         className="object-cover" 
+                        onError={() => setImgError(true)}
                       />
                     ) : (
                       <span className="text-white text-5xl font-bold">
@@ -882,6 +899,12 @@ export default function ProfilePage() {
         creatorName={targetUser?.displayName || 'Creator'}
         creatorId={creatorUid}
         userId={user?.uid || ''}
+      />
+      <ImageModal 
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={targetUser.photoURL || ''}
+        alt={targetUser.displayName}
       />
     </ProtectedRoute>
   );

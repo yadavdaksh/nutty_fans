@@ -11,7 +11,7 @@ import { Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getWalletBalance, processTransaction } from '@/lib/db';
+import { getWalletBalance, unlockPost } from '@/lib/db';
 import { toast } from 'react-hot-toast';
 import WatermarkMedia from './WatermarkMedia';
 import AlertModal from './modals/AlertModal';
@@ -38,6 +38,7 @@ export default function PostCard({ post }: { post: Post }) {
   const [isUnlocked, setIsUnlocked] = useState(!post.isLocked);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
 
   const handleLike = () => {
@@ -75,16 +76,14 @@ export default function PostCard({ post }: { post: Post }) {
     setIsUnlocking(true);
 
     try {
-      // 2. Process Transaction
-      await processTransaction(
+      // 2. Unlock Content (Atomic Transaction & Permission Update)
+      await unlockPost(
         user.uid,
-        priceCents,
-        `Unlock post by ${post.creatorName}`,
-        { contentType: 'post_unlock', contentId: post.id, creatorId: post.creatorId }
+        post.id,
+        post.creatorId,
+        priceCents
       );
 
-      // 3. Unlock (Client side update, purely visual for now effectively)
-      // In real-world, we'd also call an API to 'add user to allowed viewers' in backend
       setIsUnlocked(true);
       toast.success("Post unlocked!");
     } catch (error) {
@@ -101,8 +100,15 @@ export default function PostCard({ post }: { post: Post }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
-            {post.creatorAvatar ? (
-               <Image src={post.creatorAvatar} alt={post.creatorName} fill sizes="40px" className="object-cover" />
+            {post.creatorAvatar && !imgError ? (
+               <Image 
+                 src={post.creatorAvatar} 
+                 alt={post.creatorName} 
+                 fill 
+                 sizes="40px" 
+                 className="object-cover" 
+                 onError={() => setImgError(true)}
+               />
             ) : (
                <div className="w-full h-full flex items-center justify-center bg-purple-100 text-purple-600 font-bold">
                  {post.creatorName[0]}

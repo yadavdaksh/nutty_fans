@@ -2,20 +2,18 @@ import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { sendEmail } from '@/lib/email';
 
+import { verifyAuth } from '@/lib/api-auth';
+
 export async function POST(request: Request) {
   try {
-    const { uid, action, adminUid } = await request.json();
+    // 1. [SECURITY] Auth & Admin Verification
+    const { user: _user, error } = await verifyAuth(request, 'admin');
+    if (error) return error;
 
-    if (!uid || !action || !adminUid) {
+    const { uid, action } = await request.json();
+
+    if (!uid || !action) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    // 1. Verify that the requester is an admin
-    const adminSnap = await adminDb.collection('users').doc(adminUid).get();
-    const adminData = adminSnap.data();
-
-    if (!adminData || adminData.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 });
     }
 
     if (action === 'approve') {

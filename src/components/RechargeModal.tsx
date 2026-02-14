@@ -90,7 +90,7 @@ export default function RechargeModal({ isOpen, onClose, onSuccess }: RechargeMo
                        step="0.01"
                        value={customAmount}
                        onChange={(e) => setCustomAmount(e.target.value)}
-                       className="w-full pl-7 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                       className="w-full pl-7 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
                        placeholder="0.00"
                      />
                    </div>

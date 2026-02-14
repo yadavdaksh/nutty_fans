@@ -3,14 +3,13 @@
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
-import { useSubscriptions, SubscriptionWithUser } from '@/hooks/useSubscriptions';
+import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { 
   Users, 
   Search, 
   ChevronLeft, 
   ChevronRight, 
   Calendar, 
-  CreditCard,
   User,
   MessageSquare,
   Twitter,
@@ -23,6 +22,7 @@ import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Timestamp } from 'firebase/firestore';
 
 const ITEMS_PER_PAGE = 50;
 
@@ -200,13 +200,13 @@ export default function SubscribersPage() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <div className="flex items-center gap-1.5 font-medium">
                               <Calendar className="w-3.5 h-3.5" />
-                              {sub.createdAt ? format((sub.createdAt as any).toDate(), 'MMM dd, yyyy') : 'N/A'}
+                              {sub.createdAt instanceof Timestamp ? format(sub.createdAt.toDate(), 'MMM dd, yyyy') : 'N/A'}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <div className="flex items-center gap-1.5 font-medium">
                               <Calendar className="w-3.5 h-3.5" />
-                              {sub.expiresAt ? format((sub.expiresAt as any).toDate(), 'MMM dd, yyyy') : 'N/A'}
+                              {sub.expiresAt instanceof Timestamp ? format(sub.expiresAt.toDate(), 'MMM dd, yyyy') : 'N/A'}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">

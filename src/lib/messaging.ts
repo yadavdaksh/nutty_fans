@@ -8,11 +8,15 @@ import {
   serverTimestamp, 
   getDoc,
   increment,
-  arrayUnion
+  arrayUnion,
+  deleteDoc,
+  query,
+  where,
+  getDocs
 } from 'firebase/firestore';
 import { ref, set, onDisconnect, remove } from 'firebase/database';
 import { ref as storageRef, deleteObject } from 'firebase/storage';
-import { Conversation, Message } from './db';
+import { Conversation, Message, processTransaction } from './db';
 import { storage } from './firebase';
 
 /**
@@ -80,6 +84,26 @@ export const sendMessage = async (
   isLocked: boolean = false,
   price?: number
 ) => {
+  // 1. [SECURITY] Authorization Check: Creators can message anyone, Fans MUST be subscribed.
+  // First, check sender role
+  const senderDoc = await getDoc(doc(db, 'users', senderId));
+  const senderData = senderDoc.data();
+  
+  if (senderData?.role === 'user') {
+    // Check for active subscription
+    const subsQuery = query(
+      collection(db, 'subscriptions'),
+      where('userId', '==', senderId),
+      where('creatorId', '==', recipientId),
+      where('status', 'in', ['active', 'expiring'])
+    );
+    const subsSnap = await getDocs(subsQuery);
+    
+    if (subsSnap.empty) {
+      throw new Error("You must have an active subscription to message this creator.");
+    }
+  }
+
   const messagesRef = collection(db, 'conversations', conversationId, 'messages');
   
   const messageData: Message = {
@@ -142,19 +166,28 @@ export const logSystemMessage = async (
 
 /**
  * Unlocks a locked message for a specific user.
+ * Performs a financial transaction before granting access.
  */
 export const unlockMessage = async (
   conversationId: string,
   messageId: string,
-  userId: string
+  userId: string,
+  creatorId: string,
+  amount: number
 ) => {
   const messageRef = doc(db, 'conversations', conversationId, 'messages', messageId);
   
-  // In a real app, we would enable a payment transaction here.
-  // For now, we just update the unlockedBy array.
+  // 1. Process Transaction
+  await processTransaction(
+    userId,
+    amount,
+    'Unlock Message Content',
+    { conversationId, messageId, creatorId, type: 'unlock_content' }
+  );
   
+  // 2. Grant Access
   await updateDoc(messageRef, {
-    unlockedBy: arrayUnion(userId) // Ensure arrayUnion is imported!
+    unlockedBy: arrayUnion(userId)
   });
 };
 

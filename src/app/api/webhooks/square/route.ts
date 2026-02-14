@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db, addFunds } from '@/lib/db';
 import { collection, query, where, getDocs, updateDoc, Timestamp, doc } from 'firebase/firestore';
 
+import crypto from 'crypto';
+
 // You need to set this env var in Vercel/local
 const SIGNATURE_KEY = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY || '';
 
@@ -9,14 +11,21 @@ export async function POST(request: Request) {
   try {
     const bodyText = await request.text();
     const signature = request.headers.get('x-square-hmacsha256-signature');
-    // const url = process.env.NEXT_PUBLIC_APP_URL + '/api/webhooks/square';
+    const url = process.env.NEXT_PUBLIC_APP_URL + '/api/webhooks/square';
 
-    // 1. Verify Signature (Skip in dev if strictly needed, but better to have)
+    // 1. [SECURITY] Verify Signature
     if (SIGNATURE_KEY && signature) {
-       // Square SDK has a helper, but verifying manually is also possible.
-       // For now, let's assume we implement verification or trust if key missing in dev.
-       // const isValid = WebhooksHelper.isValidWebhookEventSignature(..., signature, KEY, url);
-       // if (!isValid) return NextResponse.json({error: 'Invalid signature'}, {status: 403});
+       const hmac = crypto.createHmac('sha256', SIGNATURE_KEY);
+       hmac.update(url + bodyText);
+       const expectedSignature = hmac.digest('base64');
+
+       if (signature !== expectedSignature) {
+         console.error('[SECURITY] Invalid Square webhook signature');
+         return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
+       }
+    } else if (process.env.NODE_ENV === 'production') {
+       console.error('[SECURITY] Webhook SIGNATURE_KEY missing in production');
+       return NextResponse.json({ error: 'Security configuration missing' }, { status: 500 });
     }
 
     const event = JSON.parse(bodyText);

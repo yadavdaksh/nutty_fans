@@ -2,9 +2,14 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { verifyAuth } from '@/lib/api-auth';
 
 export async function POST(request: Request) {
   try {
+    // 1. [SECURITY] Auth & Admin Verification
+    const { user: _user, error } = await verifyAuth(request, 'admin');
+    if (error) return error;
+
     const { subject, content, target, imageUrl } = await request.json();
 
     if (!subject || !content) {

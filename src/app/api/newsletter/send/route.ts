@@ -2,12 +2,18 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { verifyAuth } from '@/lib/api-auth';
 
 export async function POST(request: Request) {
   try {
-    const { subject, content, target, creatorId, imageUrl } = await request.json();
+    // 1. [SECURITY] Auth & Role Verification
+    const { user, error } = await verifyAuth(request, 'creator');
+    if (error) return error;
 
-    if (!subject || !content || !creatorId) {
+    const { subject, content, target, imageUrl } = await request.json();
+    const creatorId = user.uid; // Always use verified UID
+
+    if (!subject || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 

@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db'; // Make sure this exports your firestore instance
+import { db } from '@/lib/db'; 
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { sendEmail } from '@/lib/email';
 import { getOtpEmailTemplate } from '@/lib/email-templates';
-
-
-// We will use the standard db instance if available or initialize it. 
-// In src/lib/db.ts, 'db' is exported.
+import { verifyAuth } from '@/lib/api-auth';
 
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -14,10 +11,15 @@ function generateOTP() {
 
 export async function POST(request: Request) {
   try {
-    const { email, uid } = await request.json();
+    // 1. [SECURITY] Auth Verification
+    const { user, error } = await verifyAuth(request);
+    if (error) return error;
 
-    if (!email || !uid) {
-      return NextResponse.json({ error: 'Email and UID are required' }, { status: 400 });
+    const { email } = await request.json();
+    const uid = user.uid; // Always use verified UID
+
+    if (!email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
     const otp = generateOTP();

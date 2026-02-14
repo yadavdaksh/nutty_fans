@@ -86,9 +86,13 @@ export default function VerifyOTPPage() {
     setError(null);
 
     try {
+      const idToken = await user.getIdToken();
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({ 
           email: user.email, 
           uid: user.uid,
@@ -119,9 +123,13 @@ export default function VerifyOTPPage() {
     setError(null);
     
     try {
+      const idToken = await user.getIdToken();
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({ 
           email: user.email, 
           uid: user.uid

@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
 import { squareClient } from '@/lib/square';
 import { getUserProfile } from '@/lib/db';
+import { verifyAuth } from '@/lib/api-auth';
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    // 1. [SECURITY] Auth Verification
+    const { user, error } = await verifyAuth(request);
+    if (error) return error;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
+    const userId = user.uid; // Always use verified UID
     const userProfile = await getUserProfile(userId);
+
     if (!userProfile?.squareCustomerId) {
       return NextResponse.json({ cards: [] });
     }

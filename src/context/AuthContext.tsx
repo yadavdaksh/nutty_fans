@@ -81,8 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             Cookies.remove('onboarding_completed');
             Cookies.remove('user_role');
           }
+          setLoading(false);
         }, (error) => {
           console.error('Error in profile listener:', error);
+          setLoading(false);
         });
 
       } else {
@@ -92,8 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         Cookies.remove('user_role', { path: '/' });
         setUserProfile(null);
         if (unsubProfile) unsubProfile();
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {

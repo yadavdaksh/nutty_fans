@@ -107,9 +107,13 @@ export default function VerificationQueue() {
       onConfirm: async () => {
         setProcessingId(uid);
         try {
+          const token = await adminUser.getIdToken();
           const res = await fetch('/api/admin/verify-creator', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({
               uid,
               action,
