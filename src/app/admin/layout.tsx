@@ -1,5 +1,32 @@
-'use client'
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { Loader2 } from 'lucide-react';
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { user, userProfile, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user || userProfile?.role !== 'admin') {
+        router.push('/dashboard');
+      }
+    }
+  }, [user, userProfile, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50 text-indigo-500">
+        <Loader2 className="w-12 h-12 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user || userProfile?.role !== 'admin') {
+    return null; // Don't flash unauthorized content
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />

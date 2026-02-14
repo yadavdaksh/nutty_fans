@@ -29,6 +29,7 @@ import {
 import { useEffect } from 'react';
 import { getCreatorProfile, updateUserProfile, createCreatorProfile } from '@/lib/db';
 import { updateProfile } from 'firebase/auth';
+import { toast } from 'react-hot-toast';
 import { useStorage } from '@/hooks/useStorage';
 import { useRef } from 'react';
 
@@ -84,7 +85,7 @@ export default function SettingsPage() {
     loginAlerts: true,
   });
 
-  const { uploadFile, isUploading: uploadingImage } = useStorage();
+  const { uploadFile, deleteFile, isUploading: uploadingImage } = useStorage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -179,11 +180,14 @@ export default function SettingsPage() {
     if (!file || !user) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("File size exceeds 5MB limit.");
+      toast.error("File size exceeds 5MB limit.");
       return;
     }
 
     try {
+      // Store old URL for cleanup
+      const oldPhotoURL = user.photoURL;
+
       const path = `users/${user.uid}/profile_${Date.now()}_${file.name}`;
       const url = await uploadFile(file, path);
       
@@ -193,11 +197,16 @@ export default function SettingsPage() {
       // Update Firestore User Profile
       await updateUserProfile(user.uid, { photoURL: url });
 
+      // Clean up old image from storage if it exists
+      if (oldPhotoURL) {
+        await deleteFile(oldPhotoURL);
+      }
+
       await refreshProfile();
-      alert("Profile picture updated successfully!");
+      toast.success("Profile picture updated successfully!");
     } catch (error) {
       console.error("Error uploading image:", error);
-      alert("Failed to upload image. Please try again.");
+      toast.error("Failed to upload image. Please try again.");
     } finally {
       // Create a fresh input to allow re-uploading same file if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -248,11 +257,11 @@ export default function SettingsPage() {
       }
 
       await refreshProfile();
-      alert("Settings saved successfully!");
+      toast.success("Settings saved successfully!");
     } catch (error: unknown) {
       console.error('Error saving settings:', error);
       const errorMessage = error instanceof Error ? error.message : "Failed to save settings. Please try again.";
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -919,10 +928,10 @@ export default function SettingsPage() {
                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 setCreatorProfile((current: any) => ({ ...current, ...updatedProfile } as any));
                          await refreshProfile();
-                         alert("Subscription plans saved and synced with Square!");
+                         toast.success("Subscription plans saved and synced with Square!");
                       } catch (err) {
                         console.error("Error saving plans:", err);
-                        alert("Failed to save plans.");
+                        toast.error("Failed to save plans.");
                       } finally {
                         setSaving(false);
                       }

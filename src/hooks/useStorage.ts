@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { storage } from '@/lib/firebase';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 
 interface UseStorageReturn {
   uploadFile: (file: File, path: string) => Promise<string>;
+  deleteFile: (url: string) => Promise<void>;
   progress: number;
   error: string | null;
   isUploading: boolean;
@@ -15,8 +16,8 @@ export const useStorage = (): UseStorageReturn => {
   const [isUploading, setIsUploading] = useState(false);
 
   const uploadFile = async (file: File, path: string): Promise<string> => {
+    // ... (keep existing implementation)
     return new Promise((resolve, reject) => {
-      // Basic validation
       if (!file) {
         reject(new Error('No file provided'));
         return;
@@ -58,5 +59,17 @@ export const useStorage = (): UseStorageReturn => {
     });
   };
 
-  return { uploadFile, progress, error, isUploading };
+  const deleteFile = async (url: string): Promise<void> => {
+    if (!url || !url.startsWith('http')) return;
+    try {
+      const fileRef = ref(storage, url);
+      await deleteObject(fileRef);
+    } catch (err) {
+      console.error('Delete error:', err);
+      // We don't necessarily want to fail the whole process if delete fails 
+      // (e.g. if the file was already deleted or doesn't exist)
+    }
+  };
+
+  return { uploadFile, deleteFile, progress, error, isUploading };
 };

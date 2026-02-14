@@ -8,8 +8,9 @@ import {
   GoogleAuthProvider, 
   signOut as firebaseSignOut 
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { UserProfile, getUserProfile } from '@/lib/db';
+import { auth, db } from '@/lib/firebase';
+import { UserProfile } from '@/lib/db';
+import { doc, onSnapshot } from 'firebase/firestore';
 import Cookies from 'js-cookie';
 
 interface AuthContextType {
@@ -37,31 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (uid: string) => {
-    try {
-      const profile = await getUserProfile(uid);
-      setUserProfile(profile);
-      
-      // Set cookies for middleware
-      if (profile?.role === 'admin') {
-        Cookies.set('is_admin', 'true', { expires: 7 });
-      } else {
-        Cookies.remove('is_admin');
-      }
-
-      if (profile?.onboardingCompleted) {
-        Cookies.set('onboarding_completed', 'true', { expires: 7 });
-        Cookies.set('user_role', profile.role, { expires: 7 });
-      } else {
-        Cookies.remove('onboarding_completed');
-        Cookies.remove('user_role');
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
+  // Removed fetchProfile in favor of onSnapshot listener
 
   useEffect(() => {
+    let unsubProfile: (() => void) | undefined;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
@@ -72,24 +53,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           sameSite: 'Lax',
           secure: true
         }); 
-        await fetchProfile(user.uid);
+
+        // Start real-time listener for profile
+        const profileRef = doc(db, 'users', user.uid);
+        unsubProfile = onSnapshot(profileRef, (snap) => {
+          if (snap.exists()) {
+            const profile = snap.data() as UserProfile;
+            setUserProfile(profile);
+
+            // Sync cookies
+            if (profile.role === 'admin') {
+              Cookies.set('is_admin', 'true', { expires: 7 });
+            } else {
+              Cookies.remove('is_admin');
+            }
+
+            if (profile.onboardingCompleted) {
+              Cookies.set('onboarding_completed', 'true', { expires: 7 });
+              Cookies.set('user_role', profile.role, { expires: 7 });
+            } else {
+              Cookies.remove('onboarding_completed');
+              Cookies.remove('user_role');
+            }
+          } else {
+            setUserProfile(null);
+            Cookies.remove('is_admin');
+            Cookies.remove('onboarding_completed');
+            Cookies.remove('user_role');
+          }
+        }, (error) => {
+          console.error('Error in profile listener:', error);
+        });
+
       } else {
         Cookies.remove('session_token', { path: '/' });
         Cookies.remove('is_admin', { path: '/' });
         Cookies.remove('onboarding_completed', { path: '/' });
         Cookies.remove('user_role', { path: '/' });
         setUserProfile(null);
+        if (unsubProfile) unsubProfile();
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (unsubProfile) unsubProfile();
+    };
   }, []);
 
   const refreshProfile = async () => {
-    if (user) {
-      await fetchProfile(user.uid);
-    }
+    // refreshProfile is now mostly legacy as we have a real-time listener,
+    // but we can keep the interface for compatibility.
   };
 
   const signInWithGoogle = async () => {

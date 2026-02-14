@@ -11,7 +11,9 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { ref, set, onDisconnect, remove } from 'firebase/database';
+import { ref as storageRef, deleteObject } from 'firebase/storage';
 import { Conversation, Message } from './db';
+import { storage } from './firebase';
 
 /**
  * Creates a unique conversation ID for two users by sorting their UIDs.
@@ -217,5 +219,25 @@ export const setTypingStatus = (conversationId: string, userId: string, isTyping
     onDisconnect(typingRef).remove();
   } else {
     remove(typingRef);
+  }
+};
+
+/**
+ * Deletes a message from a conversation and cleans up media if applicable.
+ */
+export const deleteMessage = async (conversationId: string, messageId: string, mediaURL?: string) => {
+  const messageRef = doc(db, 'conversations', conversationId, 'messages', messageId);
+
+  // 1. Delete Firestore Document
+  await deleteDoc(messageRef);
+
+  // 2. Delete Media from Storage if it exists and is a Firebase Storage URL
+  if (mediaURL && mediaURL.includes('firebasestorage.googleapis.com')) {
+    try {
+      const fileRef = storageRef(storage, mediaURL);
+      await deleteObject(fileRef);
+    } catch (error) {
+      console.error("Error deleting message media:", error);
+    }
   }
 };

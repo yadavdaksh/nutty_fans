@@ -7,6 +7,7 @@ import { updateUserProfile, createCreatorProfile, createUserProfile } from '@/li
 import { updateProfile } from 'firebase/auth';
 import { useStorage } from '@/hooks/useStorage';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { Step, Role } from './onboarding.types';
 
 // Components
@@ -295,7 +296,7 @@ export default function OnboardingPage() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert("File size exceeds 5MB limit.");
+        toast.error("File size exceeds 5MB limit.");
         return;
       }
       setImageFile(file);

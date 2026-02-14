@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Clock, LogOut, Mail, ShieldCheck, ArrowRight, ArrowLeft, PenLine } from 'lucide-react';
 import { updateUserProfile, createCreatorProfile, BankDetails } from '@/lib/db';
 import { useStorage } from '@/hooks/useStorage';
+import { toast } from 'react-hot-toast';
 // Removed unused updateProfile import
 
 // Reuse components from onboarding
@@ -84,7 +85,7 @@ export default function VerificationPendingPage() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert("File size exceeds 5MB limit.");
+        toast.error("File size exceeds 5MB limit.");
         return;
       }
       setImageFile(file);

@@ -11,7 +11,8 @@ import {
   Timestamp,
   orderBy
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
+import { ref as storageRef, listAll, deleteObject as storageDeleteObject } from 'firebase/storage';
 import { UserProfile, UserRole, VerificationStatus } from '@/lib/db';
 import { 
   Search,
@@ -80,20 +81,41 @@ export default function UserManagement() {
     setAlertConfig({
       isOpen: true,
       title: 'Delete User',
-      message: `Are you sure you want to delete ${user.displayName || user.email}? This action is permanent and cannot be undone.`,
+      message: `Are you sure you want to delete ${user.displayName || user.email}? This action is permanent and cannot be undone. All their media, posts, and account data will be removed.`,
       type: 'error',
       onConfirm: async () => {
         try {
-          // 1. Delete from users collection
+          // 1. Storage Cleanup (Delete all user media)
+          const cleanupStorageFolder = async (folderPath: string) => {
+            try {
+              const folderRef = storageRef(storage, folderPath);
+              const result = await listAll(folderRef);
+              await Promise.all(result.items.map(item => storageDeleteObject(item)));
+              // Recursively handle subfolders if any (though here we mostly have flat)
+              await Promise.all(result.prefixes.map(prefix => cleanupStorageFolder(prefix.fullPath)));
+            } catch (err) {
+              console.error(`Error cleaning up folder ${folderPath}:`, err);
+            }
+          };
+
+          // Clean up profile images and post media
+          await Promise.all([
+            cleanupStorageFolder(`users/${user.uid}`),
+            cleanupStorageFolder(`posts/${user.uid}`),
+            cleanupStorageFolder(`messages/${user.uid}`) // Also try to clean up their message folder if it exists
+          ]);
+
+          // 2. Delete from users collection
           await deleteDoc(doc(db, 'users', user.uid));
           
-          // 2. If creator, delete from creators collection too
+          // 3. If creator, delete from creators collection too
           if (user.role === 'creator') {
             await deleteDoc(doc(db, 'creators', user.uid));
           }
           
-          toast.success('User and related data removed');
-        } catch {
+          toast.success('User and all related data removed permanently');
+        } catch (error) {
+          console.error("Complete deletion error:", error);
           toast.error('Failed to perform complete deletion');
         }
       }

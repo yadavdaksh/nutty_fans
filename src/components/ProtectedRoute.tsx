@@ -22,6 +22,9 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
       } else if (!userProfile.isAgeVerified) {
         // Strict Age Check
         router.push('/onboarding');
+      } else if (pathname.startsWith('/admin') && userProfile.role !== 'admin') {
+        // Role check for admin routes
+        router.push('/dashboard');
       }
     }
   }, [user, userProfile, loading, router]);

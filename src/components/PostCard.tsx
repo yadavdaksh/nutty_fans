@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { 
-  Heart, 
+  Heart,
   MoreHorizontal,
   Lock,
   Loader2 

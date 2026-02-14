@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { db, storage } from './firebase';
 export { db };
 import { 
   doc, 
@@ -15,8 +15,10 @@ import {
   DocumentSnapshot,
   query,
   where,
-  getDocs
+  getDocs,
+  deleteDoc
 } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
 
 export interface Stream {
   id: string;
@@ -557,6 +559,31 @@ export const createPost = async (postData: Omit<Post, 'id' | 'createdAt' | 'like
   });
   
   return newPost;
+};
+
+// Delete a post
+export const deletePost = async (postId: string, creatorId: string, mediaURL?: string) => {
+  const postRef = doc(db, 'posts', postId);
+  const creatorRef = doc(db, 'creators', creatorId);
+
+  // 1. Delete Firestore Document
+  await deleteDoc(postRef);
+
+  // 2. Decrement creator's post count
+  await updateDoc(creatorRef, {
+    postCount: increment(-1)
+  });
+
+  // 3. Delete Media from Storage if it exists and is a Firebase Storage URL
+  if (mediaURL && mediaURL.includes('firebasestorage.googleapis.com')) {
+    try {
+      const fileRef = ref(storage, mediaURL);
+      await deleteObject(fileRef);
+    } catch (error) {
+      console.error("Error deleting post media:", error);
+      // Don't fail the whole process if storage delete fails
+    }
+  }
 };
 
 // Get feed for a user
