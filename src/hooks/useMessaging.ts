@@ -6,8 +6,6 @@ import { ref, onValue } from 'firebase/database';
 import { db, rtdb } from '../lib/firebase';
 import { Conversation, Message } from '../lib/db';
 
-import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '../lib/mockData';
-
 /**
  * Custom hook to handle real-time messaging state.
  * Manages the inbox list, active message history, and online/typing statuses.
@@ -44,37 +42,17 @@ export function useMessaging(userId: string | undefined) {
         ...doc.data() 
       } as Conversation));
 
-      // Merge with mock conversations
-      const combinedConvs = [...convs];
-      MOCK_CONVERSATIONS.forEach(mock => {
-        if (!combinedConvs.find(c => c.id === mock.id)) {
-          // Adjust participants to include current user
-          const participants = mock.participants.map(p => p === 'current_user_id' ? userId : p);
-          const participantMetadata = { ...mock.participantMetadata };
-          if (participantMetadata['current_user_id']) {
-            participantMetadata[userId] = participantMetadata['current_user_id'];
-            delete participantMetadata['current_user_id'];
-          }
-
-          combinedConvs.push({
-            ...mock,
-            participants,
-            participantMetadata
-          });
-        }
-      });
-
       // Sort by updatedAt desc
-      combinedConvs.sort((a, b) => {
+      convs.sort((a, b) => {
         const timeA = a.updatedAt instanceof Timestamp ? a.updatedAt.toMillis() : Date.now();
         const timeB = b.updatedAt instanceof Timestamp ? b.updatedAt.toMillis() : Date.now();
         return timeB - timeA;
       });
 
-      setConversations(combinedConvs);
+      setConversations(convs);
       
       // Calculate total unread count
-      const total = combinedConvs.reduce((acc, conv) => {
+      const total = convs.reduce((acc, conv) => {
         return acc + (conv.unreadCount?.[userId] || 0);
       }, 0);
       setTotalUnreadCount(total);
@@ -112,31 +90,14 @@ export function useMessaging(userId: string | undefined) {
         ...doc.data() 
       } as Message));
       
-      // If it's a mock conversation, inject mock messages
-      const combinedMsgs = [...msgs];
-      const isMockConv = MOCK_CONVERSATIONS.some(c => c.id === chatId);
-      
-      if (isMockConv) {
-         MOCK_MESSAGES.forEach((mock, index) => {
-           const id = `mock_msg_${index}`;
-           if (!combinedMsgs.find(m => m.id === id)) {
-             combinedMsgs.push({
-               ...mock,
-               id,
-               senderId: mock.senderId === 'current_user_id' ? (userId || 'me') : mock.senderId
-             });
-           }
-         });
-      }
-
       // Sort by timestamp asc
-      combinedMsgs.sort((a, b) => {
+      msgs.sort((a, b) => {
         const timeA = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : 0;
         const timeB = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : 0;
         return timeA - timeB;
       });
 
-      setActiveChatMessages(combinedMsgs);
+      setActiveChatMessages(msgs);
       setMessagesLoading(false);
     });
 
@@ -151,7 +112,8 @@ export function useMessaging(userId: string | undefined) {
       unsubMessages();
       unsubTyping();
     };
-  }, [userId]);
+  }, []);
+
 
   /**
    * Listen to any user's online status in RTDB.

@@ -31,6 +31,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
+import AlertModal from '@/components/modals/AlertModal';
+
 
 export default function UserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -39,6 +41,19 @@ export default function UserManagement() {
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
+  const [alertConfig, setAlertConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
 
   useEffect(() => {
     const q = query(collection(db, 'users'), orderBy('createdAt', sortOrder));
@@ -62,22 +77,29 @@ export default function UserManagement() {
   }, [activeUserId]);
 
   const handleDelete = async (user: UserProfile) => {
-    if (!confirm(`Are you sure you want to delete ${user.displayName || user.email}? This action is permanent.`)) return;
-    
-    try {
-      // 1. Delete from users collection
-      await deleteDoc(doc(db, 'users', user.uid));
-      
-      // 2. If creator, delete from creators collection too
-      if (user.role === 'creator') {
-        await deleteDoc(doc(db, 'creators', user.uid));
+    setAlertConfig({
+      isOpen: true,
+      title: 'Delete User',
+      message: `Are you sure you want to delete ${user.displayName || user.email}? This action is permanent and cannot be undone.`,
+      type: 'error',
+      onConfirm: async () => {
+        try {
+          // 1. Delete from users collection
+          await deleteDoc(doc(db, 'users', user.uid));
+          
+          // 2. If creator, delete from creators collection too
+          if (user.role === 'creator') {
+            await deleteDoc(doc(db, 'creators', user.uid));
+          }
+          
+          toast.success('User and related data removed');
+        } catch {
+          toast.error('Failed to perform complete deletion');
+        }
       }
-      
-      toast.success('User and related data removed');
-    } catch {
-      toast.error('Failed to perform complete deletion');
-    }
+    });
   };
+
 
   const handleStatusChange = async (uid: string, newStatus: VerificationStatus) => {
     try {
@@ -183,7 +205,7 @@ export default function UserManagement() {
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl relative overflow-hidden bg-gray-100 shrink-0">
                         {user.photoURL ? (
-                          <Image src={user.photoURL} alt={user.displayName || 'User'} fill className="object-cover" />
+                          <Image src={user.photoURL} alt={user.displayName || 'User'} fill sizes="40px" className="object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400">
                             <UserCircle className="w-6 h-6" />
@@ -337,6 +359,18 @@ export default function UserManagement() {
           </table>
         </div>
       </div>
+
+      <AlertModal 
+        isOpen={alertConfig.isOpen}
+        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={alertConfig.onConfirm}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 }
+

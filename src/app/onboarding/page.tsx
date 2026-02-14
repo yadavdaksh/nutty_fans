@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { updateUserProfile, createCreatorProfile, createUserProfile } from '@/lib/db';
 import { updateProfile } from 'firebase/auth';
+import { useStorage } from '@/hooks/useStorage';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Step, Role } from './onboarding.types';
 
@@ -22,6 +23,8 @@ export default function OnboardingPage() {
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const { uploadFile } = useStorage();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // State Restoration & Initialization
@@ -291,9 +294,13 @@ export default function OnboardingPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cover') => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size exceeds 5MB limit.");
+        return;
+      }
+      setImageFile(file);
       const imageUrl = URL.createObjectURL(file);
       if (type === 'profile') setSelectedImage(imageUrl);
-      // Cover image logic removed for user flow
     }
   };
 
@@ -343,13 +350,21 @@ export default function OnboardingPage() {
         setLoading(true);
         try {
           if (user) {
+            let photoURL = user.photoURL;
+            
+            if (imageFile) {
+              const path = `users/${user.uid}/profile_${Date.now()}_${imageFile.name}`;
+              photoURL = await uploadFile(imageFile, path);
+            }
+
             await updateProfile(user, {
               displayName: formData.displayName,
-              photoURL: selectedImage || user.photoURL,
+              photoURL: photoURL,
             });
             await updateUserProfile(user.uid, {
               displayName: formData.displayName,
               bio: formData.bio,
+              photoURL: photoURL || undefined,
               role: 'user',
               onboardingCompleted: true,
               onboardingStep: 5 

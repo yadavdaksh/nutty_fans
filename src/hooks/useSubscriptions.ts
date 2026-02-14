@@ -14,8 +14,6 @@ export interface SubscriptionWithUser extends Subscription {
   user: UserProfile;
 }
 
-import { MOCK_SUBSCRIPTIONS } from '@/lib/mockData';
-
 export function useSubscriptions(userId?: string, creatorId?: string) {
   const [subscriptions, setSubscriptions] = useState<SubscriptionWithCreator[]>([]);
   const [subscribers, setSubscribers] = useState<SubscriptionWithUser[]>([]);
@@ -75,19 +73,7 @@ export function useSubscriptions(userId?: string, creatorId?: string) {
             }
           }
 
-          // Merge with mock subscriptions for this user
-          const combinedSubs = [...subsData];
-          MOCK_SUBSCRIPTIONS.forEach(mock => {
-             if (!combinedSubs.find(s => s.id === mock.id)) {
-               // Assign to current user for demo
-               combinedSubs.push({
-                 ...mock,
-                 userId: userId
-               } as SubscriptionWithCreator);
-             }
-          });
-
-          setSubscriptions(combinedSubs);
+          setSubscriptions(subsData);
         } else if (creatorId) {
           const subsData: SubscriptionWithUser[] = [];
           for (const subDoc of snapshot.docs) {
@@ -102,15 +88,7 @@ export function useSubscriptions(userId?: string, creatorId?: string) {
             }
           }
           
-          // Merge with mock subscribers for this creator if the IDs match
-          const combinedSubscribers = [...subsData];
-          MOCK_SUBSCRIPTIONS.forEach(mock => {
-             if (mock.creatorId === creatorId && !combinedSubscribers.find(s => s.id === mock.id)) {
-                combinedSubscribers.push(mock);
-             }
-          });
-
-          setSubscribers(combinedSubscribers);
+          setSubscribers(subsData);
         }
         setLoading(false);
       } catch (err: unknown) {
@@ -121,7 +99,7 @@ export function useSubscriptions(userId?: string, creatorId?: string) {
       }
     }, (err) => {
       console.error("Subscriptions snapshot error:", err);
-      setError(err.message);
+      setError(err?.message || "Unknown error");
       setLoading(false);
     });
 

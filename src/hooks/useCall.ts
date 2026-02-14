@@ -11,7 +11,15 @@ export function useCall() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const startCall = async (callerId: string, receiverId: string, type: 'audio' | 'video', price: number, callerName: string, callerPhotoURL?: string) => {
+  const startCall = async (
+    callerId: string, 
+    receiverId: string, 
+    type: 'audio' | 'video', 
+    price: number, 
+    callerName: string, 
+    callerPhotoURL?: string,
+    onInsufficientBalance?: () => void
+  ) => {
     try {
       setLoading(true);
 
@@ -20,10 +28,15 @@ export function useCall() {
       const minRequired = Math.round(price * 100); // 1 minute price in cents
       
       if (balance < minRequired) {
-        toast.error(`Insufficient balance. You need at least $${price.toFixed(2)} in your wallet to start this call.`);
+        if (onInsufficientBalance) {
+          onInsufficientBalance();
+        } else {
+          toast.error(`Insufficient balance. You need at least $${price.toFixed(2)} in your wallet to start this call.`);
+        }
         setLoading(false);
         return;
       }
+
 
       // Check for existing calls (User is caller OR receiver)
       const callsRef = collection(db, 'calls');

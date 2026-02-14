@@ -4,18 +4,22 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Bell, Search, Menu, LogOut, User, Settings, LayoutDashboard, Phone, PhoneOff } from 'lucide-react';
+
+
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { useMessaging } from '@/hooks/useMessaging';
 import { createCreatorProfile, getCreatorProfile } from '@/lib/db';
 import { toast } from 'react-hot-toast';
+import { format } from 'date-fns';
 
 
+import { useNotifications } from '@/hooks/useNotifications';
 export default function Header() {
   const pathname = usePathname();
   const { user, userProfile, signOut } = useAuth();
   const { totalUnreadCount } = useMessaging(user?.uid);
-  /* useChatNotifications(); - Removed to avoid duplicate toasts (called in LayoutShell) */
+  const { notifications, unreadCount: notificationsUnreadCount, markAsRead, markAllAsRead, dismissNotification } = useNotifications();
   const isAdminPage = pathname.startsWith('/admin');
   const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/verify-otp' || pathname === '/verify-age';
 
@@ -37,11 +41,8 @@ export default function Header() {
   const notificationsRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const mockNotifications = [
-    { id: 1, text: 'Sarah Miller subscribed to your Premium tier!', time: '2 mins ago', unread: true },
-    { id: 2, text: 'You received a $50 tip from Alex Rivers!', time: '1 hour ago', unread: true },
-    { id: 3, text: 'New comment on your latest post', time: '5 hours ago', unread: false },
-  ];
+
+
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -90,15 +91,15 @@ export default function Header() {
           {/* Left side - Logo and Navigation */}
           <div className="flex items-center h-10">
             {/* Logo - 41.79px x 40px */}
-            <Link href="/" className="flex-shrink-0 h-10 w-[41.79px] relative">
-              <div 
-                className="h-10 w-10 rounded-lg flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
-                }}
-              >
-                <span className="text-white font-bold text-lg">N</span>
-              </div>
+            <Link href="/" className="flex-shrink-0 h-10 w-[120px] relative">
+              <Image 
+                src="/logo.png" 
+                alt="NuttyFans Logo" 
+                fill 
+                sizes="120px"
+                className="object-contain object-left"
+                priority
+              />
             </Link>
 
             {/* Navigation Links - Hidden on mobile, shown on desktop */}
@@ -319,7 +320,7 @@ export default function Header() {
                   aria-label="Notifications"
                 >
                   <Bell className="w-4 h-4" />
-                  {mockNotifications.some(n => n.unread) && (
+                  {notificationsUnreadCount > 0 && (
                     <span 
                       className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full border-2"
                       style={{
@@ -354,81 +355,80 @@ export default function Header() {
                       >
                         Notifications
                       </h3>
-                      <button 
-                        className="text-xs font-medium transition-colors"
-                        style={{
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '12px',
-                          fontWeight: 500,
-                          color: '#9810FA'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = '#8200DB'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = '#9810FA'}
-                      >
-                        Mark as read
-                      </button>
+                      {notificationsUnreadCount > 0 && (
+                        <button 
+                          onClick={() => markAllAsRead()}
+                          className="text-xs font-medium transition-colors"
+                          style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            color: '#9810FA'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = '#8200DB'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = '#9810FA'}
+                        >
+                          Mark as read
+                        </button>
+                      )}
                     </div>
                     <div className="max-h-96 overflow-y-auto">
-                      {mockNotifications.map((notif) => (
-                        <div 
-                          key={notif.id} 
-                          className="px-4 py-3 transition-colors cursor-pointer last:border-0 flex gap-3"
-                          style={{
-                            backgroundColor: notif.unread ? 'rgba(152, 16, 250, 0.05)' : 'transparent',
-                            borderBottom: '1px solid #F9FAFB',
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = notif.unread ? 'rgba(152, 16, 250, 0.05)' : 'transparent'}
-                        >
+                      {notifications.length > 0 ? (
+                        notifications.slice(0, 3).map((notif) => (
                           <div 
-                            className="w-2 h-2 mt-1.5 rounded-full flex-shrink-0"
+                            key={notif.id} 
+                            onClick={() => dismissNotification(notif.id)}
+                            className="px-4 py-3 transition-colors cursor-pointer last:border-0 flex gap-3"
                             style={{
-                              backgroundColor: notif.unread ? '#E60076' : 'transparent',
+                              backgroundColor: !notif.isRead ? 'rgba(152, 16, 250, 0.05)' : 'transparent',
+                              borderBottom: '1px solid #F9FAFB',
                             }}
-                          ></div>
-                          <div>
-                            <p 
-                              className="leading-tight"
-                              style={{ 
-                                fontFamily: 'Inter, sans-serif',
-                                fontSize: '14px',
-                                fontWeight: 400,
-                                color: '#101828'
-                              }}
-                            >
-                              {notif.text}
-                            </p>
-                            <p 
-                              className="mt-1"
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = !notif.isRead ? 'rgba(152, 16, 250, 0.05)' : 'transparent'}
+                          >
+                            <div 
+                              className="w-2 h-2 mt-1.5 rounded-full flex-shrink-0"
                               style={{
-                                fontFamily: 'Inter, sans-serif',
-                                fontSize: '12px',
-                                color: '#6A7282'
+                                backgroundColor: !notif.isRead ? '#E60076' : 'transparent',
                               }}
-                            >
-                              {notif.time}
-                            </p>
+                            ></div>
+                            <div>
+                               <div className="flex items-center justify-between gap-2">
+                                <p 
+                                  className={`leading-tight text-sm font-medium ${!notif.isRead ? 'text-gray-900' : 'text-gray-600'}`}
+                                  style={{ fontFamily: 'Inter, sans-serif' }}
+                                >
+                                  {notif.title}
+                                </p>
+                                {notif.amount && (
+                                  <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                                    +${(notif.amount / 100).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                              <p 
+                                className="mt-0.5 text-xs text-gray-500 line-clamp-2"
+                                style={{ fontFamily: 'Inter, sans-serif' }}
+                              >
+                                {notif.message}
+                              </p>
+                              <p 
+                                className="mt-1 text-[10px] text-gray-400"
+                                style={{ fontFamily: 'Inter, sans-serif' }}
+                              >
+                                {notif.createdAt ? format(notif.createdAt instanceof Object && 'toDate' in notif.createdAt ? (notif.createdAt as { toDate: () => Date }).toDate() : new Date(), 'MMM dd, HH:mm') : 'Just now'}
+                              </p>
+                            </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="p-8 text-center">
+                          <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <Bell className="w-6 h-6 text-gray-300" />
+                          </div>
+                          <p className="text-sm text-gray-500 font-medium">No new notifications</p>
                         </div>
-                      ))}
-                    </div>
-                    <div 
-                      className="px-4 py-2 text-center"
-                      style={{ borderTop: '1px solid #E5E7EB' }}
-                    >
-                      <button 
-                        className="text-sm font-medium transition-colors"
-                        style={{
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '14px',
-                          fontWeight: 500,
-                          color: '#9810FA'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = '#8200DB'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = '#9810FA'}
-                      >
-                        View all notifications
-                      </button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -459,15 +459,7 @@ export default function Header() {
                             background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
                           }}
                         >
-                          <span 
-                            className="font-medium text-sm"
-                            style={{
-                              color: '#FFFFFF',
-                              fontFamily: 'Inter, sans-serif',
-                            }}
-                          >
-                            {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                          </span>
+                          <User className="w-5 h-5 text-white" />
                         </div>
                       )}
                     </button>
@@ -610,8 +602,8 @@ export default function Header() {
                       aria-label="Profile"
                       onClick={toggleDropdown}
                     >
-                      <div className="w-full h-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
-                        <span className="text-white font-medium text-sm">U</span>
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                        <User className="w-5 h-5 text-gray-400" />
                       </div>
                     </button>
 

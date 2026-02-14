@@ -179,7 +179,7 @@ export default function NewsletterPage() {
                  <label className="block text-sm font-bold text-[#344054] mb-2 uppercase tracking-wider">Attached Image</label>
                  {imageUrl ? (
                    <div className="relative w-full h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
-                      <Image src={imageUrl} alt="Newsletter attachment" fill className="object-cover" />
+                      <Image src={imageUrl} alt="Newsletter attachment" fill sizes="(max-width: 768px) 100vw, 800px" className="object-cover" />
                       <button 
                         type="button"
                         onClick={() => setImageUrl('')}

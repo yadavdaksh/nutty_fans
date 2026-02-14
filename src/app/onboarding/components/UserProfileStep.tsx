@@ -44,6 +44,7 @@ export default function UserProfileStep({
                     src={selectedImage} 
                     alt="Profile" 
                     fill 
+                    sizes="160px"
                     className="object-cover" 
                   />
                 ) : (
@@ -113,6 +114,7 @@ export default function UserProfileStep({
                   src={selectedImage} 
                   alt="User" 
                   fill 
+                  sizes="64px"
                   className="object-cover" 
                 />
               ) : (

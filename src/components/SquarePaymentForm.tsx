@@ -1,6 +1,6 @@
 'use client';
 
-import { CreditCard, PaymentForm } from 'react-square-web-payments-sdk';
+import { CreditCard, PaymentForm, ApplePay, GooglePay } from 'react-square-web-payments-sdk';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -89,6 +89,14 @@ export default function SquarePaymentForm({
             familyName: 'User',
           }
         })}
+        createPaymentRequest={() => ({
+          countryCode: 'US',
+          currencyCode: 'USD',
+          total: {
+            amount: amount,
+            label: 'Total',
+          },
+        })}
       >
         <div className="space-y-4">
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-4">
@@ -96,18 +104,30 @@ export default function SquarePaymentForm({
              <p className="text-2xl font-bold text-gray-900">${amount}</p>
           </div>
           
-          <CreditCard 
-             buttonProps={{
-               css: {
-                 backgroundColor: '#9810fa',
-                 fontSize: '16px',
-                 color: '#fff',
-                 '&:hover': {
-                   backgroundColor: '#8109d6',
-                 },
-               }
-             }}
-          />
+          <div className="space-y-3">
+            <ApplePay />
+            <GooglePay />
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-400">Or pay with card</span>
+              </div>
+            </div>
+            <CreditCard 
+               buttonProps={{
+                 css: {
+                   backgroundColor: '#9810fa',
+                   fontSize: '16px',
+                   color: '#fff',
+                   '&:hover': {
+                     backgroundColor: '#8109d6',
+                   },
+                 }
+               }}
+            />
+          </div>
           
           {loading && (
              <div className="flex items-center justify-center gap-2 text-purple-600 mt-2">

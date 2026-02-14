@@ -9,6 +9,8 @@ import { useStorage } from '@/hooks/useStorage';
 import { createPost } from '@/lib/db';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
+
 
 export default function CreateContentPage() {
   const { user, userProfile } = useAuth();
@@ -64,12 +66,13 @@ export default function CreateContentPage() {
         isLocked,
       });
 
-      alert("Post created successfully!");
+      toast.success("Post created successfully!");
       router.push('/dashboard');
     } catch (err) {
       console.error("Error creating post:", err);
-      alert("Failed to create post. Please try again.");
+      toast.error("Failed to create post. Please try again.");
     } finally {
+
       setIsSubmitting(false);
     }
   };
@@ -140,7 +143,7 @@ export default function CreateContentPage() {
                     <div className="relative rounded-xl overflow-hidden bg-black border border-gray-200 group">
                       {mediaType === 'image' ? (
                         <div className="relative h-64 w-full">
-                           <Image src={previewUrl!} alt="Preview" fill className="object-contain" />
+                           <Image src={previewUrl!} alt="Preview" fill sizes="(max-width: 768px) 100vw, 800px" className="object-contain" />
                         </div>
                       ) : (
                         <video src={previewUrl!} className="w-full h-64 object-contain" controls />

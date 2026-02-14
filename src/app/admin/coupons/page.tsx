@@ -15,6 +15,9 @@ import {
 import { collection, query, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Coupon } from '@/lib/db';
+import { toast } from 'react-hot-toast';
+import AlertModal from '@/components/modals/AlertModal';
+
 
 export default function CouponManagement() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -28,6 +31,21 @@ export default function CouponManagement() {
     discountValue: 0,
     expiryDate: '',
   });
+
+  // Alert/Confirm State
+  const [alertConfig, setAlertConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
 
   useEffect(() => {
     const q = query(collection(db, 'coupons'));
@@ -45,9 +63,10 @@ export default function CouponManagement() {
     // Check if code exists
     const codeUpper = newCoupon.code.toUpperCase().trim();
     if (coupons.some(c => c.code === codeUpper)) {
-      alert(`Coupon code "${codeUpper}" already exists!`);
+      toast.error(`Coupon code "${codeUpper}" already exists!`);
       return;
     }
+
 
     try {
       await addDoc(collection(db, 'coupons'), {
@@ -62,15 +81,28 @@ export default function CouponManagement() {
       setNewCoupon({ code: '', discountType: 'percentage', discountValue: 0, expiryDate: '' });
     } catch (error) {
       console.error("Error creating coupon:", error);
-      alert("Failed to create coupon");
+      toast.error("Failed to create coupon");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this coupon?")) {
-      await deleteDoc(doc(db, 'coupons', id));
-    }
+    setAlertConfig({
+      isOpen: true,
+      title: 'Delete Coupon',
+      message: 'Are you sure you want to delete this coupon? This action cannot be undone.',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, 'coupons', id));
+          toast.success("Coupon deleted successfully");
+        } catch (error) {
+          console.error("Error deleting coupon:", error);
+          toast.error("Failed to delete coupon");
+        }
+      }
+    });
   };
+
 
   return (
     <div className="space-y-8">
@@ -253,6 +285,18 @@ export default function CouponManagement() {
           </div>
         </div>
       )}
+
+      <AlertModal 
+        isOpen={alertConfig.isOpen}
+        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={alertConfig.onConfirm}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 }
+

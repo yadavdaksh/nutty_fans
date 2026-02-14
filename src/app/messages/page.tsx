@@ -15,7 +15,7 @@ import {
 } from '@/lib/messaging';
 import { db, getWalletBalance, processTransaction, CreatorProfile, Conversation } from '@/lib/db';
 import { toast } from 'react-hot-toast';
-import { Search, MoreVertical, Smile, Send, MessageSquare, Image as ImageIcon, Lock, X, Camera, Phone, Video, Loader2 } from 'lucide-react';
+import { Search, MoreVertical, Smile, Send, MessageSquare, Image as ImageIcon, Lock, X, Camera, Phone, Video, Loader2, DollarSign } from 'lucide-react';
 import { useCall } from '@/hooks/useCall';
 import WatermarkMedia from '@/components/WatermarkMedia';
 import { format } from 'date-fns';
@@ -23,8 +23,14 @@ import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Timestamp, doc, onSnapshot } from 'firebase/firestore';
+import RechargeModal from '@/components/RechargeModal';
+import AlertModal from '@/components/modals/AlertModal';
+import InsufficientFundsModal from '@/components/modals/InsufficientFundsModal';
+import TipModal from '@/components/TipModal';
+
 
 type ParticipantMetadata = {
+
   displayName: string;
   photoURL?: string;
 };
@@ -62,6 +68,7 @@ export default function MessagesPage() {
 
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isTipOpen, setIsTipOpen] = useState(false);
   const [recipientPresence, setRecipientPresence] = useState<unknown>(null);
   
   // Image Upload State
@@ -70,6 +77,27 @@ export default function MessagesPage() {
   const [isLocked, setIsLocked] = useState(false);
   const [price, setPrice] = useState<string>('');
   const [unlockingMessageId, setUnlockingMessageId] = useState<string | null>(null);
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [insufficientFundsConfig, setInsufficientFundsConfig] = useState<{
+     isOpen: boolean;
+     requiredAmount?: string;
+     currentBalance?: string;
+  }>({ isOpen: false });
+
+  const [alertConfig, setAlertConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
+
 
   // Camera State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -233,7 +261,7 @@ export default function MessagesPage() {
       cancelUpload();
     } catch (error) {
       console.error("Error sending image:", error);
-      alert("Failed to upload image. Please try again.");
+      toast.error("Failed to upload image. Please try again.");
     }
   };
 
@@ -246,35 +274,45 @@ export default function MessagesPage() {
     // 1. Check Wallet Balance
     const balance = await getWalletBalance(user.uid);
     if (balance < priceCents) {
-       toast.error(`Insufficient wallet balance. You need $${price.toFixed(2)}.`);
-       // Optional: Router push to wallet?
+       setInsufficientFundsConfig({
+         isOpen: true,
+         requiredAmount: price.toFixed(2),
+         currentBalance: (balance / 100).toFixed(2)
+       });
        return;
     }
 
-    const confirmUnlock = window.confirm(`Unlock for $${price.toFixed(2)}? This will be deducted from your wallet.`);
-    if (!confirmUnlock) return;
 
-    setUnlockingMessageId(messageId);
-    try {
-      // 2. Process Transaction
-      const recipientId = activeConversation?.participants.find(p => p !== user.uid);
-      await processTransaction(
-        user.uid,
-        priceCents,
-        `Unlock message`,
-        { contentType: 'message_unlock', contentId: messageId, creatorId: recipientId, category: 'message_unlock' }
-      );
-      
-      // 3. Unlock Content
-      await unlockMessage(activeChatId, messageId, user.uid);
-      toast.success("Content unlocked!");
-    } catch (error) {
-      console.error("Error unlocking message:", error);
-      toast.error("Failed to unlock message.");
-    } finally {
-      setUnlockingMessageId(null);
-    }
+    setAlertConfig({
+      isOpen: true,
+      title: 'Unlock Content',
+      message: `Unlock this message for $${price.toFixed(2)}? This will be deducted from your wallet balance.`,
+      type: 'info',
+      onConfirm: async () => {
+        setUnlockingMessageId(messageId);
+        try {
+          // 2. Process Transaction
+          const recipientId = activeConversation?.participants.find(p => p !== user.uid);
+          await processTransaction(
+            user.uid,
+            priceCents,
+            `Unlock message`,
+            { contentType: 'message_unlock', contentId: messageId, creatorId: recipientId, category: 'message_unlock' }
+          );
+          
+          // 3. Unlock Content
+          await unlockMessage(activeChatId, messageId, user.uid);
+          toast.success("Content unlocked!");
+        } catch (error) {
+          console.error("Error unlocking message:", error);
+          toast.error("Failed to unlock message.");
+        } finally {
+          setUnlockingMessageId(null);
+        }
+      }
+    });
   };
+
 
   const startCamera = async () => {
     try {
@@ -289,10 +327,11 @@ export default function MessagesPage() {
       }, 100);
     } catch (err) {
       console.error("Error accessing camera:", err);
-      alert("Could not access camera. Please allow camera permissions.");
+      toast.error("Could not access camera. Please allow camera permissions.");
       setIsCameraOpen(false);
     }
   };
+
 
   const stopCamera = () => {
     if (streamRef.current) {
@@ -553,8 +592,10 @@ export default function MessagesPage() {
                                              'audio', 
                                              audioPrice, 
                                              user.displayName || 'User',
-                                             user.photoURL || undefined
+                                             user.photoURL || undefined,
+                                             () => setShowRechargeModal(true)
                                            );
+
                                        }
                                      }}
                                      disabled={callLoading || !isCallsEnabled}
@@ -576,6 +617,15 @@ export default function MessagesPage() {
                                  </div>
                                )}
 
+                               {/* Tip Button */}
+                               <button 
+                                 onClick={() => setIsTipOpen(true)}
+                                 className="p-2 text-gray-400 hover:text-green-600 rounded-full hover:bg-green-50 transition-colors"
+                                 title="Send Tip"
+                               >
+                                 <DollarSign className="w-5 h-5" />
+                               </button>
+
                                {/* Video Call Button */}
                                {videoPrice > 0 && (
                                  <div className="group relative">
@@ -588,8 +638,10 @@ export default function MessagesPage() {
                                              'video', 
                                              videoPrice,
                                              user.displayName || 'User',
-                                             user.photoURL || undefined
+                                             user.photoURL || undefined,
+                                             () => setShowRechargeModal(true)
                                            );
+
                                        }
                                      }}
                                      disabled={callLoading || !isCallsEnabled}
@@ -971,10 +1023,10 @@ export default function MessagesPage() {
                            {isUploading ? (
                               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                            ) : (
-                             <>
-                               <Send className="w-4 h-4" />
-                               <span>Send {isLocked && price ? `for $${price}` : ''}</span>
-                             </>
+                              <>
+                                <Send className="w-4 h-4" />
+                                <span>Send {isLocked && price ? `for $${price}` : ''}</span>
+                              </>
                            )}
                          </button>
                        </div>
@@ -982,12 +1034,51 @@ export default function MessagesPage() {
                    </div>
                  </div>
                )}
+              </div>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
-  );
+        </main>
+
+        {/* Modals */}
+        <>
+          {(() => {
+            const otherUserId = activeConversation?.participants.find(id => id !== user?.uid);
+            const otherUserMeta = otherUserId ? activeConversation?.participantMetadata[otherUserId] : null;
+
+            return (
+              <TipModal
+                isOpen={isTipOpen}
+                onClose={() => setIsTipOpen(false)}
+                creatorName={otherUserMeta?.displayName || 'Creator'}
+                creatorId={otherUserId || ''}
+                userId={user?.uid || ''}
+              />
+            );
+          })()}
+
+          <InsufficientFundsModal
+            isOpen={insufficientFundsConfig.isOpen}
+            onClose={() => setInsufficientFundsConfig({ isOpen: false })}
+            onRecharge={() => setShowRechargeModal(true)}
+            requiredAmount={insufficientFundsConfig.requiredAmount}
+            currentBalance={insufficientFundsConfig.currentBalance}
+          />
+
+          <RechargeModal 
+            isOpen={showRechargeModal} 
+            onClose={() => setShowRechargeModal(false)} 
+          />
+
+          <AlertModal 
+            isOpen={alertConfig.isOpen}
+            onClose={() => setAlertConfig({ ...alertConfig, isOpen: false })}
+            title={alertConfig.title}
+            message={alertConfig.message}
+            type={alertConfig.type}
+            onConfirm={alertConfig.onConfirm}
+            confirmLabel="Confirm"
+          />
+        </>
+      </div>
+    );
 }
-
-

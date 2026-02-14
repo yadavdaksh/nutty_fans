@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Plus, Trash2, Save, Check, Loader2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+
 
 interface Tier {
   name: string;
@@ -23,9 +25,10 @@ export default function SubscriptionPlansEditor({ initialTiers = [], onSave, sav
 
   const handleAddTier = () => {
     if (tiers.length >= 3) {
-      alert("Maximum 3 tiers allowed.");
+      toast.error("Maximum 3 tiers allowed.");
       return;
     }
+
     setTiers([...tiers, { name: 'New Tier', price: '19.99', benefits: ['Exclusive content'] }]);
     setActiveTierIndex(tiers.length);
   };

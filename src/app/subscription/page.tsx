@@ -15,27 +15,41 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cancelSubscription } from '@/lib/db';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
+import AlertModal from '@/components/modals/AlertModal';
+
 export default function SubscriptionPage() {
   const { user, userProfile } = useAuth();
   const { subscriptions, loading } = useSubscriptions(user?.uid);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const handleCancel = async (subId: string) => {
-    if (!confirm('Are you sure you want to cancel this subscription?')) return;
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [targetSubId, setTargetSubId] = useState<string | null>(null);
+
+  const handleCancelClick = (subId: string) => {
+    setTargetSubId(subId);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!targetSubId) return;
     
-    setCancellingId(subId);
+    setCancellingId(targetSubId);
     try {
-      await cancelSubscription(subId);
-      // alert('Subscription cancelled successfully');
+      await cancelSubscription(targetSubId);
+      toast.success('Subscription cancelled successfully');
     } catch (error) {
       console.error('Error cancelling subscription:', error);
-      alert('Failed to cancel subscription. Please try again.');
+      toast.error('Failed to cancel subscription. Please try again.');
     } finally {
       setCancellingId(null);
+      setTargetSubId(null);
     }
   };
 
+
   return (
+    <>
     <div 
       className="flex min-h-screen"
       style={{ 
@@ -180,7 +194,8 @@ export default function SubscriptionPage() {
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
                         <button 
-                          onClick={() => handleCancel(sub.id)}
+                          onClick={() => handleCancelClick(sub.id)}
+
                           disabled={cancellingId === sub.id || sub.status === 'cancelled'}
                           className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center p-2"
                         >
@@ -202,5 +217,17 @@ export default function SubscriptionPage() {
         </div>
       </main>
     </div>
+      <AlertModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        title="Cancel Subscription"
+        message="Are you sure you want to cancel this subscription? You will still have access until the end of the current billing period."
+        type="warning"
+        onConfirm={confirmCancel}
+        confirmLabel="Yes, Cancel"
+        cancelLabel="No, Keep it"
+      />
+    </>
   );
 }
+

@@ -14,6 +14,8 @@ import { useAuth } from '@/context/AuthContext';
 import { getWalletBalance, processTransaction } from '@/lib/db';
 import { toast } from 'react-hot-toast';
 import WatermarkMedia from './WatermarkMedia';
+import AlertModal from './modals/AlertModal';
+
 
 interface Post {
   id: string;
@@ -35,6 +37,8 @@ export default function PostCard({ post }: { post: Post }) {
   const [likesCount, setLikesCount] = useState(post.likes);
   const [isUnlocked, setIsUnlocked] = useState(!post.isLocked);
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -61,10 +65,15 @@ export default function PostCard({ post }: { post: Post }) {
        return;
     }
 
-    const confirmUnlock = window.confirm(`Unlock this post for $${post.price.toFixed(2)}?`);
-    if (!confirmUnlock) return;
+    setShowConfirmModal(true);
+  };
+
+  const processUnlock = async () => {
+    if (!user || !post.price) return;
+    const priceCents = Math.round(post.price * 100);
 
     setIsUnlocking(true);
+
     try {
       // 2. Process Transaction
       await processTransaction(
@@ -93,7 +102,7 @@ export default function PostCard({ post }: { post: Post }) {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
             {post.creatorAvatar ? (
-               <Image src={post.creatorAvatar} alt={post.creatorName} fill className="object-cover" />
+               <Image src={post.creatorAvatar} alt={post.creatorName} fill sizes="40px" className="object-cover" />
             ) : (
                <div className="w-full h-full flex items-center justify-center bg-purple-100 text-purple-600 font-bold">
                  {post.creatorName[0]}
@@ -140,7 +149,7 @@ export default function PostCard({ post }: { post: Post }) {
                    </button>
                  </div>
                  {/* Blurred generic background if we had 'blur hash', else just gray */}
-                 <Image src={post.image} alt="Locked" fill className="object-cover blur-2xl opacity-50" />
+                  <Image src={post.image} alt="Locked" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px" className="object-cover blur-2xl opacity-50" />
                </div>
              ) : (
                <WatermarkMedia 
@@ -179,7 +188,19 @@ export default function PostCard({ post }: { post: Post }) {
             </span>
           </div>
         )}
+
+        <AlertModal 
+          isOpen={showConfirmModal}
+          onClose={() => setShowConfirmModal(false)}
+          title="Unlock Post"
+          message={`Unlock this exclusive post for $${post.price?.toFixed(2)}? This will be deducted from your wallet balance.`}
+          type="info"
+          onConfirm={processUnlock}
+          confirmLabel="Unlock Now"
+          cancelLabel="Maybe Later"
+        />
       </div>
+
 
   );
 }

@@ -10,8 +10,6 @@ export interface FeedPost extends Post {
   user: UserProfile;
 }
 
-import { MOCK_POSTS, MOCK_CREATORS } from '@/lib/mockData';
-
 export function useFeed() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,51 +20,45 @@ export function useFeed() {
     
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       try {
-        const feedPosts: FeedPost[] = [];
-        
-        for (const postDoc of snapshot.docs) {
-          const postData = { id: postDoc.id, ...postDoc.data() } as Post;
+        const postsArray: FeedPost[] = [];
+
+        // To avoid redundant reads, we'll fetch unique creators
+        const creatorIds = Array.from(new Set(snapshot.docs.map(d => (d.data() as Post).creatorId)));
+        const creatorProfiles: Record<string, { creator: CreatorProfile; user: UserProfile }> = {};
+
+        await Promise.all(creatorIds.map(async (id) => {
+          const creatorSnap = await getDoc(doc(db, 'creators', id));
+          const userSnap = await getDoc(doc(db, 'users', id));
           
-          // Fetch creator profile
-          const creatorDocRef = doc(db, 'creators', postData.creatorId);
-          const creatorSnap = await getDoc(creatorDocRef);
-          
-          if (creatorSnap.exists()) {
-            const creatorData = creatorSnap.data() as CreatorProfile;
-            
-            // Fetch user profile
-            const userDocRef = doc(db, 'users', postData.creatorId);
-            const userSnap = await getDoc(userDocRef);
-            
-            if (userSnap.exists()) {
-              feedPosts.push({
-                ...postData,
-                creator: creatorData,
-                user: userSnap.data() as UserProfile
-              });
+          if (creatorSnap.exists() && userSnap.exists()) {
+            const userData = userSnap.data() as UserProfile;
+            // FILTER: Only cache approved creators
+            if (userData.verificationStatus === 'approved') {
+              creatorProfiles[id] = {
+                creator: creatorSnap.data() as CreatorProfile,
+                user: userData
+              };
             }
           }
-        }
-        
-        // Merge with mock posts
-        const combinedFeed = [...feedPosts];
-        MOCK_POSTS.forEach(mockPost => {
-          if (!combinedFeed.find(p => p.id === mockPost.id)) {
-            const mockCreator = MOCK_CREATORS.find(c => c.userId === mockPost.creatorId);
-            if (mockCreator) {
-              combinedFeed.push({
-                ...mockPost,
-                creator: mockCreator,
-                user: mockCreator.user
-              });
-            }
+        }));
+
+        snapshot.docs.forEach((postDoc) => {
+          const postData = { id: postDoc.id, ...postDoc.data() } as Post;
+          const creatorInfo = creatorProfiles[postData.creatorId];
+
+          if (creatorInfo) {
+            postsArray.push({
+              ...postData,
+              creator: creatorInfo.creator,
+              user: creatorInfo.user
+            });
           }
         });
-
+        
         // Sort by createdAt desc
-        combinedFeed.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+        postsArray.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
 
-        setPosts(combinedFeed);
+        setPosts(postsArray);
         setLoading(false);
       } catch (err: unknown) {
         console.error("Error fetching feed:", err);
@@ -76,7 +68,7 @@ export function useFeed() {
       }
     }, (err) => {
       console.error("Feed snapshot error:", err);
-      setError(err.message);
+      setError(err?.message || "Unknown error");
       setLoading(false);
     });
 

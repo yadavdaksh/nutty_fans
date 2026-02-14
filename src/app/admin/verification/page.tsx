@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
+import AlertModal from '@/components/modals/AlertModal';
+
 import { CreatorProfile } from '@/lib/db';
 
 interface PendingCreator {
@@ -34,6 +36,19 @@ export default function VerificationQueue() {
   const [pendingCreators, setPendingCreators] = useState<PendingCreator[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [alertConfig, setAlertConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
 
   const fetchPendingCreators = async () => {
     setLoading(true);
@@ -84,34 +99,41 @@ export default function VerificationQueue() {
         ? 'Are you sure you want to approve this creator? They will be notified via email.'
         : 'Are you sure you want to reject this creator? This will delete their account and all data.';
     
-    if (!confirm(confirmMessage)) return;
+    setAlertConfig({
+      isOpen: true,
+      title: action === 'approve' ? 'Approve Creator' : 'Reject Creator',
+      message: confirmMessage,
+      type: action === 'approve' ? 'success' : 'error',
+      onConfirm: async () => {
+        setProcessingId(uid);
+        try {
+          const res = await fetch('/api/admin/verify-creator', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid,
+              action,
+              adminUid: adminUser.uid
+            }),
+          });
 
-    setProcessingId(uid);
-    try {
-      const res = await fetch('/api/admin/verify-creator', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uid,
-          action,
-          adminUid: adminUser.uid
-        }),
-      });
+          const data = await res.json();
 
-      const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to process request');
 
-      if (!res.ok) throw new Error(data.error || 'Failed to process request');
-
-      toast.success(data.message);
-      // Refresh list
-      setPendingCreators(prev => prev.filter(c => c.uid !== uid));
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to process request';
-      toast.error(message);
-    } finally {
-      setProcessingId(null);
-    }
+          toast.success(data.message);
+          // Refresh list
+          setPendingCreators(prev => prev.filter(c => c.uid !== uid));
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Failed to process request';
+          toast.error(message);
+        } finally {
+          setProcessingId(null);
+        }
+      }
+    });
   };
+
 
   if (loading) {
     return (
@@ -263,9 +285,21 @@ export default function VerificationQueue() {
           ))}
         </div>
       )}
+
+      <AlertModal 
+        isOpen={alertConfig.isOpen}
+        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={alertConfig.onConfirm}
+        confirmLabel={alertConfig.title.split(' ')[0]}
+        cancelLabel="Cancel"
+      />
     </div>
   );
 }
+
 
 function Clock({ className }: { className?: string }) {
   return (

@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { CreatorProfile, UserProfile } from '@/lib/db';
-
-import { MOCK_CREATORS } from '@/lib/mockData';
+import { CreatorProfile, UserProfile, getUserProfile } from '@/lib/db';
 
 export interface CreatorWithUser extends CreatorProfile {
   user: UserProfile;
@@ -21,30 +19,30 @@ export function useCreators() {
     
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       try {
-        const creatorsData: CreatorWithUser[] = [];
+        const creatorsWithUsers: CreatorWithUser[] = [];
         
-        for (const creatorDoc of snapshot.docs) {
+        // Fetch all user profiles for these creators to check verification status
+        const userPromises = snapshot.docs.map(creatorDoc => {
           const creatorData = creatorDoc.data() as CreatorProfile;
-          const userDocRef = doc(db, 'users', creatorData.userId);
-          const userSnap = await getDoc(userDocRef);
-          
-          if (userSnap.exists()) {
-            creatorsData.push({
-              ...creatorData,
-              user: userSnap.data() as UserProfile
-            });
-          }
-        }
-        
-        // Merge with mock creators, avoiding duplicates if any
-        const combinedCreators = [...creatorsData];
-        MOCK_CREATORS.forEach(mock => {
-          if (!combinedCreators.find(c => c.userId === mock.userId)) {
-            combinedCreators.push(mock);
-          }
+          return getUserProfile(creatorData.userId);
         });
 
-        setCreators(combinedCreators);
+        const userProfiles = await Promise.all(userPromises);
+
+        snapshot.docs.forEach((creatorDoc, index) => {
+          const creatorData = creatorDoc.data() as CreatorProfile;
+          const userProfile = userProfiles[index];
+
+          // FILTER: Only show creators who are 'approved'
+          if (userProfile && userProfile.verificationStatus === 'approved') {
+            creatorsWithUsers.push({
+              ...creatorData,
+              user: userProfile
+            });
+          }
+        });
+        
+        setCreators(creatorsWithUsers);
         setLoading(false);
       } catch (err: unknown) {
         console.error("Error fetching creators:", err);

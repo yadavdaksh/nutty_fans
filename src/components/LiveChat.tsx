@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { getWalletBalance, processTransaction, recordStreamEarning } from '@/lib/db';
 import { toast } from 'react-hot-toast';
 import { Send, DollarSign, Loader2, Coins } from 'lucide-react';
+import RechargeModal from './RechargeModal';
+
 
 interface LiveChatProps {
   streamId: string; // The LiveKit room name is essentially the stream ID
@@ -22,6 +24,7 @@ export default function LiveChat({ streamId, creatorId, chatPrice }: LiveChatPro
   // Handling Tips
   const [showTipInput, setShowTipInput] = useState(false);
   const [tipAmount, setTipAmount] = useState('5');
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
   
   const handleSend = async (e?: FormEvent) => {
     e?.preventDefault();
@@ -36,7 +39,7 @@ export default function LiveChat({ streamId, creatorId, chatPrice }: LiveChatPro
         // 1.1 Check Balance
         const balance = await getWalletBalance(user.uid);
         if (balance < priceCents) {
-            toast.error(`Insufficient balance. Add funds to send messages.`);
+            setShowRechargeModal(true);
             setIsProcessing(false);
             return;
         }
@@ -75,6 +78,14 @@ export default function LiveChat({ streamId, creatorId, chatPrice }: LiveChatPro
       setIsProcessing(true);
       try {
           const priceCents = Math.round(amount * 100);
+
+          // Check Balance
+          const balance = await getWalletBalance(user.uid);
+          if (balance < priceCents) {
+              setShowRechargeModal(true);
+              setIsProcessing(false);
+              return;
+          }
           
           await processTransaction(
             user.uid,
@@ -94,11 +105,12 @@ export default function LiveChat({ streamId, creatorId, chatPrice }: LiveChatPro
           toast.success(`Sent $${amount} tip!`);
       } catch (err) {
           console.error(err);
-          toast.error("Tip failed. Check your wallet balance.");
+          toast.error("Tip failed. Please try again.");
       } finally {
           setIsProcessing(false);
       }
   };
+
 
   return (
     <div className="flex flex-col h-full bg-gray-900 border-l border-gray-800">
@@ -190,6 +202,11 @@ export default function LiveChat({ streamId, creatorId, chatPrice }: LiveChatPro
             </div>
         )}
       </div>
+      <RechargeModal 
+        isOpen={showRechargeModal} 
+        onClose={() => setShowRechargeModal(false)} 
+      />
     </div>
   );
 }
+

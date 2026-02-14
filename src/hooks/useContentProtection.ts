@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+
 
 export const useContentProtection = (enabled: boolean = true) => {
   useEffect(() => {
@@ -42,7 +44,7 @@ export const useContentProtection = (enabled: boolean = true) => {
            setTimeout(() => {
              body.style.visibility = 'visible';
            }, 1000);
-           alert("Screenshots are disabled on this platform.");
+           toast.error("Screenshots are disabled on this platform.");
          }
         e.preventDefault();
       }

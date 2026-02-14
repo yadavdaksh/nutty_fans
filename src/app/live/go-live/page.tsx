@@ -4,18 +4,27 @@ import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/db';
 import {
   LiveKitRoom,
-  VideoConference,
+  useParticipants,
+  useLocalParticipant,
+  VideoTrack,
+  ConnectionStateToast,
+  RoomAudioRenderer,
 } from '@livekit/components-react';
+import { Track } from 'livekit-client';
 import '@livekit/components-styles';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
-import { Loader2, Video, X, Globe, Users, DollarSign } from 'lucide-react';
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { Loader2, Video, VideoOff, Mic, MicOff, X, Globe, Users, DollarSign, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import LiveChat from '@/components/LiveChat';
+
 
 export default function GoLivePage() {
   const { user, userProfile } = useAuth();
   const router = useRouter();
   const [token, setToken] = useState('');
+  const [roomName, setRoomName] = useState('');
   const [isLive, setIsLive] = useState(false);
   const [title, setTitle] = useState('');
   const [accessType, setAccessType] = useState<'public' | 'subscribers' | 'paid'>('public');
@@ -37,11 +46,13 @@ export default function GoLivePage() {
     const room = `stream-${user.uid}-${Date.now()}`;
 
     try {
+      const creatorIdentity = `${user.uid}-creator`;
       const resp = await fetch(
-        `/api/livekit/auth?room=${room}&username=${user.uid}&participantName=${encodeURIComponent(user.displayName)}&mode=publisher`
+        `/api/livekit/auth?room=${room}&username=${creatorIdentity}&participantName=${encodeURIComponent(user.displayName)}&mode=publisher`
       );
       const data = await resp.json();
       setToken(data.token);
+      setRoomName(room);
 
       // Create stream document in Firestore
       await setDoc(doc(db, 'streams', user.uid), {
@@ -52,7 +63,8 @@ export default function GoLivePage() {
         accessType: accessType,
         price: accessType === 'paid' ? parseFloat(price) : 0,
         chatPrice: chatPrice ? parseFloat(chatPrice) : 0,
-        totalEarnings: 0,
+        totalEarnings: 0, // Explicitly reset for new session
+        createdAt: serverTimestamp(),
         viewerCount: 0,
         startedAt: new Date()
       });
@@ -60,8 +72,9 @@ export default function GoLivePage() {
       setIsLive(true);
     } catch (e) {
       console.error(e);
-      alert('Failed to start stream');
+      toast.error('Failed to start stream');
     }
+
   };
 
   const endStream = async () => {
@@ -73,7 +86,7 @@ export default function GoLivePage() {
         // Note: For MVP we just read the doc.
         const snap = await import('firebase/firestore').then(mod => mod.getDoc(streamRef)); 
         if (snap.exists()) {
-           setFinalEarnings(snap.data().totalEarnings || 0);
+           setFinalEarnings((snap.data().totalEarnings || 0) / 100);
         }
 
         await updateDoc(streamRef, {
@@ -125,30 +138,79 @@ export default function GoLivePage() {
 
   if (isLive && token) {
     return (
-      <div className="h-screen w-full bg-black flex flex-col">
-          <div className="bg-gray-900 p-4 flex justify-between items-center text-white border-b border-gray-800">
-             <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                <span className="font-bold">LIVE: {title}</span>
-             </div>
-             <button 
-                onClick={endStream}
-                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"
-             >
-                <X className="w-4 h-4" /> End Stream
-             </button>
-          </div>
-          
+      <div className="h-screen w-full bg-black flex flex-col overflow-hidden">
         <LiveKitRoom
           video={true}
           audio={true}
           token={token}
           serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
           data-lk-theme="default"
-          className="flex-1"
+          className="flex-1 flex flex-col md:flex-row h-full"
           onDisconnected={endStream}
         >
-          <VideoConference />
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col h-full bg-[#050505]">
+            {/* Professional Header */}
+            <div className="bg-[#111111] p-4 flex justify-between items-center text-white border-b border-white/5 z-50">
+               <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3">
+                     <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]"></div>
+                     <span className="font-bold uppercase text-[10px] tracking-[0.2em] text-white/90">Live: {title}</span>
+                  </div>
+                  <div className="h-4 w-px bg-white/10" />
+                  <ViewerCount />
+               </div>
+
+               <div className="flex items-center gap-3">
+                  <MediaControls />
+                  <div className="h-4 w-px bg-white/10 mx-1" />
+                  <button 
+                    onClick={endStream}
+                    className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all border border-red-500/20 flex items-center gap-2"
+                  >
+                    <X className="w-3.5 h-3.5" /> End Stream
+                  </button>
+               </div>
+            </div>
+            
+            {/* Monitor Area */}
+            <div className="flex-1 relative bg-black overflow-hidden flex items-center justify-center group">
+               <CreatorMonitor />
+               
+               {/* Dashboard Overlay - Subtle bits */}
+               <div className="absolute bottom-6 left-6 z-20">
+                  <div className="bg-black/40 backdrop-blur-xl border border-white/10 p-3 rounded-2xl flex items-center gap-3">
+                     <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                        {user?.displayName?.[0] || 'C'}
+                     </div>
+                     <div>
+                        <div className="text-white text-xs font-bold">{user?.displayName}</div>
+                        <div className="text-white/40 text-[10px]">Broadcasting via NuttyFans</div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+          </div>
+
+          {/* Sidebar Chat */}
+          <div className="w-full md:w-[320px] lg:w-[380px] h-1/2 md:h-full border-l border-white/5 bg-[#0a0a0a] flex flex-col z-10">
+             <div className="p-4 border-b border-white/5 flex items-center justify-between bg-black/20">
+                <h3 className="text-white/70 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
+                  <MessageSquare className="w-3 h-3 text-purple-500" />
+                  Live Chat
+                </h3>
+             </div>
+             <div className="flex-1 min-h-0">
+                <LiveChat 
+                  streamId={roomName || user!.uid} 
+                  creatorId={user!.uid}
+                  chatPrice={parseFloat(chatPrice) || 0}
+                />
+             </div>
+          </div>
+
+          <RoomAudioRenderer />
+          <ConnectionStateToast />
         </LiveKitRoom>
       </div>
     );
@@ -247,6 +309,63 @@ export default function GoLivePage() {
             </button>
          </div>
       </div>
+    </div>
+  );
+}
+
+function ViewerCount() {
+  const participants = useParticipants();
+  return (
+    <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold uppercase tracking-wider">
+      <Users className="w-3 h-3" />
+      <span>{Math.max(0, participants.length - 1)} Viewers</span>
+    </div>
+  );
+}
+
+function MediaControls() {
+  const { isMicrophoneEnabled, isCameraEnabled, localParticipant } = useLocalParticipant();
+
+  return (
+    <div className="flex items-center gap-2">
+       <button 
+        onClick={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
+        className={`p-2 rounded-lg transition-all border ${isMicrophoneEnabled ? 'bg-white/5 border-white/10 text-white/70' : 'bg-red-500/20 border-red-500/50 text-red-500'}`}
+       >
+         {isMicrophoneEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+       </button>
+       <button 
+        onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled)}
+        className={`p-2 rounded-lg transition-all border ${isCameraEnabled ? 'bg-white/5 border-white/10 text-white/70' : 'bg-red-500/20 border-red-500/50 text-red-500'}`}
+       >
+         {isCameraEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+       </button>
+    </div>
+  );
+}
+
+function CreatorMonitor() {
+  const { cameraTrack, localParticipant } = useLocalParticipant();
+  
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-black">
+      {cameraTrack ? (
+        <VideoTrack 
+          trackRef={{
+            participant: localParticipant,
+            source: Track.Source.Camera,
+            publication: cameraTrack
+          }} 
+          className="w-full h-full object-contain" 
+        />
+      ) : (
+        <div className="flex flex-col items-center gap-4">
+           <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center">
+              <VideoOff className="w-6 h-6 text-white/20" />
+           </div>
+           <p className="text-white/20 text-xs font-bold uppercase tracking-widest">Camera is off</p>
+        </div>
+      )}
     </div>
   );
 }

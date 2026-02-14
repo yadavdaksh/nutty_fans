@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Clock, LogOut, Mail, ShieldCheck, ArrowRight, ArrowLeft, PenLine } from 'lucide-react';
 import { updateUserProfile, createCreatorProfile, BankDetails } from '@/lib/db';
+import { useStorage } from '@/hooks/useStorage';
+// Removed unused updateProfile import
 
 // Reuse components from onboarding
 import CreatorSteps from '../onboarding/components/CreatorSteps';
@@ -22,10 +24,12 @@ export default function VerificationPendingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const { uploadFile } = useStorage();
   
   // State for setup wizard
   const [step, setStep] = useState(4); // Start at step 4 (Creator categories) assuming 1-3 were done in onboarding
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [tiers, setTiers] = useState([
     { name: 'Basic', price: '', description: '', benefits: [''] },
     { name: 'Premium', price: '', description: '', benefits: [''] },
@@ -79,6 +83,11 @@ export default function VerificationPendingPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cover') => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size exceeds 5MB limit.");
+        return;
+      }
+      setImageFile(file);
       const imageUrl = URL.createObjectURL(file);
       if (type === 'cover') setSelectedCoverImage(imageUrl);
     }
@@ -151,6 +160,12 @@ export default function VerificationPendingPage() {
                 console.error("Error syncing plans:", err);
             }
 
+            let coverImageURL: string | undefined = undefined;
+            if (imageFile) {
+                const path = `creators/${user.uid}/cover_${Date.now()}_${imageFile.name}`;
+                coverImageURL = await uploadFile(imageFile, path);
+            }
+
             await updateUserProfile(user.uid, {
               bankDetails,
               onboardingCompleted: true, 
@@ -161,7 +176,7 @@ export default function VerificationPendingPage() {
               categories: selectedCategories,
               socialLinks: socials,
               subscriptionTiers: syncedTiers,
-              coverImageURL: selectedCoverImage || undefined,
+              coverImageURL: coverImageURL || undefined,
             });
             await refreshProfile();
            }

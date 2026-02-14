@@ -26,6 +26,7 @@ import {
   Sparkles,
   Image as ImageIcon,
   Wallet,
+  Video,
   X,
   CreditCard,
   AlertCircle,
@@ -126,11 +127,19 @@ export default function DashboardPage() {
   // Fallback to estimated if 0 (optional, but for now let's show real)
   const totalEarnings = realEarnings;
 
-  // Calculate engagement rate
+  // Calculate engagement rate including stream interactions
   const totalLikes = myPosts.reduce((acc, post) => acc + (post.likesCount || 0), 0);
   const totalComments = myPosts.reduce((acc, post) => acc + (post.commentsCount || 0), 0);
+  
+  // Include live stream messages and tips as high-value engagement
+  const streamInteractions = (earningsBreakdown && creatorProfile) 
+    ? (earningsBreakdown.stream_chat + earningsBreakdown.stream_tip) / (creatorProfile.chatPrice || 1) // Rough estimate of interaction count
+    : 0;
+
+  const totalInteractions = totalLikes + totalComments + streamInteractions;
+
   const calculatedEngagement = activeSubsCount > 0 
-    ? ((totalLikes + totalComments) / activeSubsCount) * 100 
+    ? (totalInteractions / activeSubsCount) * 100 
     : 0;
 
   const stats = {
@@ -387,6 +396,24 @@ export default function DashboardPage() {
                   Engagement Rate
                 </p>
               </div>
+
+              {/* Streaming Index */}
+              <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+                    <Video className="w-6 h-6 text-red-600" />
+                  </div>
+                </div>
+                <p className="text-3xl font-bold text-[#101828] mb-1">
+                  ${(((earningsBreakdown?.stream_chat || 0) + (earningsBreakdown?.stream_tip || 0)) / 100).toFixed(2)}
+                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-[#667085]">
+                    Streaming Index
+                  </p>
+                  <TrendingUp className="w-3 h-3 text-red-400" />
+                </div>
+              </div>
             </div>
 
             {/* Main Content Grid */}
@@ -419,10 +446,31 @@ export default function DashboardPage() {
                          </div>
                        </div>
                        
+                       {/* Live Streams */}
+                       <div>
+                         <div className="flex justify-between items-end mb-2">
+                           <span className="text-sm font-medium text-[#344054]">Live Streams</span>
+                           <div className="text-right">
+                             <span className="text-sm font-bold text-[#101828] block">
+                               ${(((earningsBreakdown.stream_chat || 0) + (earningsBreakdown.stream_tip || 0)) / 100).toFixed(2)}
+                             </span>
+                             <span className="text-xs text-[#667085]">
+                               {earningsBreakdown.total > 0 ? (((earningsBreakdown.stream_chat + earningsBreakdown.stream_tip) / earningsBreakdown.total) * 100).toFixed(0) : 0}%
+                             </span>
+                           </div>
+                         </div>
+                         <div className="w-full bg-red-100 rounded-full h-2">
+                           <div 
+                             className="bg-red-500 h-2 rounded-full transition-all duration-1000"
+                             style={{ width: `${earningsBreakdown.total > 0 ? (((earningsBreakdown.stream_chat + earningsBreakdown.stream_tip) / earningsBreakdown.total) * 100) : 0}%` }}
+                           ></div>
+                         </div>
+                       </div>
+
                        {/* Tips */}
                        <div>
                          <div className="flex justify-between items-end mb-2">
-                           <span className="text-sm font-medium text-[#344054]">Tips & Donations</span>
+                           <span className="text-sm font-medium text-[#344054]">Other Tips & Donations</span>
                            <div className="text-right">
                              <span className="text-sm font-bold text-[#101828] block">
                                ${(earningsBreakdown.tip / 100).toFixed(2)}
@@ -432,7 +480,7 @@ export default function DashboardPage() {
                              </span>
                            </div>
                          </div>
-                         <div className="w-full bg-gray-100 rounded-full h-2">
+                         <div className="w-full bg-green-100 rounded-full h-2">
                            <div 
                              className="bg-green-500 h-2 rounded-full transition-all duration-1000"
                              style={{ width: `${earningsBreakdown.total > 0 ? (earningsBreakdown.tip / earningsBreakdown.total) * 100 : 0}%` }}

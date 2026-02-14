@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { 
   Home, 
@@ -9,7 +10,6 @@ import {
   MessageSquare, 
   Video, 
   Sparkles, 
-  Bell, 
   Settings, 
   User,
   Wallet 
@@ -94,14 +94,15 @@ export default function Sidebar() {
         {/* Logo Area */}
         <div className="px-6 py-8 flex justify-center">
           <Link href="/" className="flex flex-col items-center">
-            <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-2"
-              style={{
-                background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
-                boxShadow: '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)',
-              }}
-            >
-               <span className="text-3xl">🐿️</span>
+            <div className="w-16 h-16 relative mb-2">
+              <NextImage 
+                src="/logo.png" 
+                alt="NuttyFans Logo" 
+                fill 
+                sizes="64px"
+                className="object-contain"
+                priority
+              />
             </div>
             <span 
               className="font-bold text-2xl tracking-tight"
@@ -269,7 +270,6 @@ export default function Sidebar() {
         >
           <ul className="flex flex-col w-full">
             {[
-              { href: '/notifications', label: 'Notifications', icon: Bell },
               { href: '/settings', label: 'Settings', icon: Settings },
               { href: '/profile', label: 'Profile', icon: User },
             ].map((item) => {

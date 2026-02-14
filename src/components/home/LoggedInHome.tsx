@@ -18,6 +18,7 @@ import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 
 import { useSubscriptions } from '@/hooks/useSubscriptions';
+import { useActiveStreams } from '@/hooks/useActiveStreams';
 import MediaLightbox from '@/components/MediaLightbox';
 import { useState } from 'react';
 
@@ -30,10 +31,10 @@ export default function LoggedInHome() {
   const { user, userProfile } = useAuth();
   const { posts, loading: feedLoading } = useFeed();
   const { creators, loading: creatorsLoading } = useCreators();
+  const { streams, loading: streamsLoading } = useActiveStreams();
   const { subscriptions, loading: subsLoading } = useSubscriptions(user?.uid);
   const [lightboxMedia, setLightboxMedia] = useState<LightboxState>(null);
 
-  const liveModels = creators.filter(c => c.isLive);
   const recommendedCreators = creators
     .filter(c => !subscriptions.some(s => s.creatorId === c.userId))
     .slice(0, 3);
@@ -57,31 +58,31 @@ export default function LoggedInHome() {
           </div>
 
           {/* Live Models Strip */}
-          {(liveModels.length > 0 || creatorsLoading) && (
-            <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-8 flex items-center gap-4 overflow-x-auto scrollbar-hide">
-              <div className="flex-shrink-0 font-bold text-[#101828] whitespace-nowrap">
-                Live Models &gt;
-              </div>
-              {creatorsLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
-              ) : (
-                liveModels.map((model) => (
-                  <Link href={`/profile/${model.userId}`} key={model.userId} className="flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer group">
-                    <div className="w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-[#9810fa] to-[#e60076]">
-                      <div className="w-full h-full rounded-full border-2 border-white overflow-hidden relative">
-                        <Image 
-                          src={model.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(model.user.displayName)}`} 
-                          alt={model.user.displayName} 
-                          fill
-                          className="object-cover group-hover:scale-110 transition-transform" 
-                        />
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              )}
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-8 flex items-center gap-4 overflow-x-auto scrollbar-hide">
+            <div className="flex-shrink-0 font-bold text-[#101828] whitespace-nowrap">
+              Live Models &gt;
             </div>
-          )}
+            {streamsLoading ? (
+              <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+            ) : streams.length === 0 ? (
+              <p className="text-sm text-[#475467] font-medium italic">No live models at the moment</p>
+            ) : (
+              streams.map((stream) => (
+                <Link href={`/live/${stream.creatorId}`} key={stream.creatorId} className="flex-shrink-0 flex flex-col items-center gap-1 cursor-pointer group">
+                  <div className="w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-[#9810fa] to-[#e60076]">
+                    <div className="w-full h-full rounded-full border-2 border-white overflow-hidden relative">
+                      <Image 
+                        src={stream.creator?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(stream.creator?.displayName || 'Creator')}`} 
+                        alt={stream.creator?.displayName || 'Creator'} 
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform" 
+                      />
+                    </div>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
 
           {/* Feed Posts */}
           {feedLoading ? (

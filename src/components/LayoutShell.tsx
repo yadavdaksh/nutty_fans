@@ -42,7 +42,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   const isCreator = userProfile?.role === 'creator';
   
   // Routes that have the Sidebar (Dashboard logic)
-  const sidebarRoutes = ['/discover', '/messages', '/live', '/cart', '/subscription', '/notifications', '/settings', '/profile'];
+  const sidebarRoutes = ['/discover', '/messages', '/live', '/cart', '/subscription', '/settings', '/profile'];
   const isSidebarPage = (user && pathname === '/') || sidebarRoutes.some(route => pathname.startsWith(route));
   
   // Routes that should be full screen (no header/footer)

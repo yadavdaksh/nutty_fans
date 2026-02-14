@@ -24,10 +24,15 @@ export function useChatNotifications() {
   useEffect(() => {
     if (!user?.uid) return;
 
-    // We only want to listen for *changes* after mount.
-    // However, onSnapshot with 'includeMetadataChanges: false' (default) gives us initial state too.
-    // We can filter out initial emissions by checking if we have loaded before or track the start time.
-    
+    // 1. Request Notification Permission
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    // Pre-load audio
+    const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+    notificationSound.load();
+
     let isInitialLoad = true;
 
     const q = query(
@@ -36,20 +41,27 @@ export function useChatNotifications() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      // 2. Update Document Title
+      const totalUnread = snapshot.docs.reduce((acc, doc) => {
+        const data = doc.data() as Conversation;
+        return acc + (data.unreadCount?.[user.uid] || 0);
+      }, 0);
+
+      if (typeof document !== 'undefined') {
+        document.title = totalUnread > 0 ? `(${totalUnread}) NuttyFans` : 'NuttyFans';
+      }
+
       if (isInitialLoad) {
         isInitialLoad = false;
         return;
       }
 
       snapshot.docChanges().forEach((change) => {
-        
         if (change.type === 'modified') {
           const data = change.doc.data() as Conversation;
-          
           const myUnread = data.unreadCount?.[user.uid] || 0;
           
           if (myUnread > 0) {
-             // Identify sender
              const senderId = data.participants.find(p => p !== user.uid);
              const senderMeta = senderId ? data.participantMetadata[senderId] : null;
              const senderName = senderMeta?.displayName || 'Someone';
@@ -61,31 +73,36 @@ export function useChatNotifications() {
                return; 
              }
 
-             // Format Message for Toast
              let toastMessage = data.lastMessage || 'Sent a message';
              const isImage = data.lastMessageType === 'image' || toastMessage.startsWith('https://firebasestorage.googleapis.com');
-             
-             if (isImage) {
-               toastMessage = 'Sent an image 📷';
+             if (isImage) toastMessage = 'Sent an image 📷';
+
+             // 3. Play Notification Sound
+             notificationSound.currentTime = 0;
+             notificationSound.play().catch(e => {
+               console.warn('[Notifications] Playback failed (likely autoplay policy):', e);
+             });
+
+             // 4. Show System Notification
+             if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(senderName, { body: toastMessage, icon: '/favicon.ico' });
              }
 
-             // Show Toast
+             // 5. Show Toast
              toast(`${senderName}: ${toastMessage}`, {
-               duration: 4000,
-               position: 'top-right',
-               icon: '💬',
-                style: {
-                  background: '#fff',
-                  color: '#333',
-                  border: '1px solid #E5E7EB',
-                },
-                id: `msg-${data.id}-${data.lastMessage?.substring(0, 20)}` // Stable ID based on content
+                duration: 4000,
+                position: 'top-right',
+                icon: '💬',
+                id: `msg-${data.id}` 
               });
           }
         }
       });
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (typeof document !== 'undefined') document.title = 'NuttyFans';
+    };
   }, [user?.uid, pathname]);
 }

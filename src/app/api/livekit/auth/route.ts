@@ -26,7 +26,13 @@ export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get('mode');
   const canPublish = mode === 'publisher';
 
-  at.addGrant({ roomJoin: true, room: room, canPublish: canPublish, canSubscribe: true });
+  at.addGrant({ 
+    roomJoin: true, 
+    room: room, 
+    canPublish: canPublish, 
+    canSubscribe: true,
+    canPublishData: true // All participants should be able to chat
+  });
 
   return NextResponse.json({ token: await at.toJwt() });
 }

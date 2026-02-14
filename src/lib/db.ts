@@ -45,6 +45,26 @@ export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspende
 export const PLATFORM_COMMISSION_PERCENT = 20; // 20% for admin
 export const ADMIN_WALLET_ID = 'PLATFORM_ADMIN_WALLET'; // Placeholder for admin wallet UID
 
+export interface UserSettings {
+  notifications: {
+    email: boolean;
+    push: boolean;
+    newSubscribers: boolean;
+    newMessages: boolean;
+    newComments: boolean;
+    tips: boolean;
+    monthlyReport: boolean;
+    promotions: boolean;
+  };
+  privacy: {
+    showSubscriberCount: boolean;
+    allowDMs: boolean;
+    allowComments: boolean;
+    showOnlineStatus: boolean;
+    allowDownloads: boolean;
+  };
+}
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -63,6 +83,7 @@ export interface UserProfile {
   squareCustomerId?: string; // Square Customer ID for recurring payments
   mercuryRecipientId?: string; // Mercury Recipient ID for payouts
   bankDetails?: BankDetails; // Bank details for payouts
+  settings?: UserSettings;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -96,6 +117,20 @@ export interface CreatorProfile {
   };
   isCallsEnabled?: boolean; // Toggle for audio/video calls
 }
+
+// Create a notification for a user
+export const createNotification = async (notification: Omit<Notification, 'id' | 'isRead' | 'createdAt'>) => {
+  const notificationsRef = collection(db, 'notifications');
+  const docRef = doc(notificationsRef);
+  const newNotification = {
+    ...notification,
+    id: docRef.id,
+    isRead: false,
+    createdAt: serverTimestamp(),
+  };
+  await setDoc(docRef, newNotification);
+  return docRef.id;
+};
 
 // Create or overwrite a user profile
 export const createUserProfile = async (uid: string, data: Partial<UserProfile>) => {
@@ -193,6 +228,24 @@ export interface Subscription {
   price: string;
   appliedCoupon?: string | null;
   squareSubscriptionId?: string | null;
+}
+
+export interface SubscriptionWithUser extends Subscription {
+  user?: UserProfile;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'tip' | 'subscription' | 'message_unlock' | 'payout' | 'system';
+  title: string;
+  message: string;
+  senderId?: string;
+  senderName?: string;
+  amount?: number;
+  isRead: boolean;
+  createdAt: Timestamp | FieldValue;
+  expiresAt?: Timestamp | FieldValue; // For auto-dismissal
 }
 
 export interface Conversation {
@@ -301,11 +354,25 @@ export const createSubscription = async (
       creatorId,
       tierId,
       status: 'active',
-      createdAt: serverTimestamp(),
+      createdAt: serverTimestamp() as Timestamp,
       expiresAt: Timestamp.fromDate(expiresAt),
       price,
       appliedCoupon: couponCode || null,
       squareSubscriptionId: squareSubscriptionId || null
+    });
+
+    // 4. Create Notification for Creator
+    const notificationRef = doc(collection(db, 'notifications'));
+    transaction.set(notificationRef, {
+      id: notificationRef.id,
+      userId: creatorId,
+      type: 'subscription',
+      title: 'New Subscriber!',
+      message: `${creatorSnap.data()?.categories?.[0] || 'Someone'} just subscribed to your ${tierId} tier.`,
+      senderId: userId,
+      senderName: 'A fan',
+      isRead: false,
+      createdAt: serverTimestamp()
     });
 
     // 4. Update counts and balances only if new
@@ -578,9 +645,29 @@ export interface WalletTransaction {
   type: 'credit' | 'debit';
   amount: number; // in cents
   description: string;
-  timestamp: Timestamp | FieldValue;
+  timestamp: Timestamp;
   metadata?: Record<string, unknown>;
 }
+
+export const getWalletTransactions = async (userId: string): Promise<WalletTransaction[]> => {
+  const txRef = collection(db, 'wallet_transactions');
+  const q = query(
+    txRef,
+    where('userId', '==', userId),
+    // We would need an index for orderBy('timestamp', 'desc'). 
+    // For now, fetch and sort in JS if needed, or just fetch.
+  );
+  
+  const snap = await getDocs(q);
+  return snap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  } as WalletTransaction)).sort((a, b) => {
+     const timeA = a.timestamp?.seconds || 0;
+     const timeB = b.timestamp?.seconds || 0;
+     return timeB - timeA;
+  });
+};
 
 export const getWalletBalance = async (userId: string): Promise<number> => {
   const userRef = doc(db, 'users', userId);
@@ -624,7 +711,7 @@ export const addFunds = async (
     const newBalance = (userDoc.data().walletBalance || 0) + creatorAmount;
     transaction.update(userRef, { walletBalance: newBalance });
     
-    // Add transaction record for User/Creator
+    // Add transaction record    // Log the transaction
     const newTxRef = doc(transactionRef);
     transaction.set(newTxRef, {
       userId,
@@ -662,6 +749,19 @@ export const addFunds = async (
         timestamp: serverTimestamp()
       });
     }
+
+    // 4. Create Notification for Creator
+    const notificationRef = doc(collection(db, 'notifications'));
+    transaction.set(notificationRef, {
+      id: notificationRef.id,
+      userId: userId, // receiver
+      type: 'tip', // generic for wallet additions
+      title: 'Funds Received',
+      message: description || 'New funds have been added to your wallet.',
+      amount: amount,
+      isRead: false,
+      createdAt: serverTimestamp()
+    });
   });
 };
 
@@ -738,8 +838,32 @@ export const processTransaction = async (userId: string, amount: number, descrip
              sourceUserId: userId 
            },
            timestamp: serverTimestamp()
-        });
-     }
+         });
+
+         // Create Notification for Creator
+         const notificationRef = doc(collection(db, 'notifications'));
+         const expiresAt = new Date();
+         expiresAt.setDate(expiresAt.getDate() + 1); // 24 hours expiry
+
+         const notificationData = {
+            id: notificationRef.id,
+            userId: creatorId,
+            type: 'tip',
+            title: 'New Tip!',
+            message: description ? `You received a tip: ${description}` : 'You received a new tip!',
+            senderId: userId,
+            senderName: userDoc.data().displayName || 'A fan',
+            amount: creatorAmount,
+            isRead: false,
+            createdAt: serverTimestamp(),
+            expiresAt: Timestamp.fromDate(expiresAt)
+         };
+         
+         console.log('[DEBUG] Creating notification:', notificationData);
+         transaction.set(notificationRef, notificationData);
+      } else {
+        console.log('[DEBUG] Skipping notification creation. creatorDoc exists:', !!creatorDoc, 'exists check:', creatorDoc?.exists(), 'creatorId:', creatorId);
+      }
 
      // 3. Credit Admin (Commission)
      const adminBalance = adminDoc.exists() ? (adminDoc.data() as { walletBalance: number }).walletBalance || 0 : 0;
@@ -800,6 +924,8 @@ export interface EarningsBreakdown {
   post_unlock: number;
   call: number;
   video_call: number;
+  stream_chat: number;
+  stream_tip: number;
   other: number;
   platform_fee: number; // Added for transparency
   [key: string]: number;
@@ -822,6 +948,8 @@ export const getEarningsBreakdown = async (userId: string): Promise<EarningsBrea
     post_unlock: 0,
     call: 0,
     video_call: 0,
+    stream_chat: 0,
+    stream_tip: 0,
     other: 0,
     platform_fee: 0
   };
@@ -835,13 +963,20 @@ export const getEarningsBreakdown = async (userId: string): Promise<EarningsBrea
     if (type === 'credit') {
       breakdown.total += amount;
 
-      if (breakdown[cat] !== undefined) {
+      if (cat && breakdown[cat] !== undefined) {
          breakdown[cat] += amount;
       } else {
          // Fallback for older transactions or different names
-         if (data.description.toLowerCase().includes('tip')) breakdown.tip += amount;
+         if (data.description.toLowerCase().includes('tip')) {
+            if (cat === 'stream_chat' || cat === 'tip' && data.metadata?.streamId) {
+               breakdown.stream_tip += amount;
+            } else {
+               breakdown.tip += amount;
+            }
+         }
          else if (data.description.toLowerCase().includes('subscription')) breakdown.subscription += amount;
          else if (data.description.toLowerCase().includes('unlock')) breakdown.message_unlock += amount; // Generic unlock
+         else if (cat === 'stream_chat') breakdown.stream_chat += amount;
          else breakdown.other += amount;
       }
     } else if (type === 'debit' && (cat === 'platform_fee' || data.description.toLowerCase().includes('platform fee'))) {

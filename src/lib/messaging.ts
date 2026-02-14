@@ -12,7 +12,6 @@ import {
 } from 'firebase/firestore';
 import { ref, set, onDisconnect, remove } from 'firebase/database';
 import { Conversation, Message } from './db';
-import { MOCK_CONVERSATIONS } from './mockData';
 
 /**
  * Creates a unique conversation ID for two users by sorting their UIDs.
@@ -21,21 +20,11 @@ import { MOCK_CONVERSATIONS } from './mockData';
 export const getConversationId = (uid1: string, uid2: string) => {
   return [uid1, uid2].sort().join('_');
 };
-
 /**
  * Checks if a conversation exists between two users.
  */
 export const checkConversationExists = async (uid1: string, uid2: string) => {
-  // 1. Check Mock Data first (for demo purposes)
-  const mockConv = MOCK_CONVERSATIONS.find(c => 
-    c.participants.includes(uid1) && c.participants.includes(uid2)
-  ) || MOCK_CONVERSATIONS.find(c => 
-    c.participants.includes('current_user_id') && c.participants.includes(uid2)
-  );
-  
-  if (mockConv) return mockConv;
-
-  // 2. Check Firestore
+  // Check Firestore
   const convId = getConversationId(uid1, uid2);
   const convRef = doc(db, 'conversations', convId);
   const convSnap = await getDoc(convRef);
@@ -174,12 +163,8 @@ export const markAsRead = async (conversationId: string, userId: string): Promis
   const convRef = doc(db, 'conversations', conversationId);
   const convSnap = await getDoc(convRef);
   
-  // If it's a mock or new chat, ensure it exists with metadata so it doesn't disappear from inbox
   if (!convSnap.exists() || !convSnap.data()?.participants) {
-    // We try to find the recipient ID to pass to the helper
-    const mock = MOCK_CONVERSATIONS.find(c => c.id === conversationId);
-    const recipientId = mock?.participants.find(p => p !== 'current_user_id' && p !== userId) || 'unknown';
-    await ensureConversationRecord(conversationId, userId, recipientId);
+    return;
   }
 
   await updateDoc(convRef, {
@@ -189,26 +174,14 @@ export const markAsRead = async (conversationId: string, userId: string): Promis
 
 /**
  * Ensures a conversation document exists with minimum required metadata.
- * Promotes mocks to real Firestore documents if needed.
  */
 const ensureConversationRecord = async (conversationId: string, currentUserId: string, recipientId: string) => {
   const convRef = doc(db, 'conversations', conversationId);
   const convSnap = await getDoc(convRef);
 
   if (!convSnap.exists() || !convSnap.data()?.participants) {
-    const mock = MOCK_CONVERSATIONS.find(c => c.id === conversationId);
-    let participants = [currentUserId, recipientId];
-    let participantMetadata = {};
-
-    if (mock) {
-      participants = mock.participants.map(p => p === 'current_user_id' ? currentUserId : p);
-      const metadata = { ...mock.participantMetadata };
-      if (metadata['current_user_id']) {
-        metadata[currentUserId] = metadata['current_user_id'];
-        delete metadata['current_user_id'];
-      }
-      participantMetadata = metadata;
-    }
+    const participants = [currentUserId, recipientId];
+    const participantMetadata = {};
 
     await setDoc(convRef, {
       participants,

@@ -164,6 +164,7 @@ export default function CreatorSteps({
                 src={selectedCoverImage} 
                 alt="Cover" 
                 fill 
+                sizes="(max-width: 768px) 100vw, 800px"
                 className="object-cover" 
               />
             ) : (

@@ -6,6 +6,8 @@ import { toast } from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useStorage } from '@/hooks/useStorage';
 import Image from 'next/image';
+import AlertModal from '@/components/modals/AlertModal';
+
 
 const EMAIL_TEMPLATES = [
   {
@@ -39,6 +41,8 @@ export default function CreatorNewsletterPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [lastSentCount, setLastSentCount] = useState(0);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,10 +80,14 @@ export default function CreatorNewsletterPage() {
         return;
     }
 
-    const confirmSend = window.confirm(`Are you sure you want to send this to ${target === 'all' ? 'ALL' : target} members? This action cannot be undone.`);
-    if (!confirmSend) return;
+    setShowConfirmModal(true);
+  };
+
+  const processSend = async () => {
+    if (!subject || !content || !user) return;
 
     setLoading(true);
+
     try {
       const res = await fetch('/api/newsletter/send', {
         method: 'POST',
@@ -229,8 +237,8 @@ export default function CreatorNewsletterPage() {
                      <label className="block text-sm font-bold text-[#344054] mb-2">Attached Image (Optional)</label>
                      {imageUrl ? (
                        <div className="relative w-full h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
-                          <Image src={imageUrl} alt="Newsletter attachment" fill className="object-cover" />
-                          <button 
+                         <Image src={imageUrl} alt="Newsletter attachment" fill sizes="(max-width: 768px) 100vw, 800px" className="object-cover" />
+                         <button 
                             type="button"
                             onClick={() => setImageUrl('')}
                             className="absolute top-3 right-3 p-1.5 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
@@ -354,6 +362,18 @@ export default function CreatorNewsletterPage() {
           </div>
         )}
       </div>
+
+      <AlertModal 
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        title="Confirm Newsletter"
+        message={`Are you sure you want to send this newsletter to ${target === 'all' ? 'ALL' : target} members? This action cannot be undone.`}
+        type="warning"
+        onConfirm={processSend}
+        confirmLabel="Send Now"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 }
+

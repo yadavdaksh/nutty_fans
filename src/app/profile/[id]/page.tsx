@@ -101,14 +101,15 @@ export default function ProfilePage() {
 
   const handleSubscribe = async (tier: CreatorProfile['subscriptionTiers'][number]) => {
     if (!user || userProfile?.role !== 'user') {
-      alert("Only fans can subscribe to creators.");
+      toast.error("Only fans can subscribe to creators.");
       return;
     }
 
     if (activeSubscription?.tierId === tier.name) {
-      alert("You are already subscribed to this tier.");
+      toast.error("You are already subscribed to this tier.");
       return;
     }
+
 
     setSelectedTier(tier);
     setIsCheckoutOpen(true);
@@ -149,7 +150,7 @@ export default function ProfilePage() {
     
     // Rule: Only users (subscribers) can initiate chats with creators
     if (userProfile.role !== 'user') {
-      alert("Only subscribers can initiate messages with creators.");
+      toast.error("Only subscribers can initiate messages with creators.");
       return;
     }
 
@@ -178,8 +179,9 @@ export default function ProfilePage() {
       
     } catch (error) {
       console.error("Error starting conversation:", error);
-      alert("Failed to start conversation. Please try again.");
+      toast.error("Failed to start conversation. Please try again.");
     } finally {
+
       setIsStartingChat(false);
     }
   };
@@ -200,12 +202,41 @@ export default function ProfilePage() {
           onClick={() => router.back()} 
           className="hover:underline transition-colors"
           style={{ color: '#9810FA' }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#8200DB'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#9810FA'}
         >
           Go Back
         </button>
       </div>
+    );
+  }
+
+  // 4. Verification Check: Restrict access to unverified profiles
+  const isApproved = targetUser.verificationStatus === 'approved';
+  const isAdmin = userProfile?.role === 'admin';
+  const canView = isApproved || isOwnProfile || isAdmin;
+
+  if (!canView) {
+    return (
+      <ProtectedRoute>
+        <div className="flex min-h-screen">
+          <Sidebar />
+          <div className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'} p-8 flex flex-col items-center justify-center text-center`}>
+            <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mb-6">
+              <Lock className="w-10 h-10 text-yellow-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Profile Pending Verification</h2>
+            <p className="text-gray-600 max-w-md mb-8">
+              This creator&apos;s profile is currently being reviewed by our team. 
+              Please check back later once they have been verified.
+            </p>
+            <button 
+              onClick={() => router.push('/discover')}
+              className="px-8 py-3 bg-[#9810FA] text-white rounded-xl font-bold hover:bg-[#8200DB] transition-all shadow-lg"
+            >
+              Explore Other Creators
+            </button>
+          </div>
+        </div>
+      </ProtectedRoute>
     );
   }
 
