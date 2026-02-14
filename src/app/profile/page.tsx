@@ -22,10 +22,26 @@ export default function ProfileRedirect() {
 
   return (
     <ProtectedRoute>
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div 
+        className="flex items-center justify-center min-h-screen"
+        style={{ backgroundColor: '#F9FAFB' }}
+      >
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-purple-600" />
-          <p className="text-gray-500 font-medium">Loading your profile...</p>
+          <Loader2 
+            className="w-10 h-10 animate-spin"
+            style={{ color: '#9810FA' }}
+          />
+          <p 
+            className="font-medium"
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#4A5565',
+            }}
+          >
+            Loading your profile...
+          </p>
         </div>
       </div>
     </ProtectedRoute>

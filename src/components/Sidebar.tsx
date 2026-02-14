@@ -83,16 +83,48 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 w-[276px] h-screen bg-white border-r border-gray-200 overflow-y-auto z-40">
+    <aside 
+      className="fixed left-0 top-0 w-[276px] h-screen overflow-y-auto z-40"
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderRight: '1px solid #E5E7EB',
+      }}
+    >
       <div className="flex flex-col h-full">
         {/* Logo Area */}
         <div className="px-6 py-8 flex justify-center">
           <Link href="/" className="flex flex-col items-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-500 rounded-2xl flex items-center justify-center mb-2 shadow-lg">
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-2"
+              style={{
+                background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                boxShadow: '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)',
+              }}
+            >
                <span className="text-3xl">🐿️</span>
             </div>
-            <span className="font-bold text-2xl tracking-tight text-[#2d0c40]">nuttyfans</span>
-            <span className="text-xs text-gray-500 -mt-1 font-medium">get nutty now</span>
+            <span 
+              className="font-bold text-2xl tracking-tight"
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '24px',
+                fontWeight: 700,
+                color: '#101828'
+              }}
+            >
+              nuttyfans
+            </span>
+            <span 
+              className="-mt-1 font-medium"
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#4A5565'
+              }}
+            >
+              get nutty now
+            </span>
           </Link>
         </div>
 
@@ -107,21 +139,64 @@ export default function Sidebar() {
               <li key={item.href} className="w-full">
                 <Link
                   href={item.href}
-                  className={`flex items-center justify-between py-3 px-6 w-full transition-all ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-[#b00b69] to-[#de1d3e] text-white font-medium' 
-                      : 'text-[#4a5565] hover:bg-gray-50 hover:text-[#101828] border-b border-gray-100 last:border-0'
-                  }`}
-                  style={{ fontFamily: 'Inter, sans-serif' }}
+                  className="flex items-center justify-between py-3 px-6 w-full transition-all"
+                  style={{
+                    fontFamily: 'Inter, sans-serif',
+                    backgroundColor: isActive 
+                      ? 'transparent'
+                      : 'transparent',
+                    background: isActive 
+                      ? 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)'
+                      : 'transparent',
+                    color: isActive ? '#FFFFFF' : '#4A5565',
+                    fontWeight: isActive ? 500 : 400,
+                    borderBottom: '1px solid #F9FAFB',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = '#F9FAFB';
+                      e.currentTarget.style.color = '#101828';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = '#4A5565';
+                    }
+                  }}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[#4a5565]'} `} strokeWidth={isActive ? 2.5 : 2} />
-                    <span className="text-[15px] leading-5">{item.label}</span>
+                    <Icon 
+                      className="w-5 h-5"
+                      style={{
+                        color: isActive ? '#FFFFFF' : '#4A5565',
+                      }}
+                      strokeWidth={isActive ? 2.5 : 2} 
+                    />
+                    <span 
+                      style={{
+                        fontSize: '15px',
+                        lineHeight: '20px',
+                      }}
+                    >
+                      {item.label}
+                    </span>
                   </div>
                   {item.badge && (
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      isActive ? 'bg-white text-[#de1d3e]' : (item.badgeColor === 'green' ? 'bg-green-100 text-green-700' : 'bg-[#de1d3e] text-white')
-                    }`}>
+                    <span 
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                      style={{
+                        backgroundColor: isActive 
+                          ? '#FFFFFF' 
+                          : (item.badgeColor === 'green' ? '#D1FAE5' : '#E60076'),
+                        color: isActive 
+                          ? '#E60076' 
+                          : (item.badgeColor === 'green' ? '#00C950' : '#FFFFFF'),
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                      }}
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -135,7 +210,17 @@ export default function Sidebar() {
         {/* Categories Section - Only on Discover Page */}
         {pathname === '/discover' && (
           <div className="px-6 py-4">
-             <h3 className="text-[#98a2b3] font-medium text-sm mb-4">Categories</h3>
+             <h3 
+               className="mb-4"
+               style={{
+                 fontFamily: 'Inter, sans-serif',
+                 fontSize: '14px',
+                 fontWeight: 500,
+                 color: '#6A7282'
+               }}
+             >
+               Categories
+             </h3>
              <div className="flex flex-col gap-2">
                {['All', 'Fitness', 'Music', 'Art', 'Photography', 'Gaming', 'Cooking', 'Fashion', 'Comedy'].map((cat) => {
                  const isActive = currentCategory === cat;
@@ -149,11 +234,25 @@ export default function Sidebar() {
                           router.push(`/discover?category=${cat}`);
                         }
                      }}
-                     className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                       isActive
-                        ? 'bg-[#e60076] text-white border-[#e60076]'
-                        : 'bg-white text-[#344054] border-gray-200 hover:bg-gray-50'
-                     }`}
+                     className="w-full text-left px-4 py-2 rounded-lg transition-colors border"
+                     style={{
+                       fontFamily: 'Inter, sans-serif',
+                       fontSize: '14px',
+                       fontWeight: 500,
+                       backgroundColor: isActive ? '#E60076' : '#FFFFFF',
+                       color: isActive ? '#FFFFFF' : '#364153',
+                       borderColor: isActive ? '#E60076' : '#E5E7EB',
+                     }}
+                     onMouseEnter={(e) => {
+                       if (!isActive) {
+                         e.currentTarget.style.backgroundColor = '#F9FAFB';
+                       }
+                     }}
+                     onMouseLeave={(e) => {
+                       if (!isActive) {
+                         e.currentTarget.style.backgroundColor = '#FFFFFF';
+                       }
+                     }}
                    >
                      {cat}
                    </button>
@@ -164,7 +263,10 @@ export default function Sidebar() {
         )}
 
         {/* Bottom Navigation */}
-        <div className="mt-auto border-t border-gray-200">
+        <div 
+          className="mt-auto"
+          style={{ borderTop: '1px solid #E5E7EB' }}
+        >
           <ul className="flex flex-col w-full">
             {[
               { href: '/notifications', label: 'Notifications', icon: Bell },
@@ -185,15 +287,43 @@ export default function Sidebar() {
                 <li key={item.href} className="w-full">
                   <Link
                     href={item.href}
-                    className={`flex items-center gap-3 py-3 px-6 w-full transition-all ${
-                      isActive 
-                        ? 'bg-gradient-to-r from-[#b00b69] to-[#de1d3e] text-white font-medium'
-                        : 'text-[#4a5565] hover:bg-gray-50 hover:text-[#101828]'
-                    }`}
-                    style={{ fontFamily: 'Inter, sans-serif' }}
+                    className="flex items-center gap-3 py-3 px-6 w-full transition-all"
+                    style={{
+                      fontFamily: 'Inter, sans-serif',
+                      background: isActive 
+                        ? 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)'
+                        : 'transparent',
+                      color: isActive ? '#FFFFFF' : '#4A5565',
+                      fontWeight: isActive ? 500 : 400,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = '#F9FAFB';
+                        e.currentTarget.style.color = '#101828';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = '#4A5565';
+                      }
+                    }}
                   >
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[#4a5565]'} `} strokeWidth={isActive ? 2.5 : 2} />
-                    <span className="text-[15px] leading-5">{item.label}</span>
+                    <Icon 
+                      className="w-5 h-5"
+                      style={{
+                        color: isActive ? '#FFFFFF' : '#4A5565',
+                      }}
+                      strokeWidth={isActive ? 2.5 : 2} 
+                    />
+                    <span 
+                      style={{
+                        fontSize: '15px',
+                        lineHeight: '20px',
+                      }}
+                    >
+                      {item.label}
+                    </span>
                   </Link>
                 </li>
               );

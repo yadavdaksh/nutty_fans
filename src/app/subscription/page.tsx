@@ -36,7 +36,13 @@ export default function SubscriptionPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#fdfbfd]" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div 
+      className="flex min-h-screen"
+      style={{ 
+        fontFamily: 'Inter, sans-serif',
+        backgroundColor: '#F9FAFB',
+      }}
+    >
       <Sidebar />
       
       <main className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'} p-8`}>
@@ -47,7 +53,19 @@ export default function SubscriptionPage() {
               <h1 className="text-3xl font-semibold text-[#101828] mb-1">My Subscriptions</h1>
               <p className="text-[#475467]">Manage your creator subscriptions and billing</p>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-[#344054] hover:bg-gray-50 bg-white shadow-sm">
+            <button 
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors"
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 500,
+                border: '1px solid #E5E7EB',
+                backgroundColor: '#FFFFFF',
+                color: '#364153',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+            >
               <Settings className="w-4 h-4" />
               Billing
             </button>
@@ -89,7 +107,10 @@ export default function SubscriptionPage() {
           <div className="space-y-4">
             {loading ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                <Loader2 
+                  className="w-8 h-8 animate-spin"
+                  style={{ color: '#9810FA' }}
+                />
               </div>
             ) : subscriptions.length === 0 ? (
               <div className="bg-white border border-dashed border-gray-200 rounded-2xl p-12 text-center text-[#475467]">

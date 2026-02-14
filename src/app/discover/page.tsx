@@ -27,7 +27,13 @@ export default function DiscoverPage() {
   });
 
   return (
-    <div className="flex min-h-screen bg-[#fdfbfd]" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div 
+      className="flex min-h-screen"
+      style={{ 
+        fontFamily: 'Inter, sans-serif',
+        backgroundColor: '#F9FAFB',
+      }}
+    >
       <Sidebar />
       
       <main className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'} p-8`}>
@@ -50,7 +56,19 @@ export default function DiscoverPage() {
                 className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 text-[#101828]"
               />
             </div>
-            <button className="px-6 py-3 border border-gray-200 rounded-xl flex items-center gap-2 hover:bg-gray-50 text-[#344054] font-medium bg-white">
+            <button 
+              className="px-6 py-3 rounded-xl flex items-center gap-2 transition-colors"
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 500,
+                border: '1px solid #E5E7EB',
+                backgroundColor: '#FFFFFF',
+                color: '#364153',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+            >
               <Filter className="w-5 h-5" />
               Filters
             </button>
@@ -59,7 +77,10 @@ export default function DiscoverPage() {
           {/* Loading State */}
           {loading && (
             <div className="flex justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+              <Loader2 
+                className="w-8 h-8 animate-spin"
+                style={{ color: '#9810FA' }}
+              />
             </div>
           )}
 
@@ -85,10 +106,25 @@ export default function DiscoverPage() {
                     <Link 
                       key={creator.userId} 
                       href={`/profile/${creator.userId}`}
-                      className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group block"
+                      className="rounded-2xl overflow-hidden transition-shadow group block"
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E5E7EB',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     >
                       {/* Cover Gradient */}
-                      <div className="h-32 bg-gradient-to-r from-[#9810fa] to-[#e60076]"></div>
+                      <div 
+                        className="h-32"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                        }}
+                      ></div>
                       
                       <div className="px-6 pb-6 relative">
                         {/* Avatar */}

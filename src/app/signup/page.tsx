@@ -58,25 +58,43 @@ export default function SignupPage() {
 
   return (
     <>
-      <div className="min-h-[calc(100vh-128px)] bg-gray-50 relative overflow-hidden">
-        {/* Background with gradient overlay */}
-        <div className="absolute inset-0 w-full h-full">
-          <div className="absolute inset-0 w-full h-full">
-            <div
-              className="absolute inset-0 w-full h-full"
-              style={{
-                backgroundImage: `url('data:image/svg+xml;utf8,<svg viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><rect x="0" y="0" height="100%" width="100%" fill="url(%23grad)" opacity="1"/><defs><radialGradient id="grad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="10" gradientTransform="matrix(72 45 -72 45 720 450)"><stop stop-color="rgba(168,85,247,0.1)" offset="0"/><stop stop-color="rgba(0,0,0,0)" offset="0.5"/></radialGradient></defs></svg>'), url('data:image/svg+xml;utf8,<svg viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><rect x="0" y="0" height="100%" width="100%" fill="url(%23grad)" opacity="1"/><defs><radialGradient id="grad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="10" gradientTransform="matrix(72 45 -72 45 720 450)"><stop stop-color="rgba(236,72,153,0.1)" offset="0"/><stop stop-color="rgba(0,0,0,0)" offset="0.5"/></radialGradient></defs></svg>')`,
+      <div 
+        className="min-h-[calc(100vh-128px)] relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, rgba(250, 245, 255, 1) 0%, rgba(253, 242, 248, 1) 50%, rgba(255, 247, 237, 1) 100%)',
+        }}
+      >
+        {/* Background gradient overlays */}
+        <div 
+          className="absolute top-0 right-0 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full"
+          style={{
+            background: 'radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.1) 0%, rgba(0, 0, 0, 0) 50%)',
+            filter: 'blur(100px)',
+          }}
+        />
+        <div 
+          className="absolute bottom-0 left-0 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full"
+          style={{
+            background: 'radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.1) 0%, rgba(0, 0, 0, 0) 50%)',
+            filter: 'blur(100px)',
+          }}
+        />
+        
+        {/* Left side image placeholder */}
+        <div className="hidden lg:block absolute left-0 top-0 w-[649px] h-full">
+          <div className="absolute left-[70px] top-[89px]">
+            <h1 
+              className="text-5xl font-semibold leading-[72px]"
+              style={{ 
+                fontFamily: 'Inter, sans-serif',
+                background: 'linear-gradient(90deg, rgba(173, 70, 255, 1) 0%, rgba(227, 132, 255, 1) 50%, rgba(134, 93, 255, 1) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
               }}
             >
-              {/* Left side image placeholder */}
-              <div className="hidden lg:block absolute left-0 top-0 w-[649px] h-full bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-                <div className="absolute left-[70px] top-[89px]">
-                  <h1 className="text-5xl font-semibold bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent leading-[72px]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                    Join the Community.
-                  </h1>
-                </div>
-              </div>
-            </div>
+              Join the Community.
+            </h1>
           </div>
         </div>
 
@@ -94,10 +112,25 @@ export default function SignupPage() {
             </div>
 
             {/* Form Card */}
-            <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-[14px] p-6 shadow-lg">
+            <div 
+              className="rounded-[14px] p-6"
+              style={{
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E5E7EB',
+                boxShadow: '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)',
+              }}
+            >
               
               {authError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm">
+                <div 
+                  className="mb-4 p-3 rounded-lg flex items-center gap-2 text-sm"
+                  style={{
+                    backgroundColor: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    color: '#FB2C36',
+                    fontFamily: 'Inter, sans-serif',
+                  }}
+                >
                   <AlertCircle className="w-4 h-4" />
                   {authError}
                 </div>
@@ -120,8 +153,23 @@ export default function SignupPage() {
                       id="fullName"
                       type="text"
                       placeholder="John Doe"
-                      className="w-full pl-10 pr-4 py-3 border border-[#d1d5dc] rounded-lg bg-white text-[14.2px] font-normal text-neutral-950 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      style={{ fontFamily: 'Inter, sans-serif' }}
+                      className="w-full pl-10 pr-4 py-3 rounded-lg focus:outline-none"
+                      style={{ 
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: 400,
+                        border: '1px solid #D1D5DC',
+                        backgroundColor: '#FFFFFF',
+                        color: '#101828',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#9810FA';
+                        e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#D1D5DC';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                       {...register('fullName', {
                         required: 'Full name is required',
                       })}
@@ -147,8 +195,23 @@ export default function SignupPage() {
                       id="email"
                       type="email"
                       placeholder="you@example.com"
-                      className="w-full pl-10 pr-4 py-3 border border-[#d1d5dc] rounded-lg bg-white text-[14.2px] font-normal text-neutral-950 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      style={{ fontFamily: 'Inter, sans-serif' }}
+                      className="w-full pl-10 pr-4 py-3 rounded-lg focus:outline-none"
+                      style={{ 
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: 400,
+                        border: '1px solid #D1D5DC',
+                        backgroundColor: '#FFFFFF',
+                        color: '#101828',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#9810FA';
+                        e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#D1D5DC';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                       {...register('email', {
                         required: 'Email is required',
                         pattern: {
@@ -178,8 +241,23 @@ export default function SignupPage() {
                       id="password"
                       type="password"
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-4 py-3 border border-[#d1d5dc] rounded-lg bg-white text-[14.2px] font-normal text-neutral-950 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      style={{ fontFamily: 'Inter, sans-serif' }}
+                      className="w-full pl-10 pr-4 py-3 rounded-lg focus:outline-none"
+                      style={{ 
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: 400,
+                        border: '1px solid #D1D5DC',
+                        backgroundColor: '#FFFFFF',
+                        color: '#101828',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#9810FA';
+                        e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#D1D5DC';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                       {...register('password', {
                         required: 'Password is required',
                         minLength: {
@@ -209,8 +287,23 @@ export default function SignupPage() {
                       id="confirmPassword"
                       type="password"
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-4 py-3 border border-[#d1d5dc] rounded-lg bg-white text-[14.2px] font-normal text-neutral-950 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      style={{ fontFamily: 'Inter, sans-serif' }}
+                      className="w-full pl-10 pr-4 py-3 rounded-lg focus:outline-none"
+                      style={{ 
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: 400,
+                        border: '1px solid #D1D5DC',
+                        backgroundColor: '#FFFFFF',
+                        color: '#101828',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#9810FA';
+                        e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#D1D5DC';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                       {...register('confirmPassword', {
                         validate: (val) => {
                           if (watch('password') != val) {
@@ -227,12 +320,24 @@ export default function SignupPage() {
 
                 {/* Terms and Conditions Checkbox */}
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-purple-100 transition-colors">
+                  <div 
+                    className="flex items-start gap-3 p-4 rounded-xl transition-colors"
+                    style={{
+                      backgroundColor: '#F9FAFB',
+                      border: '1px solid #E5E7EB',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#E9D4FF'}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
+                  >
                     <div className="relative flex items-center h-5">
                       <input
                         id="agreeTerms"
                         type="checkbox"
-                        className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                        className="w-5 h-5 rounded cursor-pointer"
+                        style={{
+                          borderColor: '#D1D5DC',
+                          accentColor: '#9810FA',
+                        }}
                         {...register('agreeTerms', {
                           required: 'You must agree to the Terms & Conditions',
                         })}
@@ -244,7 +349,12 @@ export default function SignupPage() {
                         <button
                           type="button"
                           onClick={() => setIsTermsOpen(true)}
-                          className="text-purple-600 font-bold hover:underline"
+                          className="font-bold hover:underline transition-colors"
+                          style={{
+                            color: '#9810FA',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = '#8200DB'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = '#9810FA'}
                         >
                           Terms & Conditions
                         </button>
@@ -265,8 +375,22 @@ export default function SignupPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white py-3 rounded-lg font-medium text-[20px] leading-[20px] flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  style={{ fontFamily: 'Inter, sans-serif' }}
+                  className="w-full py-3 rounded-lg flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                    color: '#FFFFFF',
+                    borderRadius: '8px',
+                    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSubmitting) e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSubmitting) e.currentTarget.style.opacity = '1';
+                  }}
                 >
                   {isSubmitting ? (
                     'Creating Account...'
@@ -285,7 +409,10 @@ export default function SignupPage() {
                   Already have an account?{' '}
                   <Link
                     href="/login"
-                    className="text-[#9810fa] hover:underline"
+                    className="hover:underline transition-colors"
+                    style={{ color: '#9810FA' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#8200DB'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#9810FA'}
                   >
                     Sign In
                   </Link>

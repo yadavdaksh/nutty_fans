@@ -5,73 +5,139 @@ import { Twitter, Instagram, Youtube, Facebook } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-50 border-t border-gray-200 mt-auto transition-all">
+    <footer 
+      className="mt-auto transition-all"
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderTop: '1px solid #E5E7EB',
+      }}
+    >
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-1">
-            <Link href="/" className="text-2xl font-semibold bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent inline-block mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <Link 
+              href="/" 
+              className="inline-block mb-4"
+              style={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '24px',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
               NuttyFans
             </Link>
-            <p className="text-sm font-normal text-[#4a5565] leading-relaxed" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <p 
+              className="leading-relaxed"
+              style={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 400,
+                color: '#4A5565'
+              }}
+            >
               Empowering creators to build meaningful connections with their audience.
             </p>
           </div>
 
           {/* Platform Links */}
           <div>
-            <h3 className="text-sm font-semibold text-[#101828] tracking-wider uppercase mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>Platform</h3>
+            <h3 
+              className="tracking-wider uppercase mb-4"
+              style={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#101828'
+              }}
+            >
+              Platform
+            </h3>
             <ul className="space-y-2">
-              <li>
-                <Link href="/creators" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  For Creators
-                </Link>
-              </li>
-              <li>
-                <Link href="/discover" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  For Fans
-                </Link>
-              </li>
-              <li>
-                <Link href="/pricing" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Pricing
-                </Link>
-              </li>
-              <li>
-                <Link href="/features" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Features
-                </Link>
-              </li>
+              {['For Creators', 'For Fans', 'Pricing', 'Features'].map((label, idx) => {
+                const hrefs = ['/creators', '/discover', '/pricing', '/features'];
+                return (
+                  <li key={idx}>
+                    <Link 
+                      href={hrefs[idx]}
+                      className="transition-colors"
+                      style={{ 
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: 400,
+                        color: '#4A5565'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#9810FA'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#4A5565'}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
           {/* Resources Links */}
           <div>
-            <h3 className="text-sm font-semibold text-[#101828] tracking-wider uppercase mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>Resources</h3>
+            <h3 
+              className="tracking-wider uppercase mb-4"
+              style={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#101828'
+              }}
+            >
+              Resources
+            </h3>
             <ul className="space-y-2">
+              {['Help Center', 'Community', 'Blog', 'Creator Guide'].map((label, idx) => {
+                const hrefs = ['/help', '/community', '/blog', '/guide'];
+                return (
+                  <li key={idx}>
+                    <Link 
+                      href={hrefs[idx]}
+                      className="transition-colors"
+                      style={{ 
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: 400,
+                        color: '#4A5565'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#9810FA'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#4A5565'}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                );
+              })}
               <li>
-                <Link href="/help" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Help Center
-                </Link>
-              </li>
-              <li>
-                <Link href="/community" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Community
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link href="/guide" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Creator Guide
-                </Link>
-              </li>
-              <li>
-                <Link href="mailto:support@nuttyfans.com" className="text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-2" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  <span className="w-1.5 h-1.5 bg-purple-600 rounded-full"></span>
+                <Link 
+                  href="mailto:support@nuttyfans.com" 
+                  className="transition-colors flex items-center gap-2"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#9810FA'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#8200DB'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#9810FA'}
+                >
+                  <span 
+                    className="rounded-full"
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      backgroundColor: '#9810FA'
+                    }}
+                  ></span>
                   Need Help?
                 </Link>
               </li>
@@ -80,75 +146,83 @@ export default function Footer() {
 
           {/* Legal Links */}
           <div>
-            <h3 className="text-sm font-semibold text-[#101828] tracking-wider uppercase mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>Legal</h3>
+            <h3 
+              className="tracking-wider uppercase mb-4"
+              style={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#101828'
+              }}
+            >
+              Legal
+            </h3>
             <ul className="space-y-2">
-              <li>
-                <Link href="/about" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link href="/privacy" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="text-sm font-normal text-[#4a5565] hover:text-[#9810fa] transition-colors" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Contact
-                </Link>
-              </li>
+              {['About', 'Privacy Policy', 'Terms of Service', 'Contact'].map((label, idx) => {
+                const hrefs = ['/about', '/privacy', '/terms', '/contact'];
+                return (
+                  <li key={idx}>
+                    <Link 
+                      href={hrefs[idx]}
+                      className="transition-colors"
+                      style={{ 
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: 400,
+                        color: '#4A5565'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#9810FA'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#4A5565'}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
 
         {/* Bottom Section */}
-        <div className="mt-12 border-t border-gray-200 pt-8">
+        <div 
+          className="mt-12 pt-8"
+          style={{ borderTop: '1px solid #E5E7EB' }}
+        >
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm font-normal text-[#4a5565] text-center md:text-left mb-4 md:mb-0" style={{ fontFamily: 'Inter, sans-serif' }}>
-            &copy; {new Date().getFullYear()} NuttyFans. All rights reserved.
-          </p>
+            <p 
+              className="text-center md:text-left mb-4 md:mb-0"
+              style={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 400,
+                color: '#4A5565'
+              }}
+            >
+              &copy; {new Date().getFullYear()} NuttyFans. All rights reserved.
+            </p>
             <div className="flex items-center space-x-4">
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#4a5565] hover:text-[#9810fa] transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#4a5565] hover:text-[#9810fa] transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a
-                href="https://youtube.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#4a5565] hover:text-[#9810fa] transition-colors"
-                aria-label="YouTube"
-              >
-                <Youtube className="w-5 h-5" />
-              </a>
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#4a5565] hover:text-[#9810fa] transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="w-5 h-5" />
-              </a>
+              {[
+                { Icon: Twitter, href: 'https://twitter.com', label: 'Twitter' },
+                { Icon: Instagram, href: 'https://instagram.com', label: 'Instagram' },
+                { Icon: Youtube, href: 'https://youtube.com', label: 'YouTube' },
+                { Icon: Facebook, href: 'https://facebook.com', label: 'Facebook' },
+              ].map(({ Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors"
+                  style={{
+                    color: '#4A5565',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#9810FA'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#4A5565'}
+                  aria-label={label}
+                >
+                  <Icon className="w-5 h-5" />
+                </a>
+              ))}
             </div>
           </div>
         </div>

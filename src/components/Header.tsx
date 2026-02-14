@@ -79,7 +79,11 @@ export default function Header() {
 
   return (
     <header 
-      className="sticky top-0 z-50 h-[65px] border-b border-gray-200 border-l-0 border-r-0 border-t-0 bg-white"
+      className="sticky top-0 z-50 h-[65px] border-b border-l-0 border-r-0 border-t-0"
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderBottomColor: '#E5E7EB',
+      }}
     >
       <div className="max-w-7xl mx-auto h-full">
         <div className="flex items-center justify-between h-full px-4 sm:px-6 lg:px-[104.5px] py-3">
@@ -87,7 +91,12 @@ export default function Header() {
           <div className="flex items-center h-10">
             {/* Logo - 41.79px x 40px */}
             <Link href="/" className="flex-shrink-0 h-10 w-[41.79px] relative">
-              <div className="h-10 w-10 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 rounded-lg flex items-center justify-center">
+              <div 
+                className="h-10 w-10 rounded-lg flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                }}
+              >
                 <span className="text-white font-bold text-lg">N</span>
               </div>
             </Link>
@@ -97,64 +106,103 @@ export default function Header() {
               <nav className="hidden lg:flex items-center lg:ml-[73.78px] gap-6 h-6">
                 <Link 
                   href="/" 
-                  className={`text-[15.1px] leading-6 font-normal transition-colors ${
-                    pathname === '/' ? 'text-[#101828]' : 'text-[#4a5565] hover:text-[#101828]'
-                  }`}
-                  style={{ fontFamily: 'Inter, sans-serif' }}
+                  className="transition-colors"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '15.1px',
+                    fontWeight: 400,
+                    lineHeight: '24px',
+                    color: pathname === '/' ? '#101828' : '#4A5565'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#101828'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = pathname === '/' ? '#101828' : '#4A5565'}
                 >
                   Home
                 </Link>
                 <Link 
                   href="/discover" 
-                  className={`text-[15.1px] leading-6 font-normal transition-colors ${
-                    pathname === '/discover' ? 'text-[#101828]' : 'text-[#4a5565] hover:text-[#101828]'
-                  }`}
-                  style={{ fontFamily: 'Inter, sans-serif' }}
+                  className="transition-colors"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '15.1px',
+                    fontWeight: 400,
+                    lineHeight: '24px',
+                    color: pathname === '/discover' ? '#101828' : '#4A5565'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#101828'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = pathname === '/discover' ? '#101828' : '#4A5565'}
                 >
-              Discover
-            </Link>
+                  Discover
+                </Link>
 
                 <Link 
                   href="/messages" 
-                  className={`text-[15.1px] leading-6 font-normal transition-colors relative flex items-center gap-1 ${
-                    pathname === '/messages' ? 'text-[#101828]' : 'text-[#4a5565] hover:text-[#101828]'
-                  }`}
-                  style={{ fontFamily: 'Inter, sans-serif' }}
+                  className="transition-colors relative flex items-center gap-1"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '15.1px',
+                    fontWeight: 400,
+                    lineHeight: '24px',
+                    color: pathname === '/messages' ? '#101828' : '#4A5565'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#101828'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = pathname === '/messages' ? '#101828' : '#4A5565'}
                 >
                   Messages
                   {totalUnreadCount > 0 && userProfile?.role === 'creator' && (
-                    <span className="flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-bold text-white bg-[#e60076] rounded-full">
+                    <span 
+                      className="flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-bold text-white rounded-full"
+                      style={{ backgroundColor: '#E60076' }}
+                    >
                       {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
                     </span>
                   )}
                 </Link>
                 <Link 
                   href="/subscription" 
-                  className={`text-[15.1px] leading-6 font-normal transition-colors ${
-                    pathname === '/subscription' ? 'text-[#101828]' : 'text-[#4a5565] hover:text-[#101828]'
-                  }`}
-                  style={{ fontFamily: 'Inter, sans-serif' }}
+                  className="transition-colors"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '15.1px',
+                    fontWeight: 400,
+                    lineHeight: '24px',
+                    color: pathname === '/subscription' ? '#101828' : '#4A5565'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#101828'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = pathname === '/subscription' ? '#101828' : '#4A5565'}
                 >
                   Subscription
                 </Link>
                 <Link 
                   href={userProfile?.role === 'creator' ? '/live/go-live' : '/live'}
-                  className={`text-[15.1px] leading-6 font-normal transition-colors ${
-                    pathname === '/live' || pathname === '/live/go-live' ? 'text-[#101828]' : 'text-[#4a5565] hover:text-[#101828]'
-                  }`}
-                  style={{ fontFamily: 'Inter, sans-serif' }}
+                  className="transition-colors"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '15.1px',
+                    fontWeight: 400,
+                    lineHeight: '24px',
+                    color: (pathname === '/live' || pathname === '/live/go-live') ? '#101828' : '#4A5565'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#101828'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = (pathname === '/live' || pathname === '/live/go-live') ? '#101828' : '#4A5565'}
                 >
                   Live Stream
                 </Link>
                 <Link 
                   href="/dashboard" 
-                  className={`text-[15.1px] leading-6 font-normal transition-colors ${
-                    pathname === '/dashboard' ? 'text-[#101828]' : 'text-[#4a5565] hover:text-[#101828]'
-                  }`}
-                  style={{ fontFamily: 'Inter, sans-serif' }}
+                  className="transition-colors"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '15.1px',
+                    fontWeight: 400,
+                    lineHeight: '24px',
+                    color: pathname === '/dashboard' ? '#101828' : '#4A5565'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#101828'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = pathname === '/dashboard' ? '#101828' : '#4A5565'}
                 >
                   Dashboard
-            </Link>
+                </Link>
           </nav>
             )}
 
@@ -216,13 +264,37 @@ export default function Header() {
                       placeholder="Search fans or categories..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-[#f9fafb] border border-gray-200 rounded-full px-4 py-1.5 text-[14px] text-[#101828] placeholder:text-[#98a2b3] focus:border-[#9810fa] focus:bg-white outline-none transition-all shadow-sm"
-                      style={{ fontFamily: 'Inter, sans-serif' }}
+                      className="w-full rounded-full px-4 py-1.5 outline-none transition-all"
+                      style={{
+                        backgroundColor: '#F9FAFB',
+                        border: '1px solid #E5E7EB',
+                        fontSize: '14px',
+                        color: '#101828',
+                        fontFamily: 'Inter, sans-serif',
+                        boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#9810FA';
+                        e.currentTarget.style.backgroundColor = '#FFFFFF';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#E5E7EB';
+                        e.currentTarget.style.backgroundColor = '#F9FAFB';
+                      }}
                     />
                   </div>
                   <button 
-                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isSearchOpen ? 'text-purple-600' : 'text-[#4a5565] hover:text-[#101828]'}`}
+                    className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+                    style={{
+                      color: isSearchOpen ? '#9810FA' : '#4A5565',
+                    }}
                     onClick={() => setIsSearchOpen(!isSearchOpen)}
+                    onMouseEnter={(e) => {
+                      if (!isSearchOpen) e.currentTarget.style.color = '#101828';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSearchOpen) e.currentTarget.style.color = '#4A5565';
+                    }}
                     aria-label="Search"
                   >
                     <Search className="w-4 h-4" />
@@ -233,35 +305,130 @@ export default function Header() {
               {/* Notifications Icon with Dropdown */}
               <div className="relative ml-4" ref={notificationsRef}>
                 <button 
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors relative ${isNotificationsOpen ? 'text-purple-600' : 'text-[#4a5565] hover:text-[#101828]'}`}
+                  className="w-9 h-9 rounded-full flex items-center justify-center transition-colors relative"
+                  style={{
+                    color: isNotificationsOpen ? '#9810FA' : '#4A5565',
+                  }}
                   onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                  onMouseEnter={(e) => {
+                    if (!isNotificationsOpen) e.currentTarget.style.color = '#101828';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isNotificationsOpen) e.currentTarget.style.color = '#4A5565';
+                  }}
                   aria-label="Notifications"
                 >
                   <Bell className="w-4 h-4" />
                   {mockNotifications.some(n => n.unread) && (
-                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#e60076] rounded-full border-2 border-white"></span>
+                    <span 
+                      className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full border-2"
+                      style={{
+                        backgroundColor: '#E60076',
+                        borderColor: '#FFFFFF',
+                      }}
+                    ></span>
                   )}
                 </button>
 
                 {isNotificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in duration-200">
-                    <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
-                      <h3 className="font-bold text-sm text-[#101828]" style={{ fontFamily: 'Inter, sans-serif' }}>Notifications</h3>
-                      <button className="text-xs text-purple-600 hover:text-purple-700 font-medium">Mark as read</button>
+                  <div 
+                    className="absolute right-0 mt-2 w-80 rounded-xl py-2 z-50 animate-in fade-in zoom-in duration-200"
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E7EB',
+                      boxShadow: '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                    }}
+                  >
+                    <div 
+                      className="px-4 py-2 flex justify-between items-center"
+                      style={{ borderBottom: '1px solid #E5E7EB' }}
+                    >
+                      <h3 
+                        className="font-bold text-sm"
+                        style={{ 
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: '#101828'
+                        }}
+                      >
+                        Notifications
+                      </h3>
+                      <button 
+                        className="text-xs font-medium transition-colors"
+                        style={{
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          color: '#9810FA'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = '#8200DB'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#9810FA'}
+                      >
+                        Mark as read
+                      </button>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                       {mockNotifications.map((notif) => (
-                        <div key={notif.id} className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 flex gap-3 ${notif.unread ? 'bg-purple-50/30' : ''}`}>
-                          <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${notif.unread ? 'bg-[#e60076]' : 'opacity-0'}`}></div>
+                        <div 
+                          key={notif.id} 
+                          className="px-4 py-3 transition-colors cursor-pointer last:border-0 flex gap-3"
+                          style={{
+                            backgroundColor: notif.unread ? 'rgba(152, 16, 250, 0.05)' : 'transparent',
+                            borderBottom: '1px solid #F9FAFB',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = notif.unread ? 'rgba(152, 16, 250, 0.05)' : 'transparent'}
+                        >
+                          <div 
+                            className="w-2 h-2 mt-1.5 rounded-full flex-shrink-0"
+                            style={{
+                              backgroundColor: notif.unread ? '#E60076' : 'transparent',
+                            }}
+                          ></div>
                           <div>
-                            <p className="text-sm font-normal text-[#101828] leading-tight" style={{ fontFamily: 'Inter, sans-serif' }}>{notif.text}</p>
-                            <p className="text-xs text-[#98a2b3] mt-1">{notif.time}</p>
+                            <p 
+                              className="leading-tight"
+                              style={{ 
+                                fontFamily: 'Inter, sans-serif',
+                                fontSize: '14px',
+                                fontWeight: 400,
+                                color: '#101828'
+                              }}
+                            >
+                              {notif.text}
+                            </p>
+                            <p 
+                              className="mt-1"
+                              style={{
+                                fontFamily: 'Inter, sans-serif',
+                                fontSize: '12px',
+                                color: '#6A7282'
+                              }}
+                            >
+                              {notif.time}
+                            </p>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div className="px-4 py-2 text-center border-t border-gray-100">
-                      <button className="text-sm font-medium text-purple-600 hover:text-purple-700">View all notifications</button>
+                    <div 
+                      className="px-4 py-2 text-center"
+                      style={{ borderTop: '1px solid #E5E7EB' }}
+                    >
+                      <button 
+                        className="text-sm font-medium transition-colors"
+                        style={{
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          color: '#9810FA'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = '#8200DB'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#9810FA'}
+                      >
+                        View all notifications
+                      </button>
                     </div>
                   </div>
                 )}
@@ -286,8 +453,19 @@ export default function Header() {
                           />
                         </div>
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
-                          <span className="text-white font-medium text-sm">
+                        <div 
+                          className="w-full h-full flex items-center justify-center"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                          }}
+                        >
+                          <span 
+                            className="font-medium text-sm"
+                            style={{
+                              color: '#FFFFFF',
+                              fontFamily: 'Inter, sans-serif',
+                            }}
+                          >
                             {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
                           </span>
                         </div>
@@ -296,47 +474,128 @@ export default function Header() {
 
                     {/* Dropdown Menu for logged in users */}
                     {isDropdownOpen && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                        <div className="px-4 py-2 border-b border-gray-200">
-                          <p className="text-sm font-medium text-[#101828] truncate" style={{ fontFamily: 'Inter, sans-serif' }}>
+                      <div 
+                        className="absolute right-0 mt-2 w-48 rounded-lg py-1 z-50"
+                        style={{
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid #E5E7EB',
+                          boxShadow: '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                        }}
+                      >
+                        <div 
+                          className="px-4 py-2"
+                          style={{ borderBottom: '1px solid #E5E7EB' }}
+                        >
+                          <p 
+                            className="text-sm font-medium truncate"
+                            style={{ 
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '14px',
+                              fontWeight: 500,
+                              color: '#101828'
+                            }}
+                          >
                             {user.displayName || 'User'}
                           </p>
-                          <p className="text-xs font-normal text-[#4a5565] truncate" style={{ fontFamily: 'Inter, sans-serif' }}>
+                          <p 
+                            className="text-xs font-normal truncate"
+                            style={{ 
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '12px',
+                              fontWeight: 400,
+                              color: '#4A5565'
+                            }}
+                          >
                             {user.email}
                           </p>
                         </div>
                         <Link
                           href="/profile"
-                          className="flex items-center gap-2 px-4 py-2 text-sm font-normal text-[#4a5565] hover:bg-gray-50 transition-colors"
+                          className="flex items-center gap-2 px-4 py-2 transition-colors"
+                          style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '14px',
+                            fontWeight: 400,
+                            color: '#4A5565'
+                          }}
                           onClick={() => setIsDropdownOpen(false)}
-                          style={{ fontFamily: 'Inter, sans-serif' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#F9FAFB';
+                            e.currentTarget.style.color = '#101828';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#4A5565';
+                          }}
                         >
                           <User className="w-4 h-4" />
                           Profile
                         </Link>
                         <Link
                           href="/dashboard"
-                          className="flex items-center gap-2 px-4 py-2 text-sm font-normal text-[#4a5565] hover:bg-gray-50 transition-colors"
+                          className="flex items-center gap-2 px-4 py-2 transition-colors"
+                          style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '14px',
+                            fontWeight: 400,
+                            color: '#4A5565'
+                          }}
                           onClick={() => setIsDropdownOpen(false)}
-                          style={{ fontFamily: 'Inter, sans-serif' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#F9FAFB';
+                            e.currentTarget.style.color = '#101828';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#4A5565';
+                          }}
                         >
                           <LayoutDashboard className="w-4 h-4" />
                           Dashboard
                         </Link>
                         <Link
                           href="/settings"
-                          className="flex items-center gap-2 px-4 py-2 text-sm font-normal text-[#4a5565] hover:bg-gray-50 transition-colors"
+                          className="flex items-center gap-2 px-4 py-2 transition-colors"
+                          style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '14px',
+                            fontWeight: 400,
+                            color: '#4A5565'
+                          }}
                           onClick={() => setIsDropdownOpen(false)}
-                          style={{ fontFamily: 'Inter, sans-serif' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#F9FAFB';
+                            e.currentTarget.style.color = '#101828';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#4A5565';
+                          }}
                         >
                           <Settings className="w-4 h-4" />
                           Settings
                         </Link>
-                        <div className="border-t border-gray-200 my-1"></div>
+                        <div 
+                          className="my-1"
+                          style={{ borderTop: '1px solid #E5E7EB' }}
+                        ></div>
                         <button
                           onClick={handleSignOut}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm font-normal text-red-600 hover:bg-red-50 transition-colors"
-                          style={{ fontFamily: 'Inter, sans-serif' }}
+                          className="w-full flex items-center gap-2 px-4 py-2 transition-colors"
+                          style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '14px',
+                            fontWeight: 400,
+                            color: '#FB2C36'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FEF2F2';
+                            e.currentTarget.style.color = '#DC2626';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#FB2C36';
+                          }}
                         >
                           <LogOut className="w-4 h-4" />
                           Sign Out

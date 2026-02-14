@@ -1,8 +1,75 @@
 @import "tailwindcss";
 
 :root {
+  /* Base Colors */
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Text Colors */
+  --text-primary: #101828;
+  --text-secondary: #4A5565;
+  --text-tertiary: #364153;
+  --text-dark: #0A0A0A;
+  --text-white: #FFFFFF;
+  --text-muted: #6A7282;
+  
+  /* Background Colors */
+  --bg-white: #FFFFFF;
+  --bg-light: #F9FAFB;
+  --bg-gray: #F3F4F6;
+  --bg-dark: #444444;
+  --bg-black: #000000;
+  --bg-overlay: rgba(255, 255, 255, 0.8);
+  --bg-overlay-dark: rgba(0, 0, 0, 0.2);
+  --bg-overlay-dark-strong: rgba(0, 0, 0, 0.5);
+  --bg-overlay-dark-stronger: rgba(0, 0, 0, 0.6);
+  
+  /* Accent Colors */
+  --accent-purple: #9810FA;
+  --accent-purple-light: #8200DB;
+  --accent-purple-dark: #6D4ECC;
+  --accent-pink: #E60076;
+  --accent-blue: #155DFC;
+  --accent-green: #00C950;
+  --accent-red: #FB2C36;
+  --accent-orange: #E7000B;
+  
+  /* Border Colors */
+  --border-light: #E5E7EB;
+  --border-dark: rgba(0, 0, 0, 0.1);
+  --border-purple: #9810FA;
+  --border-white: #FFFFFF;
+  
+  /* Badge Colors */
+  --badge-bg: #F3E8FF;
+  --badge-border: #E9D4FF;
+  --badge-text: #8200DB;
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%);
+  --gradient-purple-pink-90: linear-gradient(90deg, rgba(166, 195, 255, 1) 0%, rgba(134, 93, 255, 1) 100%);
+  --gradient-purple-pink-135: linear-gradient(135deg, rgba(165, 193, 255, 1) 0%, rgba(134, 94, 254, 1) 100%);
+  --gradient-subscribe: linear-gradient(90deg, rgba(165, 192, 254, 1) 0%, rgba(134, 93, 255, 1) 100%);
+  --gradient-text: linear-gradient(90deg, rgba(173, 70, 255, 1) 0%, rgba(227, 132, 255, 1) 50%, rgba(134, 93, 255, 1) 100%);
+  --gradient-hero-bg: linear-gradient(135deg, rgba(250, 245, 255, 1) 0%, rgba(253, 242, 248, 1) 50%, rgba(255, 247, 237, 1) 100%);
+  --gradient-stat-icon: linear-gradient(135deg, rgba(243, 232, 255, 1) 0%, rgba(252, 231, 243, 1) 100%);
+  --gradient-tier-basic: linear-gradient(135deg, rgba(21, 93, 252, 1) 0%, rgba(0, 146, 184, 1) 100%);
+  --gradient-tier-premium: linear-gradient(135deg, rgba(165, 193, 255, 1) 0%, rgba(134, 94, 254, 1) 100%);
+  --gradient-tier-vip: linear-gradient(135deg, rgba(245, 73, 0, 1) 0%, rgba(231, 0, 11, 1) 100%);
+  
+  /* Shadows */
+  --shadow-sm: 0px 4px 6px -4px rgba(0, 0, 0, 0.1), 0px 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 4px 4px 12px 0px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0px 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-purple: 0px 0px 0px 4px rgba(152, 16, 250, 1);
+  --shadow-purple-glow: 0px 4px 6px -4px rgba(173, 70, 255, 0.5), 0px 10px 15px -3px rgba(173, 70, 255, 0.5);
+  
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
 }
 
 @theme inline {

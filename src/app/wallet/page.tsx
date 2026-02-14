@@ -52,7 +52,10 @@ export default function WalletPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex min-h-screen bg-[#f9fafb]">
+      <div 
+        className="flex min-h-screen"
+        style={{ backgroundColor: '#F9FAFB' }}
+      >
         <Sidebar />
         <div className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'} p-8`}>
            <div className="max-w-4xl mx-auto space-y-8">
@@ -64,7 +67,12 @@ export default function WalletPage() {
              </div>
 
              {/* Balance Card */}
-             <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-[20px] p-8 text-white shadow-xl relative overflow-hidden">
+             <div 
+               className="rounded-[20px] p-8 text-white shadow-xl relative overflow-hidden"
+               style={{
+                 background: 'linear-gradient(135deg, rgba(16, 24, 40, 1) 0%, rgba(29, 41, 57, 1) 100%)',
+               }}
+             >
                 <div className="absolute top-0 right-0 p-8 opacity-10">
                    <Wallet className="w-48 h-48" />
                 </div>
@@ -88,7 +96,14 @@ export default function WalletPage() {
              </div>
 
              {/* Transactions */}
-             <div className="bg-white border border-gray-200 rounded-[20px] p-6 shadow-sm">
+             <div 
+               className="rounded-[20px] p-6 shadow-sm"
+               style={{
+                 backgroundColor: '#FFFFFF',
+                 border: '1px solid #E5E7EB',
+                 boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+               }}
+             >
                 <h3 className="text-lg font-bold text-gray-900 mb-6">Transaction History</h3>
                 
                 {loading ? (

@@ -347,7 +347,13 @@ export default function MessagesPage() {
   });
 
   return (
-    <div className="flex min-h-screen bg-[#fdfbfd]" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div 
+      className="flex min-h-screen"
+      style={{ 
+        fontFamily: 'Inter, sans-serif',
+        backgroundColor: '#F9FAFB',
+      }}
+    >
       <Sidebar />
       
       <main className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'} p-8`}>
@@ -361,10 +367,20 @@ export default function MessagesPage() {
           </div>
 
           {/* Chat Interface */}
-          <div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex min-h-0">
+          <div 
+            className="flex-1 rounded-2xl overflow-hidden flex min-h-0"
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+            }}
+          >
             
             {/* Conversations List - Left Side */}
-            <div className="w-[320px] border-r border-gray-200 flex flex-col">
+            <div 
+              className="w-[320px] flex flex-col"
+              style={{ borderRight: '1px solid #E5E7EB' }}
+            >
                {/* Search */}
                <div className="p-4 border-b border-gray-100">
                  <div className="relative">
@@ -374,7 +390,22 @@ export default function MessagesPage() {
                      placeholder="Search messages..." 
                      value={searchQuery}
                      onChange={(e) => setSearchQuery(e.target.value)}
-                     className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-[#101828] placeholder-[#98a2b3] focus:outline-none focus:ring-2 focus:ring-purple-500 transition-shadow"
+                     className="w-full pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none transition-shadow"
+                     style={{
+                       fontFamily: 'Inter, sans-serif',
+                       fontSize: '14px',
+                       backgroundColor: '#F9FAFB',
+                       border: '1px solid #E5E7EB',
+                       color: '#101828',
+                     }}
+                     onFocus={(e) => {
+                       e.currentTarget.style.borderColor = '#9810FA';
+                       e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
+                     }}
+                     onBlur={(e) => {
+                       e.currentTarget.style.borderColor = '#E5E7EB';
+                       e.currentTarget.style.boxShadow = 'none';
+                     }}
                    />
                  </div>
                </div>
@@ -439,7 +470,10 @@ export default function MessagesPage() {
                              </p>
                           </div>
                          {hasUnread && (
-                           <div className="w-2 h-2 bg-purple-600 rounded-full self-center"></div>
+                           <div 
+                             className="w-2 h-2 rounded-full self-center"
+                             style={{ backgroundColor: '#9810FA' }}
+                           ></div>
                          )}
                        </div>
                      );
@@ -616,11 +650,22 @@ export default function MessagesPage() {
                           >
                             <div className={`max-w-[70%] group`}>
                                <div 
-                                 className={`px-5 py-3 rounded-2xl text-[14px] leading-relaxed shadow-sm ${
-                                   isMe 
-                                     ? 'bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white rounded-tr-none' 
-                                     : 'bg-white text-[#344054] border border-gray-100 rounded-tl-none'
-                                 } overflow-hidden`}
+                                 className="px-5 py-3 rounded-2xl text-[14px] leading-relaxed shadow-sm overflow-hidden"
+                                 style={{
+                                   fontFamily: 'Inter, sans-serif',
+                                   fontSize: '14px',
+                                   ...(isMe ? {
+                                     background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                                     color: '#FFFFFF',
+                                     borderRadius: '16px 16px 16px 4px',
+                                   } : {
+                                     backgroundColor: '#FFFFFF',
+                                     color: '#364153',
+                                     border: '1px solid #E5E7EB',
+                                     borderRadius: '4px 16px 16px 16px',
+                                   }),
+                                   boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+                                 }}
                                >
                                  {msg.type === 'image' ? (
                                    <div className="relative w-60 h-60 -mx-2 -my-1 rounded-lg overflow-hidden bg-gray-100">
@@ -737,7 +782,22 @@ export default function MessagesPage() {
                             value={messageText}
                             onChange={(e) => setMessageText(e.target.value)}
                             placeholder="Type a message..." 
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-[#101828] placeholder-[#98a2b3] focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none"
+                          style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '14px',
+                            backgroundColor: '#F9FAFB',
+                            border: '1px solid #E5E7EB',
+                            color: '#101828',
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.borderColor = '#9810FA';
+                            e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.borderColor = '#E5E7EB';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
                           />
                           <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                             <Smile className="w-5 h-5" />
@@ -773,7 +833,11 @@ export default function MessagesPage() {
                         <button 
                           type="submit"
                           disabled={!messageText.trim()}
-                          className="p-2.5 bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+                          className="p-2.5 rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                            color: '#FFFFFF',
+                          }}
                         >
                           <Send className="w-5 h-5" />
                         </button>

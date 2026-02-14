@@ -76,7 +76,11 @@ export default function BankDetailsStep({
       bankName: 'Test Bank',
       accountNumber: '123456789',
       routingNumber: '111000025', // Valid ABA checksum
-      swiftCode: 'TESTUS33XXX'
+      swiftCode: 'TESTUS33XXX',
+      addressLine1: '123 Test St',
+      city: 'Test City',
+      region: 'NY',
+      postalCode: '10001'
     };
     setBankDetails(testData);
     setErrors({});
@@ -235,6 +239,71 @@ export default function BankDetailsStep({
             className={`w-full px-5 py-3.5 rounded-2xl border ${errors.swiftCode ? 'border-red-300 bg-red-50' : 'border-gray-200'} text-[#101828] placeholder:text-gray-400 focus:outline-none focus:border-[#9810fa] focus:ring-4 focus:ring-[#9810fa]/10 transition-all font-inter font-semibold`}
           />
           {errors.swiftCode && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.swiftCode}</p>}
+        </div>
+      </div>
+      
+      {/* Address Fields */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-left mb-8 pt-6 border-t border-gray-100">
+        <h3 className="md:col-span-2 text-sm font-bold text-gray-900 mb-2">Billing Address</h3>
+        
+        {/* Address Line 1 */}
+        <div className="md:col-span-2">
+          <label className="text-xs font-bold text-[#475467] uppercase tracking-widest mb-2 block font-inter">Address Line 1 *</label>
+          <input
+            type="text"
+            name="addressLine1"
+            placeholder="Street address, P.O. box, c/o"
+            value={bankDetails.addressLine1 || ''}
+            onChange={handleChange}
+            disabled={loading}
+            className={`w-full px-5 py-3.5 rounded-2xl border ${errors.addressLine1 ? 'border-red-300 bg-red-50' : 'border-gray-200'} text-[#101828] placeholder:text-gray-400 focus:outline-none focus:border-[#9810fa] focus:ring-4 focus:ring-[#9810fa]/10 transition-all font-inter font-semibold`}
+          />
+          {errors.addressLine1 && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.addressLine1}</p>}
+        </div>
+
+        {/* City */}
+        <div>
+          <label className="text-xs font-bold text-[#475467] uppercase tracking-widest mb-2 block font-inter">City *</label>
+          <input
+            type="text"
+            name="city"
+            placeholder="City"
+            value={bankDetails.city || ''}
+            onChange={handleChange}
+            disabled={loading}
+            className={`w-full px-5 py-3.5 rounded-2xl border ${errors.city ? 'border-red-300 bg-red-50' : 'border-gray-200'} text-[#101828] placeholder:text-gray-400 focus:outline-none focus:border-[#9810fa] focus:ring-4 focus:ring-[#9810fa]/10 transition-all font-inter font-semibold`}
+          />
+          {errors.city && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.city}</p>}
+        </div>
+
+        {/* State/Region */}
+        <div>
+          <label className="text-xs font-bold text-[#475467] uppercase tracking-widest mb-2 block font-inter">State / Province *</label>
+          <input
+            type="text"
+            name="region"
+            placeholder="State / Region"
+            value={bankDetails.region || ''}
+            onChange={handleChange}
+            disabled={loading}
+            className={`w-full px-5 py-3.5 rounded-2xl border ${errors.region ? 'border-red-300 bg-red-50' : 'border-gray-200'} text-[#101828] placeholder:text-gray-400 focus:outline-none focus:border-[#9810fa] focus:ring-4 focus:ring-[#9810fa]/10 transition-all font-inter font-semibold`}
+          />
+          {errors.region && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.region}</p>}
+        </div>
+
+        {/* Postal Code */}
+        <div>
+          <label className="text-xs font-bold text-[#475467] uppercase tracking-widest mb-2 block font-inter">Zip / Postal Code *</label>
+          <input
+            type="text"
+            name="postalCode"
+            placeholder="Zip Code"
+            value={bankDetails.postalCode || ''}
+            onChange={handleChange}
+            disabled={loading}
+            className={`w-full px-5 py-3.5 rounded-2xl border ${errors.postalCode ? 'border-red-300 bg-red-50' : 'border-gray-200'} text-[#101828] placeholder:text-gray-400 focus:outline-none focus:border-[#9810fa] focus:ring-4 focus:ring-[#9810fa]/10 transition-all font-inter font-semibold`}
+          />
+          {errors.postalCode && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.postalCode}</p>}
         </div>
       </div>
 

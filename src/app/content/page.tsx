@@ -82,7 +82,10 @@ export default function CreateContentPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex min-h-screen bg-[#f9fafb]">
+      <div 
+        className="flex min-h-screen"
+        style={{ backgroundColor: '#F9FAFB' }}
+      >
         <Sidebar />
         <div className="flex-1">
           <div className="px-8 py-10 max-w-3xl mx-auto">
@@ -90,7 +93,14 @@ export default function CreateContentPage() {
               Create New Post
             </h1>
 
-            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            <div 
+              className="rounded-2xl shadow-sm p-6"
+              style={{
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E5E7EB',
+                boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+              }}
+            >
               <form onSubmit={handleSubmit}>
                 {/* Caption */}
                 <div className="mb-6">

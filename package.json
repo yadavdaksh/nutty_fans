@@ -40,5 +40,11 @@
     "eslint-config-next": "16.0.7",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "react-square-web-payments-sdk": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   }
 }

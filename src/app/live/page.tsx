@@ -18,7 +18,13 @@ export default function LivePage() {
   const { streams, loading } = useActiveStreams();
 
   return (
-    <div className="flex min-h-screen bg-[#fdfbfd]" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div 
+      className="flex min-h-screen"
+      style={{ 
+        fontFamily: 'Inter, sans-serif',
+        backgroundColor: '#F9FAFB',
+      }}
+    >
       <Sidebar />
       
       <main className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'} p-8`}>
@@ -31,11 +37,32 @@ export default function LivePage() {
 
           {/* Tabs */}
           <div className="flex gap-2 mb-8">
-            <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-sm font-medium text-[#101828] shadow-sm border border-gray-200">
+            <button 
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 500,
+                backgroundColor: '#FFFFFF',
+                color: '#101828',
+                border: '1px solid #E5E7EB',
+                boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+              }}
+            >
               <Video className="w-4 h-4 text-red-500" />
               Live Now
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#475467] hover:bg-gray-50 rounded-lg">
+            <button 
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 500,
+                color: '#4A5565',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
               Upcoming
             </button>
           </div>
@@ -44,10 +71,19 @@ export default function LivePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
              {loading ? (
                <div className="col-span-2 flex justify-center py-20">
-                 <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                 <Loader2 
+                   className="w-8 h-8 animate-spin"
+                   style={{ color: '#9810FA' }}
+                 />
                </div>
              ) : streams.length === 0 ? (
-               <div className="col-span-2 text-center py-24 bg-white rounded-3xl border border-dashed border-gray-200">
+               <div 
+                 className="col-span-2 text-center py-24 rounded-3xl"
+                 style={{
+                   backgroundColor: '#FFFFFF',
+                   border: '1px dashed #E5E7EB',
+                 }}
+               >
                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
                     <Video className="w-8 h-8" />
                   </div>
@@ -59,7 +95,17 @@ export default function LivePage() {
                  <Link 
                    key={stream.id} 
                    href={`/live/${stream.creatorId}`}
-                   className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer"
+                   className="rounded-2xl overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer"
+                   style={{
+                     backgroundColor: '#FFFFFF',
+                     border: '1px solid #E5E7EB',
+                   }}
+                   onMouseEnter={(e) => {
+                     e.currentTarget.style.boxShadow = '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)';
+                   }}
+                   onMouseLeave={(e) => {
+                     e.currentTarget.style.boxShadow = 'none';
+                   }}
                  >
                    {/* Thumbnail Container */}
                    <div className="relative aspect-video bg-gray-900 overflow-hidden">

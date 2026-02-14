@@ -111,25 +111,43 @@ export default function VerifyAgePage() {
   const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
 
   return (
-    <div className="min-h-screen bg-gray-50 relative overflow-hidden">
-      {/* Background with gradient overlay */}
-      <div className="absolute inset-0 w-full h-full">
-        <div className="absolute inset-0 w-full h-full">
-          <div
-            className="absolute inset-0 w-full h-full"
-            style={{
-              backgroundImage: `url('data:image/svg+xml;utf8,<svg viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><rect x="0" y="0" height="100%" width="100%" fill="url(%23grad)" opacity="1"/><defs><radialGradient id="grad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="10" gradientTransform="matrix(72 45 -72 45 720 450)"><stop stop-color="rgba(168,85,247,0.1)" offset="0"/><stop stop-color="rgba(0,0,0,0)" offset="0.5"/></radialGradient></defs></svg>'), url('data:image/svg+xml;utf8,<svg viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><rect x="0" y="0" height="100%" width="100%" fill="url(%23grad)" opacity="1"/><defs><radialGradient id="grad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="10" gradientTransform="matrix(72 45 -72 45 720 450)"><stop stop-color="rgba(236,72,153,0.1)" offset="0"/><stop stop-color="rgba(0,0,0,0)" offset="0.5"/></radialGradient></defs></svg>')`,
+    <div 
+      className="min-h-screen relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg, rgba(250, 245, 255, 1) 0%, rgba(253, 242, 248, 1) 50%, rgba(255, 247, 237, 1) 100%)',
+      }}
+    >
+      {/* Background gradient overlays */}
+      <div 
+        className="absolute top-0 right-0 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full"
+        style={{
+          background: 'radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.1) 0%, rgba(0, 0, 0, 0) 50%)',
+          filter: 'blur(100px)',
+        }}
+      />
+      <div 
+        className="absolute bottom-0 left-0 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full"
+        style={{
+          background: 'radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.1) 0%, rgba(0, 0, 0, 0) 50%)',
+          filter: 'blur(100px)',
+        }}
+      />
+      
+      {/* Left side image placeholder */}
+      <div className="hidden lg:block absolute left-0 top-0 w-[649px] h-full">
+        <div className="absolute left-[70px] top-[89px]">
+          <h1 
+            className="text-5xl font-semibold leading-[72px]"
+            style={{ 
+              fontFamily: 'Inter, sans-serif',
+              background: 'linear-gradient(90deg, rgba(173, 70, 255, 1) 0%, rgba(227, 132, 255, 1) 50%, rgba(134, 93, 255, 1) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
             }}
           >
-            {/* Left side image placeholder */}
-            <div className="hidden lg:block absolute left-0 top-0 w-[649px] h-full bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-              <div className="absolute left-[70px] top-[89px]">
-                <h1 className="text-5xl font-semibold bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent leading-[72px]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Connect. Create. Earn
-                </h1>
-              </div>
-            </div>
-          </div>
+            Connect. Create. Earn
+          </h1>
         </div>
       </div>
 
@@ -147,10 +165,20 @@ export default function VerifyAgePage() {
           </div>
 
           {/* Form Card */}
-          <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-[14px] p-6 shadow-lg">
+          <div 
+            className="rounded-[14px] p-6"
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)',
+            }}
+          >
             <div className="mb-6">
               <div className="flex items-center justify-center gap-2 mb-4">
-                <Calendar className="w-5 h-5 text-[#9810fa]" />
+                <Calendar 
+                  className="w-5 h-5"
+                  style={{ color: '#9810FA' }}
+                />
               </div>
               <h3 className="text-[21px] font-normal text-[#101828] mb-2 leading-[16px] text-center" style={{ fontFamily: 'Inter, sans-serif' }}>
                 Verify Your Age
@@ -244,7 +272,16 @@ export default function VerifyAgePage() {
               <button
                 type="submit"
                 disabled={isSubmitting || !day || !month || !year}
-                className="w-full bg-gradient-to-r from-[#9810fa] to-[#e60076] text-white py-3 rounded-lg font-medium text-[20px] leading-[20px] flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 rounded-lg font-medium text-[20px] leading-[20px] flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                  color: '#FFFFFF',
+                  borderRadius: '8px',
+                  boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+                }}
                 style={{ fontFamily: 'Inter, sans-serif' }}
               >
                 {isSubmitting ? (

@@ -196,7 +196,15 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h2 className="text-2xl font-bold mb-4">User not found</h2>
-        <button onClick={() => router.back()} className="text-purple-600 hover:underline">Go Back</button>
+        <button 
+          onClick={() => router.back()} 
+          className="hover:underline transition-colors"
+          style={{ color: '#9810FA' }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#8200DB'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#9810FA'}
+        >
+          Go Back
+        </button>
       </div>
     );
   }
@@ -231,23 +239,52 @@ export default function ProfilePage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex min-h-[calc(100vh-65px)] bg-[#f9fafb]">
+      <div 
+        className="flex min-h-[calc(100vh-65px)]"
+        style={{ backgroundColor: '#F9FAFB' }}
+      >
         <Sidebar />
-        <div className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'} bg-gray-50`}>
+        <div 
+          className={`flex-1 ${userProfile?.role === 'creator' ? '' : 'ml-[276px]'}`}
+          style={{ backgroundColor: '#F9FAFB' }}
+        >
           {/* Banner */}
-          <div className="relative h-[240px] bg-gradient-to-br from-[#9810fa] via-[#e60076] to-[#f54900] overflow-hidden">
-            <div className="absolute inset-0 opacity-50 mix-blend-overlay">
-              <div className="w-full h-full bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500"></div>
-            </div>
+          <div 
+            className="relative h-[240px] overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+            }}
+          >
+            <div 
+              className="absolute inset-0 opacity-50 mix-blend-overlay"
+              style={{
+                background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+              }}
+            ></div>
           </div>
 
           <div className="max-w-6xl mx-auto px-6 pb-8 -mt-[80px] relative z-10">
             {/* Profile Header Card */}
-            <div className="bg-white/90 backdrop-blur-sm border border-[#e5e7eb] rounded-[20px] p-6 mb-8 shadow-sm">
+            <div 
+              className="rounded-[20px] p-6 mb-8"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(24px)',
+                border: '1px solid #E5E7EB',
+                borderRadius: '20px',
+                boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+              }}
+            >
               <div className="flex flex-col md:flex-row gap-6">
                 {/* Avatar */}
                 <div className="relative -mt-20 flex-shrink-0">
-                  <div className="w-[160px] h-[160px] rounded-full border-[6px] border-white shadow-lg overflow-hidden bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
+                  <div 
+                    className="w-[160px] h-[160px] rounded-full border-[6px] border-white shadow-lg overflow-hidden flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                      boxShadow: '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                    }}
+                  >
                     {targetUser.photoURL ? (
                       <Image 
                         src={targetUser.photoURL} 
@@ -271,7 +308,12 @@ export default function ProfilePage() {
                         <h1 className="text-[32px] leading-[40px] font-semibold text-[#101828]" style={{ fontFamily: 'Inter, sans-serif' }}>
                           {targetUser.displayName}
                         </h1>
-                        {creatorProfile && <Check className="w-6 h-6 text-[#9810fa] fill-current" />}
+                        {creatorProfile && (
+                          <Check 
+                            className="w-6 h-6 fill-current"
+                            style={{ color: '#9810FA' }}
+                          />
+                        )}
                       </div>
                       <p className="text-[18px] text-[#4a5565] mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>
                         @{targetUser.displayName.toLowerCase().replace(/\s/g, '')}
@@ -292,7 +334,16 @@ export default function ProfilePage() {
                           <span className="text-sm text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>Posts</span>
                         </div>
                          {creatorProfile?.categories?.[0] && (
-                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#fdf2f8] text-[#e60076]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                           <span 
+                             className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
+                             style={{ 
+                               fontFamily: 'Inter, sans-serif',
+                               fontSize: '12px',
+                               fontWeight: 600,
+                               backgroundColor: '#FDF2F8',
+                               color: '#E60076',
+                             }}
+                           >
                             {creatorProfile.categories[0]}
                           </span>
                          )}
@@ -305,16 +356,35 @@ export default function ProfilePage() {
                         <>
                           <Link
                             href="/settings"
-                            className="px-6 py-2.5 bg-white border border-[#d0d5dd] text-[#344054] text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
-                            style={{ fontFamily: 'Inter, sans-serif' }}
+                            className="px-6 py-2.5 rounded-lg transition-colors shadow-sm"
+                            style={{ 
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '14px',
+                              fontWeight: 600,
+                              backgroundColor: '#FFFFFF',
+                              border: '1px solid #D1D5DC',
+                              color: '#364153',
+                              boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                           >
                             Edit Profile
                           </Link>
                           {targetUser.role === 'creator' && (
                             <Link
                               href="/dashboard"
-                              className="flex items-center gap-2 px-6 py-2.5 bg-[#ad46ff] text-white text-sm font-semibold rounded-lg hover:bg-[#9235e6] transition-colors shadow-sm"
-                              style={{ fontFamily: 'Inter, sans-serif' }}
+                              className="flex items-center gap-2 px-6 py-2.5 rounded-lg transition-colors shadow-sm"
+                              style={{ 
+                                fontFamily: 'Inter, sans-serif',
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                background: 'linear-gradient(90deg, rgba(166, 195, 255, 1) 0%, rgba(134, 93, 255, 1) 100%)',
+                                color: '#FFFFFF',
+                                boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                             >
                               Add Post
                             </Link>
@@ -325,8 +395,21 @@ export default function ProfilePage() {
                           {targetUser.role === 'creator' && (
                             <button 
                               onClick={scrollToTiers}
-                              className={`px-6 py-2.5 ${isSubscribed ? 'bg-green-600' : 'bg-[#d926a9] hover:bg-[#b01e88]'} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm`} 
-                              style={{ fontFamily: 'Inter, sans-serif' }}
+                              className="px-6 py-2.5 rounded-lg transition-colors shadow-sm"
+                              style={{ 
+                                fontFamily: 'Inter, sans-serif',
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                backgroundColor: isSubscribed ? '#00C950' : '#E60076',
+                                color: '#FFFFFF',
+                                boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSubscribed) e.currentTarget.style.backgroundColor = '#B01E88';
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSubscribed) e.currentTarget.style.backgroundColor = '#E60076';
+                              }}
                             >
                               {isSubscribed ? 'Subscribed' : 'Subscribe'}
                             </button>
@@ -334,8 +417,22 @@ export default function ProfilePage() {
                           <button 
                             onClick={handleMessageClick}
                             disabled={isStartingChat}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#d0d5dd] text-[#344054] text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50"
-                            style={{ fontFamily: 'Inter, sans-serif' }}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                            style={{ 
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '14px',
+                              fontWeight: 600,
+                              backgroundColor: '#FFFFFF',
+                              border: '1px solid #D1D5DC',
+                              color: '#364153',
+                              boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isStartingChat) e.currentTarget.style.backgroundColor = '#F9FAFB';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isStartingChat) e.currentTarget.style.backgroundColor = '#FFFFFF';
+                            }}
                           >
                             {isStartingChat ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
                             Message
@@ -343,8 +440,18 @@ export default function ProfilePage() {
                           {targetUser.role === 'creator' && (
                             <button 
                               onClick={() => setIsTipOpen(true)}
-                              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#d0d5dd] text-[#344054] text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm" 
-                              style={{ fontFamily: 'Inter, sans-serif' }}
+                              className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors shadow-sm"
+                              style={{ 
+                                fontFamily: 'Inter, sans-serif',
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                backgroundColor: '#FFFFFF',
+                                border: '1px solid #D1D5DC',
+                                color: '#364153',
+                                boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                             >
                               <span className="w-4 h-4 flex items-center justify-center">🚀</span>
                               Tip
@@ -359,8 +466,24 @@ export default function ProfilePage() {
             </div>
 
             {/* Bio Section */}
-            <div className="bg-white border border-[#e5e7eb] rounded-[14px] p-6 mb-6">
-              <p className="text-base leading-6 font-normal text-[#364153] whitespace-pre-line" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div 
+              className="rounded-[14px] p-6 mb-6"
+              style={{
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E5E7EB',
+                borderRadius: '14px',
+              }}
+            >
+              <p 
+                className="whitespace-pre-line"
+                style={{ 
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '16px',
+                  fontWeight: 400,
+                  lineHeight: '24px',
+                  color: '#364153'
+                }}
+              >
                 {creatorProfile?.bio || `️‍♀️ Certified personal trainer & nutrition coach\n💪 Helping you transform your body and mindset\n🎯 Custom workout plans, meal prep guides, and daily motivation\n📍 Los Angeles, CA`}
               </p>
             </div>
@@ -368,34 +491,145 @@ export default function ProfilePage() {
             {/* Subscription Tiers - Only for Creators */}
             {targetUser.role === 'creator' && (
               <div className="mb-6" id="subscription-tiers">
-                <h2 className="text-2xl font-normal text-[#101828] mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <h2 
+                  className="mb-6"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '24px',
+                    fontWeight: 400,
+                    lineHeight: '32px',
+                    color: '#101828'
+                  }}
+                >
                   Subscription Tiers
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {tiersToDisplay.map((tier, index) => (
+                  {tiersToDisplay.map((tier, index) => {
+                    // Determine tier type based on index or name
+                    const isPremium = tier.name.toLowerCase() === 'premium' || index === 1;
+                    const isVIP = tier.name.toLowerCase() === 'vip' || tier.name.toLowerCase() === 'v.i.p.' || index === 2;
+                    const isBasic = tier.name.toLowerCase() === 'basic' || index === 0;
+                    
+                    // Icon gradient based on tier
+                    let iconGradient = '';
+                    if (isBasic) {
+                      iconGradient = 'linear-gradient(135deg, rgba(21, 93, 252, 1) 0%, rgba(0, 146, 184, 1) 100%)';
+                    } else if (isPremium) {
+                      iconGradient = 'linear-gradient(135deg, rgba(165, 193, 255, 1) 0%, rgba(134, 94, 254, 1) 100%)';
+                    } else {
+                      iconGradient = 'linear-gradient(135deg, rgba(245, 73, 0, 1) 0%, rgba(231, 0, 11, 1) 100%)';
+                    }
+                    
+                    return (
                     <div
                       key={index}
-                      className={`bg-white border rounded-[14px] p-6 relative border-[#e5e7eb]`}
+                      className="rounded-[14px] p-6 relative"
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: isPremium ? '2px solid #9810FA' : '1px solid #E5E7EB',
+                        borderRadius: '14px',
+                      }}
                     >
-                      <div className={`w-12 h-12 rounded-[14px] bg-gradient-to-br from-[#9810fa] to-[#e60076] flex items-center justify-center mb-4`}>
-                        <span className="text-2xl">✨</span>
+                      {/* POPULAR Badge for Premium */}
+                      {isPremium && (
+                        <div 
+                          className="absolute top-0 right-0"
+                          style={{
+                            background: 'linear-gradient(90deg, rgba(166, 195, 255, 1) 0%, rgba(134, 93, 255, 1) 100%)',
+                            borderRadius: '0px 14px 0px 10px',
+                            padding: '4px 12px',
+                          }}
+                        >
+                          <span 
+                            style={{
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '12px',
+                              fontWeight: 400,
+                              lineHeight: '16px',
+                              color: '#FFFFFF',
+                            }}
+                          >
+                            POPULAR
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Icon */}
+                      <div 
+                        className="w-12 h-12 rounded-[14px] flex items-center justify-center mb-4"
+                        style={{
+                          background: iconGradient,
+                        }}
+                      >
+                        <span 
+                          style={{
+                            fontFamily: 'Segoe UI Emoji',
+                            fontSize: '24px',
+                            fontWeight: 400,
+                            lineHeight: '32px',
+                          }}
+                        >
+                          ✨
+                        </span>
                       </div>
-                      <h3 className="text-base font-normal text-[#101828] mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                      
+                      {/* Tier Name */}
+                      <h3 
+                        className="mb-2"
+                        style={{ 
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '16px',
+                          fontWeight: 400,
+                          lineHeight: '16px',
+                          color: '#101828'
+                        }}
+                      >
                         {tier.name}
                       </h3>
+                      
+                      {/* Price */}
                       <div className="flex items-baseline gap-2 mb-4">
-                        <span className="text-[30px] leading-[36px] font-normal text-[#101828]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                        <span 
+                          style={{ 
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '30px',
+                            fontWeight: 400,
+                            lineHeight: '36px',
+                            color: '#101828'
+                          }}
+                        >
                           ${tier.price}
                         </span>
-                        <span className="text-base font-normal text-[#4a5565]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                        <span 
+                          style={{ 
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '16px',
+                            fontWeight: 400,
+                            color: '#4A5565'
+                          }}
+                        >
                           /month
                         </span>
                       </div>
+                      
+                      {/* Benefits List */}
                       <ul className="space-y-3 mb-6">
                         {tier.benefits?.map((benefit, idx) => (
                           <li key={idx} className="flex items-start gap-2">
-                            <Check className="w-5 h-5 text-[#9810fa] flex-shrink-0 mt-0.5" />
-                            <span className="text-sm font-normal text-[#364153]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                            <Check 
+                              className="w-5 h-5 flex-shrink-0 mt-0.5"
+                              style={{ color: '#00C950' }}
+                              strokeWidth={1.67}
+                            />
+                            <span 
+                              style={{ 
+                                fontFamily: 'Inter, sans-serif',
+                                fontSize: '14px',
+                                fontWeight: 400,
+                                lineHeight: '20px',
+                                color: '#364153'
+                              }}
+                            >
                               {benefit}
                             </span>
                           </li>
@@ -421,20 +655,78 @@ export default function ProfilePage() {
                           (tierPrice === currentPrice && currentTierIndex < activeTierIndex)
                         );
 
+                        // Button style based on tier and state
+                        let buttonStyle: React.CSSProperties = {
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          lineHeight: '20px',
+                          borderRadius: '8px',
+                          width: '100%',
+                          padding: '8px 0',
+                        };
+                        
+                        if (isActiveTier) {
+                          buttonStyle = {
+                            ...buttonStyle,
+                            backgroundColor: '#D1FAE5',
+                            color: '#00C950',
+                            border: '1px solid #A7F3D0',
+                            cursor: 'default',
+                          };
+                        } else if (isUpgrade) {
+                          buttonStyle = {
+                            ...buttonStyle,
+                            background: 'linear-gradient(90deg, rgba(166, 195, 255, 1) 0%, rgba(134, 93, 255, 1) 100%)',
+                            color: '#FFFFFF',
+                          };
+                        } else if (isLower) {
+                          buttonStyle = {
+                            ...buttonStyle,
+                            backgroundColor: '#F9FAFB',
+                            color: '#6A7282',
+                            border: '1px solid #E5E7EB',
+                            cursor: 'not-allowed',
+                            opacity: 0.5,
+                          };
+                        } else {
+                          // Default button style - Premium tier uses gradient, others use white
+                          if (isPremium) {
+                            buttonStyle = {
+                              ...buttonStyle,
+                              background: 'linear-gradient(90deg, rgba(166, 195, 255, 1) 0%, rgba(134, 93, 255, 1) 100%)',
+                              color: '#FFFFFF',
+                            };
+                          } else {
+                            buttonStyle = {
+                              ...buttonStyle,
+                              backgroundColor: '#FFFFFF',
+                              border: '1px solid rgba(0, 0, 0, 0.1)',
+                              color: '#0A0A0A',
+                            };
+                          }
+                        }
+
                         return (
                           <button
                             onClick={() => !isActiveTier && !isLower && handleSubscribe(tier)}
                             disabled={!!isSubscribing || isActiveTier || (isLower && !isUpgrade)}
-                            className={`w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
-                              isActiveTier 
-                                ? 'bg-green-50 text-green-700 border border-green-200 cursor-default'
-                                : isUpgrade
-                                ? 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm'
-                                : isLower
-                                ? 'bg-gray-50 text-gray-400 border border-gray-100 cursor-not-allowed opacity-50'
-                                : 'bg-white border border-[rgba(0,0,0,0.1)] text-[#0a0a0a] hover:bg-gray-50 disabled:opacity-50'
-                            }`}
-                            style={{ fontFamily: 'Inter, sans-serif' }}
+                            className="transition-colors"
+                            style={buttonStyle}
+                            onMouseEnter={(e) => {
+                              if (!isActiveTier && !isLower && !isUpgrade && !isPremium) {
+                                e.currentTarget.style.backgroundColor = '#F9FAFB';
+                              } else if (!isActiveTier && !isLower && !isUpgrade && isPremium) {
+                                e.currentTarget.style.opacity = '0.9';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isActiveTier && !isLower && !isUpgrade && !isPremium) {
+                                e.currentTarget.style.backgroundColor = '#FFFFFF';
+                              } else if (!isActiveTier && !isLower && !isUpgrade && isPremium) {
+                                e.currentTarget.style.opacity = '1';
+                              }
+                            }}
                           >
                             {isSubscribing === tier.name ? (
                               <Loader2 className="w-4 h-4 animate-spin mx-auto" />
@@ -451,7 +743,8 @@ export default function ProfilePage() {
                         );
                       })()}
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               </div>
             )}

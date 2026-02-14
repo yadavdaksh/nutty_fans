@@ -48,6 +48,13 @@ export async function POST(request: Request) {
           accountHolderName: bankDetails.accountHolderName,
           emails: [creatorProfile?.email || ''],
           country: bankDetails.country || 'US',
+          address: {
+            address1: bankDetails.addressLine1 || '123 Main St', // Fallback for legacy
+            city: bankDetails.city || 'New York',
+            region: bankDetails.region || 'NY',
+            postalCode: bankDetails.postalCode || '10001',
+            country: bankDetails.country || 'US',
+          }
         });
 
         // Save recipient ID to creator profile for future use

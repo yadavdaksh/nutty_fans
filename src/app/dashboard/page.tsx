@@ -126,8 +126,14 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-[#f9fafb] flex items-center justify-center">
-          <Loader2 className="w-10 h-10 animate-spin text-purple-600" />
+        <div 
+          className="min-h-screen flex items-center justify-center"
+          style={{ backgroundColor: '#F9FAFB' }}
+        >
+          <Loader2 
+            className="w-10 h-10 animate-spin"
+            style={{ color: '#9810FA' }}
+          />
         </div>
       </ProtectedRoute>
     );
@@ -137,7 +143,10 @@ export default function DashboardPage() {
   if (userProfile?.role !== 'creator') {
     return (
       <ProtectedRoute>
-        <div className="flex min-h-screen bg-[#f9fafb]">
+        <div 
+          className="flex min-h-screen"
+          style={{ backgroundColor: '#F9FAFB' }}
+        >
           <Sidebar />
           <div className="flex-1">
             <div className="px-8 py-10 max-w-4xl mx-auto">
@@ -155,7 +164,17 @@ export default function DashboardPage() {
                 </div>
                  <Link
                   href="/onboarding/creator"
-                  className="bg-white border border-gray-200 text-[#344054] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  className="px-4 py-2 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E5E7EB',
+                    color: '#364153',
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                 >
                   <Sparkles className="w-4 h-4 text-purple-600" />
                   Become a Creator
@@ -165,21 +184,63 @@ export default function DashboardPage() {
               {/* Feed Content */}
               {feedLoading ? (
                 <div className="flex justify-center py-20">
-                  <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                  <Loader2 
+                    className="w-8 h-8 animate-spin"
+                    style={{ color: '#9810FA' }}
+                  />
                 </div>
               ) : feedPosts.length === 0 ? (
-                <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center">
-                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                     <Users className="w-8 h-8 text-gray-400" />
+                <div 
+                  className="rounded-2xl p-12 text-center"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E5E7EB',
+                  }}
+                >
+                   <div 
+                     className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                     style={{ backgroundColor: '#F9FAFB' }}
+                   >
+                     <Users 
+                       className="w-8 h-8"
+                       style={{ color: '#6A7282' }}
+                     />
                    </div>
-                   <h3 className="text-lg font-bold text-[#101828] mb-2">No posts found</h3>
-                   <p className="text-[#475467] mb-6">
+                   <h3 
+                     className="text-lg font-bold mb-2"
+                     style={{
+                       fontFamily: 'Inter, sans-serif',
+                       fontSize: '18px',
+                       fontWeight: 700,
+                       color: '#101828'
+                     }}
+                   >
+                     No posts found
+                   </h3>
+                   <p 
+                     className="mb-6"
+                     style={{
+                       fontFamily: 'Inter, sans-serif',
+                       fontSize: '14px',
+                       color: '#4A5565'
+                     }}
+                   >
                      {isGlobalFeed ? "Check back later for new content." : "Subscribe to creators to see their posts here!"}
                    </p>
                    {!isGlobalFeed && (
                      <Link
                       href="/discover"
-                      className="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-purple-700 transition-colors"
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-colors"
+                      style={{
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                        color: '#FFFFFF',
+                        borderRadius: '12px',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                     >
                       Browse Creators
                     </Link>

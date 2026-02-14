@@ -60,7 +60,7 @@ export default function VerificationQueue() {
           photoURL: userData.photoURL,
           bio: userData.bio,
           verificationStatus: userData.verificationStatus,
-          creatorDetails: creatorSnap.exists() ? creatorSnap.data() : null
+          creatorDetails: creatorSnap.exists() ? (creatorSnap.data() as CreatorProfile) : null
         });
       }
 

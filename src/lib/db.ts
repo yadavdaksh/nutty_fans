@@ -774,6 +774,10 @@ export interface BankDetails {
   iban?: string;
   swiftCode?: string;
   country: string;
+  addressLine1?: string;
+  city?: string;
+  region?: string; // State/Province
+  postalCode?: string;
 }
 
 export interface PayoutRequest {
