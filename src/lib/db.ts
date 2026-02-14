@@ -912,6 +912,24 @@ export const getPayoutRequests = async (status?: PayoutRequest['status']) => {
   } as PayoutRequest));
 };
 
+export const getCreatorPayoutRequests = async (userId: string) => {
+  const payoutRef = collection(db, 'payout_requests');
+  const q = query(
+    payoutRef, 
+    where('userId', '==', userId)
+  );
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  } as PayoutRequest)).sort((a, b) => {
+    const aTime = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : 0;
+    const bTime = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : 0;
+    return bTime - aTime;
+  });
+};
+
 export const updatePayoutRequestStatus = async (payoutId: string, status: PayoutRequest['status'], notes?: string) => {
   const payoutRef = doc(db, 'payout_requests', payoutId);
   

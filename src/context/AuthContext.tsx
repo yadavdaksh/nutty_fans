@@ -65,12 +65,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        // Set info for middleware
-        Cookies.set('session_token', await user.getIdToken(), { expires: 7 }); 
+        // Set info for middleware with explicit path and sameSite
+        Cookies.set('session_token', await user.getIdToken(), { 
+          expires: 7, 
+          path: '/',
+          sameSite: 'Lax',
+          secure: true
+        }); 
         await fetchProfile(user.uid);
       } else {
-        Cookies.remove('session_token');
-        Cookies.remove('is_admin');
+        Cookies.remove('session_token', { path: '/' });
+        Cookies.remove('is_admin', { path: '/' });
+        Cookies.remove('onboarding_completed', { path: '/' });
+        Cookies.remove('user_role', { path: '/' });
         setUserProfile(null);
       }
       setLoading(false);

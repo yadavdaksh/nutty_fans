@@ -1,22 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, Filter, Check, Loader2, UserCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCreators } from '@/hooks/useCreators';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 
 export default function DiscoverPage() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const category = searchParams.get('category');
   const { creators, loading, error } = useCreators();
   const { subscriptions } = useSubscriptions(user?.uid);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/');
+    }
+  }, [user, authLoading, router]);
 
   const filteredCreators = creators.filter(c => {
     const matchesCategory = !category || c.categories.some(cat => cat.toLowerCase() === category.toLowerCase());

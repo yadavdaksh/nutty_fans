@@ -92,6 +92,32 @@ export default function VerifyAgePage() {
     }
   };
 
+  const handleSkip = async () => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      if (user) {
+        await createUserProfile(user.uid, {
+          email: user.email || '',
+          displayName: user.displayName || '',
+          photoURL: user.photoURL || '',
+          isAgeVerified: true,
+        });
+        
+        // Refresh the profile in context
+        await refreshProfile();
+      }
+      
+      router.push('/onboarding');
+    } catch (err: unknown) {
+      console.error('Age verification skip error:', err);
+      setError('Failed to skip verification. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const months = [
     { value: '1', label: 'January' },
@@ -291,6 +317,20 @@ export default function VerifyAgePage() {
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSkip}
+                disabled={isSubmitting}
+                className="w-full py-3 rounded-lg font-medium text-[14px] flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors border border-gray-200 mt-2"
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#4A5565',
+                  borderRadius: '8px',
+                }}
+              >
+                Skip Age Verification
               </button>
             </form>
 

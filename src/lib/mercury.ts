@@ -24,18 +24,31 @@ async function getMercuryAccount() {
     return process.env.MERCURY_ACCOUNT_ID;
   }
 
+  const apiKey = (process.env.MERCURY_API_KEY || '').trim();
+  const authHeader = `Bearer ${apiKey}`;
+
+  console.log(`[Mercury Debug] getMercuryAccount URL: ${MERCURY_API_BASE}accounts`);
+  
   // Fetch accounts if ID is not in env
   const response = await fetch(`${MERCURY_API_BASE}accounts`, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${process.env.MERCURY_API_KEY}`,
+      'Authorization': authHeader,
       'Accept': 'application/json',
     },
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to fetch Mercury accounts: ${error.message || response.statusText}`);
+    let errorDetail = '';
+    try {
+      const errorJson = await response.json();
+      errorDetail = JSON.stringify(errorJson);
+    } catch {
+      errorDetail = await response.text();
+    }
+    console.error(`[Mercury Debug] getMercuryAccount Status: ${response.status}`);
+    console.error(`[Mercury Debug] getMercuryAccount Error: ${errorDetail}`);
+    throw new Error(`Failed to fetch Mercury accounts: ${response.status} ${errorDetail || response.statusText}`);
   }
 
   const data = await response.json();
@@ -49,10 +62,17 @@ async function getMercuryAccount() {
 }
 
 export async function createMercuryRecipient(bankDetails: MercuryBankDetails) {
+  const apiKey = (process.env.MERCURY_API_KEY || '').trim();
+  const authHeader = `Bearer ${apiKey}`;
+  
+  console.log(`[Mercury Debug] URL: ${MERCURY_API_BASE}recipients`);
+  console.log(`[Mercury Debug] Auth Header Prefix: ${authHeader.substring(0, 20)}...`);
+  console.log(`[Mercury Debug] API Key Length: ${apiKey.length}`);
+
   const response = await fetch(`${MERCURY_API_BASE}recipients`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${process.env.MERCURY_API_KEY}`,
+      'Authorization': authHeader,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
@@ -76,11 +96,22 @@ export async function createMercuryRecipient(bankDetails: MercuryBankDetails) {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Mercury Recipient Error: ${error.message || response.statusText}`);
+    let errorDetail = '';
+    try {
+      const errorJson = await response.json();
+      errorDetail = JSON.stringify(errorJson);
+    } catch {
+      errorDetail = await response.text();
+    }
+    
+    console.error(`[Mercury Debug] Status: ${response.status} ${response.statusText}`);
+    console.error(`[Mercury Debug] Error Body: ${errorDetail}`);
+    
+    throw new Error(`Mercury Recipient Error: ${response.status} ${errorDetail || response.statusText}`);
   }
 
   const data = await response.json();
+  console.log(`[Mercury Debug] Successfully created recipient: ${data.id}`);
   return data.id; // Return the recipient ID
 }
 
@@ -93,10 +124,15 @@ export async function triggerMercuryPayout(
   const amountInDollars = amountInCents / 100;
   const accountId = await getMercuryAccount();
 
+  const apiKey = (process.env.MERCURY_API_KEY || '').trim();
+  const authHeader = `Bearer ${apiKey}`;
+
+  console.log(`[Mercury Debug] triggerMercuryPayout URL: ${MERCURY_API_BASE}account/${accountId}/transactions`);
+
   const response = await fetch(`${MERCURY_API_BASE}account/${accountId}/transactions`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${process.env.MERCURY_API_KEY}`,
+      'Authorization': authHeader,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },

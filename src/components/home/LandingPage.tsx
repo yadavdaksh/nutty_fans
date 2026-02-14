@@ -12,10 +12,30 @@ import {
   Check
 } from 'lucide-react';
 import { useCreators } from '@/hooks/useCreators';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 
 export default function LandingPage() {
   const { creators, loading } = useCreators();
+  const { user } = useAuth();
+  const router = useRouter();
   const topCreators = creators.slice(0, 6);
+
+  const handleProtectedAction = (path: string) => {
+    if (!user) {
+      toast.error('Please sign in to explore our creators!', {
+        icon: '🔒',
+        style: {
+          borderRadius: '12px',
+          background: '#101828',
+          color: '#fff',
+        },
+      });
+      return;
+    }
+    router.push(path);
+  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FFFFFF', fontFamily: 'Inter, sans-serif' }}>
@@ -122,8 +142,8 @@ export default function LandingPage() {
                 Become a Creator
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link
-                href="/discover"
+              <button
+                onClick={() => handleProtectedAction('/discover')}
                 className="inline-flex items-center px-6 py-3 rounded-full border-2 hover:border-purple-500 hover:text-purple-600 transition-colors"
                 style={{ 
                   fontFamily: 'Inter, sans-serif',
@@ -136,7 +156,7 @@ export default function LandingPage() {
                 }}
               >
                 Explore Creators
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -333,10 +353,10 @@ export default function LandingPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
               {topCreators.map((creator) => (
-                <Link 
+                <div 
                   key={creator.userId} 
-                  href={`/profile/${creator.userId}`}
-                  className="bg-white border border-gray-200 rounded-[14px] overflow-hidden hover:shadow-xl transition-all group relative"
+                  onClick={() => handleProtectedAction(`/profile/${creator.userId}`)}
+                  className="bg-white border border-gray-200 rounded-[14px] overflow-hidden hover:shadow-xl transition-all group relative cursor-pointer"
                 >
                   {/* Gradient banner */}
                   <div 
@@ -445,14 +465,14 @@ export default function LandingPage() {
                       </div>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
 
           <div className="text-center">
-            <Link
-              href="/discover"
+            <button
+              onClick={() => handleProtectedAction('/discover')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-full border-2 hover:border-purple-500 hover:text-purple-600 transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
@@ -466,7 +486,7 @@ export default function LandingPage() {
             >
               View All Creators
               <ArrowRight className="w-4 h-4" />
-            </Link>
+            </button>
           </div>
         </div>
       </section>
@@ -743,8 +763,8 @@ export default function LandingPage() {
               Get Started for Free
               <ArrowRight className="w-5 h-5" />
             </Link>
-            <Link 
-              href="/discover" 
+            <button 
+              onClick={() => handleProtectedAction('/discover')}
               className="transition-colors"
               style={{ 
                 fontFamily: 'Inter, sans-serif',
@@ -754,7 +774,7 @@ export default function LandingPage() {
               }}
             >
               Explore Discover Feed
-            </Link>
+            </button>
           </div>
         </div>
       </section>

@@ -3,10 +3,25 @@ import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
   const session = request.cookies.get('session_token');
+  const hasSession = !!session?.value;
   const { pathname } = request.nextUrl;
 
   // Routes that require authentication
-  const protectedRoutes = ['/admin', '/dashboard', '/verify-otp', '/verify-age', '/onboarding', '/profile', '/messages', '/content'];
+  const protectedRoutes = [
+    '/admin', 
+    '/dashboard', 
+    '/verify-otp', 
+    '/verify-age', 
+    '/onboarding', 
+    '/profile', 
+    '/messages', 
+    '/content',
+    '/discover',
+    '/live',
+    '/subscription',
+    '/wallet',
+    '/settings'
+  ];
   
   // Routes that are for guests only (redirect to dashboard if logged in)
   const authRoutes = ['/login', '/signup'];
@@ -15,7 +30,7 @@ export function proxy(request: NextRequest) {
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
 
   // If trying to access protected route without session
-  if (isProtectedRoute && !session) {
+  if (isProtectedRoute && !hasSession) {
     const loginUrl = new URL('/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
@@ -23,13 +38,13 @@ export function proxy(request: NextRequest) {
   // Admin route protection
   if (pathname.startsWith('/admin')) {
     const isAdmin = request.cookies.get('is_admin');
-    if (!session || !isAdmin) {
+    if (!hasSession || !isAdmin) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
 
   // If trying to access auth routes while logged in
-  if (isAuthRoute && session) {
+  if (isAuthRoute && hasSession) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
