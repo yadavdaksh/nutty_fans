@@ -46,20 +46,7 @@ export default function GoLivePage() {
     const room = `stream-${user.uid}-${Date.now()}`;
 
     try {
-      const idToken = await user.getIdToken();
-      const resp = await fetch(
-        `/api/livekit/auth?room=${room}&participantName=${encodeURIComponent(user.displayName)}&mode=publisher`,
-        {
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        }
-      );
-      const data = await resp.json();
-      setToken(data.token);
-      setRoomName(room);
-
-      // Create stream document in Firestore
+      // 1. Create stream document in Firestore FIRST
       await setDoc(doc(db, 'streams', user.uid), {
         id: room,
         creatorId: user.uid,
@@ -74,6 +61,24 @@ export default function GoLivePage() {
         startedAt: new Date()
       });
 
+      // 2. Then Get Token
+      const idToken = await user.getIdToken();
+      const resp = await fetch(
+        `/api/livekit/auth?room=${room}&participantName=${encodeURIComponent(user.displayName)}&mode=publisher`,
+        {
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          }
+        }
+      );
+      
+      if (!resp.ok) {
+        throw new Error(`Auth failed: ${resp.statusText}`);
+      }
+
+      const data = await resp.json();
+      setToken(data.token);
+      setRoomName(room);
       setIsLive(true);
     } catch (e) {
       console.error(e);

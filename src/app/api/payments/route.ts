@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { squareClient } from '@/lib/square';
-import { addFunds, getUserProfile, updateUserProfile, getCreatorProfile } from '@/lib/db'; 
+import { addFunds, getUserProfile, updateUserProfile, getCreatorProfile, createStreamPurchase } from '@/lib/db'; 
+
+// ... (existing code handles imports)
+
+ 
 
 import { verifyAuth } from '@/lib/api-auth';
 

@@ -10,8 +10,9 @@ interface SquarePaymentFormProps {
   creatorId: string;
   tierId: string;
   creatorName: string;
-  type?: 'subscription' | 'recharge'; // Default to subscription
+  type?: 'subscription' | 'recharge' | 'stream_access'; // Default to subscription
   discountId?: string;
+  streamId?: string;
   onSuccess: (result: unknown) => Promise<void>;
   onCancel?: () => void;
 }
@@ -24,6 +25,7 @@ export default function SquarePaymentForm({
   creatorName, 
   type = 'subscription', 
   discountId,
+  streamId,
   onSuccess, 
   onCancel 
 }: SquarePaymentFormProps) {
@@ -59,7 +61,8 @@ export default function SquarePaymentForm({
                 creatorId,
                 tierId,
                 type, 
-                discountId
+                discountId,
+                streamId
             };
 
             const response = await fetch(endpoint, {

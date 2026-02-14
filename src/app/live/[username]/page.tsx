@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react';
 import LiveChat from '@/components/LiveChat'; // Custom Chat Component
 import Image from 'next/image';
 import { Track } from 'livekit-client';
+import StreamPurchaseModal from '@/components/modals/StreamPurchaseModal';
 
 interface StreamWithCreator extends Stream {
   creator?: UserProfile;
@@ -32,6 +33,7 @@ export default function ViewerPage() {
   const [token, setToken] = useState('');
   const [streamData, setStreamData] = useState<StreamWithCreator | null>(null);
   const [error, setError] = useState('');
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   
   // Custom hook to check access permissions
   const { hasAccess, loading: accessLoading } = useStreamAccess(streamData);
@@ -181,10 +183,27 @@ export default function ViewerPage() {
                 <>
                     <p className="text-gray-400 mb-6">Purchase a ticket to watch this stream.</p>
                     <div className="text-green-400 text-3xl font-bold mb-6">${streamData.price?.toFixed(2)}</div>
-                    <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full transition-colors w-full flex items-center justify-center gap-2 mb-4">
+
+                    <button 
+                        onClick={() => setShowPurchaseModal(true)}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full transition-colors w-full flex items-center justify-center gap-2 mb-4"
+                    >
                         <CreditCard className="w-4 h-4" />
                         Purchase Access
                     </button>
+                    
+                    {streamData && (
+                      <StreamPurchaseModal 
+                        isOpen={showPurchaseModal}
+                        onClose={() => setShowPurchaseModal(false)}
+                        streamData={streamData}
+                        creatorName={streamData.creator?.displayName || 'Creator'}
+                        onSuccess={() => {
+                           setShowPurchaseModal(false);
+                           window.location.reload(); // Simple reload to re-run access checks
+                        }}
+                      />
+                    )}
                 </>
             )}
 

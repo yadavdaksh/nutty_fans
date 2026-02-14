@@ -468,6 +468,57 @@ export const createSubscription = async (
 };
 
 /**
+ * Records a one-time purchase for stream access.
+ */
+export const createStreamPurchase = async (
+  userId: string,
+  creatorId: string,
+  streamId: string,
+  amount: number, // in dollars
+  paymentId: string
+) => {
+  const purchaseId = `${userId}_${streamId}`;
+  const purchaseRef = doc(db, 'stream_purchases', purchaseId);
+
+  await setDoc(purchaseRef, {
+    userId,
+    creatorId,
+    streamId,
+    amount,
+    purchasedAt: serverTimestamp(),
+    paymentId
+  });
+
+  // Also update total earnings for the stream session
+  const streamRef = doc(db, 'streams', streamId); // streamId is usually roomId or creatorId based on implementation
+  // However, in go-live we set doc ID as creatorId but field id as room name. 
+  // Let's assume we pass the Room Name (stream.id) as streamId here, but we need to find the doc.
+  // Actually, wait. In go-live: setDoc(doc(db, 'streams', user.uid)... id: room ...
+  // So the doc ID is creatorId. 
+  // But wait, if multiple streams happen, we overwrite the doc? 
+  // Yes, 'streams' seems to be "Active Stream Profile". 
+  // So we should update doc(db, 'streams', creatorId).
+  
+  // But streamId passed here might be the specific room ID (e.g. stream-uid-timestamp).
+  // So let's query to be safe or just update the active one if it matches.
+  
+  // For MVP simplification: We will try to update the creator's active stream doc if it matches.
+  const streamDocRef = doc(db, 'streams', creatorId);
+  try {
+     const snap = await getDoc(streamDocRef);
+     if (snap.exists() && snap.data().id === streamId) {
+        await updateDoc(streamDocRef, {
+            totalEarnings: increment(amount * 100)
+        });
+     }
+  } catch (e) {
+    console.error("Error updating stream earnings:", e);
+  }
+
+  return purchaseId;
+};
+
+/**
  * Cancels a subscription immediately by setting status to 'cancelled'.
  */
 export const cancelSubscription = async (subscriptionId: string) => {
@@ -1221,5 +1272,157 @@ export const recordStreamEarning = async (creatorId: string, amount: number) => 
   const streamRef = doc(db, 'streams', creatorId);
   await updateDoc(streamRef, {
     totalEarnings: increment(amount)
+  });
+};
+
+/**
+ * Atomic transaction for purchasing stream access via wallet.
+ * Deducts funds, credits creator/admin, records purchase, and updates API stats.
+ */
+export const purchaseStreamAccess = async (
+  userId: string,
+  creatorId: string,
+  streamId: string, // This is the Room ID (e.g. stream-uid-timestamp)
+  amount: number // in dollars
+) => {
+  if (amount <= 0) throw new Error("Amount must be greater than zero");
+  
+  const userRef = doc(db, 'users', userId);
+  const creatorRef = doc(db, 'users', creatorId);
+  const adminRef = doc(db, 'platform', 'finances');
+  
+  // Stream Purchase Record
+  const purchaseId = `${userId}_${streamId}`;
+  const purchaseRef = doc(db, 'stream_purchases', purchaseId);
+
+  // Active Stream Doc (for total earnings)
+  // We try to find the active stream doc for this creator. 
+  // In `go-live`, the doc ID is `creatorId`.
+  const streamDocRef = doc(db, 'streams', creatorId);
+
+  return await runTransaction(db, async (transaction) => {
+    // 1. Reads
+    const userDoc = await transaction.get(userRef);
+    const creatorDoc = await transaction.get(creatorRef);
+    const adminDoc = await transaction.get(adminRef);
+    const purchaseDoc = await transaction.get(purchaseRef);
+    const streamDoc = await transaction.get(streamDocRef); // Moved here
+
+    if (!userDoc.exists()) throw new Error("User not found");
+    if (!creatorDoc.exists()) throw new Error("Creator not found");
+    // Check if already purchased
+    if (purchaseDoc.exists()) {
+       // Already purchased, just return
+       return purchaseId;
+    }
+
+    const currentBalance = userDoc.data().walletBalance || 0;
+    const amountCents = Math.round(amount * 100);
+
+    if (currentBalance < amountCents) {
+       throw new Error("Insufficient funds");
+    }
+
+    // 2. Financial Logic (Split)
+    const adminShare = Math.floor((amountCents * PLATFORM_COMMISSION_PERCENT) / 100);
+    const creatorShare = amountCents - adminShare;
+
+    // 3. Writes
+
+    // A. User Debit
+    transaction.update(userRef, { walletBalance: currentBalance - amountCents });
+
+    // B. Creator Credit
+    const creatorBalance = creatorDoc.data().walletBalance || 0;
+    transaction.update(creatorRef, { walletBalance: creatorBalance + creatorShare });
+
+    // C. Admin Credit
+    const adminBalance = adminDoc.exists() ? (adminDoc.data()?.walletBalance || 0) : 0;
+    if (!adminDoc.exists()) {
+      transaction.set(adminRef, { walletBalance: adminShare, lastUpdated: serverTimestamp() });
+    } else {
+      transaction.update(adminRef, { walletBalance: adminBalance + adminShare });
+    }
+
+    // D. Stream Purchase Record
+    transaction.set(purchaseRef, {
+      userId,
+      creatorId,
+      streamId,
+      amount, // Record in dollars for consistency with other functional interfaces if needed, or stick to schema
+      price: amount,
+      purchasedAt: serverTimestamp(),
+      paymentMethod: 'wallet',
+      status: 'completed'
+    });
+
+    // E. Wallet Transactions
+    const txCollectionRef = collection(db, 'wallet_transactions');
+    
+    // Debit Log
+    const debitTxRef = doc(txCollectionRef);
+    transaction.set(debitTxRef, {
+       userId,
+       type: 'debit',
+       amount: amountCents,
+       description: 'Stream Access Purchase',
+       metadata: { streamId, creatorId, type: 'stream_access' },
+       timestamp: serverTimestamp()
+    });
+
+    // Credit Log
+    const creditTxRef = doc(txCollectionRef);
+    transaction.set(creditTxRef, {
+       userId: creatorId,
+       type: 'credit',
+       amount: amountCents, // Gross
+       description: 'Stream Ticket Sale',
+       metadata: { streamId, senderId: userId, type: 'earning' },
+       timestamp: serverTimestamp()
+    });
+
+    // Fee Log
+    const feeTxRef = doc(txCollectionRef);
+    transaction.set(feeTxRef, {
+       userId: creatorId,
+       type: 'debit',
+       amount: adminShare,
+       description: 'Platform Fee (20%) - Stream Ticket',
+       metadata: { streamId, type: 'platform_fee' },
+       timestamp: serverTimestamp()
+    });
+
+    // Admin Log
+    const adminTxRef = doc(txCollectionRef);
+    transaction.set(adminTxRef, {
+       userId: ADMIN_WALLET_ID,
+       type: 'credit',
+       amount: adminShare,
+       description: 'Commission: Stream Ticket',
+       metadata: { streamId, creatorId },
+       timestamp: serverTimestamp()
+    });
+
+    // F. Update Stream Stats (Best Effort inside transaction)
+    // We only update if the doc exists and matches our streamId (Room ID)
+    // Actually, `go-live` sets `id` field to `room`.
+    if (streamDoc.exists() && streamDoc.data().id === streamId) {
+       transaction.update(streamDocRef, {
+         totalEarnings: increment(amountCents)
+       });
+    }
+
+    // G. Notification
+    const notifRef = doc(collection(db, 'notifications'));
+    transaction.set(notifRef, {
+       id: notifRef.id,
+       userId: creatorId,
+       type: 'tip', // Reuse 'tip' type for generic earnings or add 'stream_purchase'
+       title: 'New Ticket Sale',
+       message: `${userDoc.data().displayName || 'Someone'} bought a ticket to your stream!`,
+       amount: creatorShare,
+       isRead: false,
+       createdAt: serverTimestamp()
+    });
   });
 };

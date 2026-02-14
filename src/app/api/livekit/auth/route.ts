@@ -18,13 +18,14 @@ export async function GET(req: NextRequest) {
 
     // 2. [SECURITY] Stream Access Verification
     // Fetch stream details from Firestore using Admin SDK
-    const streamSnap = await adminDb.collection('streams').doc(room).get();
+    // Note: Stream docs are keyed by creatorId, but we look up by room ID
+    const streamQuery = await adminDb.collection('streams').where('id', '==', room).limit(1).get();
     
-    if (!streamSnap.exists) {
+    if (streamQuery.empty) {
       return NextResponse.json({ error: 'Stream not found' }, { status: 404 });
     }
 
-    const streamData = streamSnap.data();
+    const streamData = streamQuery.docs[0].data();
     if (!streamData?.isActive) {
       return NextResponse.json({ error: 'Stream is offline' }, { status: 403 });
     }
