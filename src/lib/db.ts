@@ -255,6 +255,7 @@ export const createSubscription = async (
   const subRef = doc(db, 'subscriptions', subId) as DocumentReference<Subscription>;
   const creatorRef = doc(db, 'creators', creatorId) as DocumentReference<CreatorProfile>;
   const creatorUserRef = doc(db, 'users', creatorId) as DocumentReference<UserProfile>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adminRef = doc(db, 'platform', 'finances') as DocumentReference<{ walletBalance: number; lastUpdated?: any }>;
 
   // 1. If couponCode provided, find the coupon document first

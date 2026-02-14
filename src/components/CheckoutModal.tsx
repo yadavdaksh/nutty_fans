@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { X, Ticket, Check, Loader2, Sparkles, CreditCard, ChevronLeft } from 'lucide-react';
-import { Coupon } from '@/lib/db';
 import SquarePaymentForm from './SquarePaymentForm';
 import { useAuth } from '@/context/AuthContext';
 
@@ -76,13 +75,7 @@ export default function CheckoutModal({ isOpen, onClose, tier, onConfirm, creato
     }
   };
 
-  interface CheckoutModalProps {
-    // ...
-    onConfirm: (finalPrice: string, couponCode?: string, subscriptionId?: string) => Promise<void>;
-    // ...
-  }
 
-  // ...
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handlePaymentSuccess = async (result: any) => {

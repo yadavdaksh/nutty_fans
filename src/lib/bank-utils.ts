@@ -21,8 +21,8 @@ export const validateIBAN = (iban: string): boolean => {
 
   // Perform modulo 97 (using BigInt for large numbers)
   try {
-    return BigInt(numeric) % 97n === 1n;
-  } catch (e) {
+    return BigInt(numeric) % BigInt(97) === BigInt(1);
+  } catch {
     return false;
   }
 };

@@ -507,7 +507,6 @@ export default function ProfilePage() {
                   {tiersToDisplay.map((tier, index) => {
                     // Determine tier type based on index or name
                     const isPremium = tier.name.toLowerCase() === 'premium' || index === 1;
-                    const isVIP = tier.name.toLowerCase() === 'vip' || tier.name.toLowerCase() === 'v.i.p.' || index === 2;
                     const isBasic = tier.name.toLowerCase() === 'basic' || index === 0;
                     
                     // Icon gradient based on tier

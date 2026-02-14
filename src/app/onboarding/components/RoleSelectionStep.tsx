@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { User, Crown, Check, Heart, ShieldCheck } from 'lucide-react';
+import React from 'react';
+import { User, Crown, Check, Heart } from 'lucide-react';
 import { Role } from '../onboarding.types';
-import TermsModal from '@/components/modals/TermsModal';
 
 interface RoleSelectionStepProps {
   role: Role | null;

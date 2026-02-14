@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { WebhooksHelper } from 'square';
 import { db, addFunds } from '@/lib/db';
 import { collection, query, where, getDocs, updateDoc, Timestamp, doc } from 'firebase/firestore';
 
@@ -10,7 +9,7 @@ export async function POST(request: Request) {
   try {
     const bodyText = await request.text();
     const signature = request.headers.get('x-square-hmacsha256-signature');
-    const url = process.env.NEXT_PUBLIC_APP_URL + '/api/webhooks/square'; // e.g. https://.../api/webhooks/square
+    // const url = process.env.NEXT_PUBLIC_APP_URL + '/api/webhooks/square';
 
     // 1. Verify Signature (Skip in dev if strictly needed, but better to have)
     if (SIGNATURE_KEY && signature) {
@@ -38,11 +37,11 @@ export async function POST(request: Request) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handleInvoicePaymentMade(invoice: any) {
   const subscriptionId = invoice.subscription_id;
   if (!subscriptionId) return;
 
-  const paymentId = invoice.payment_requests?.[0]?.computed_amount_money?.amount ? invoice.payment_requests[0].uid : 'unknown';
   const amountMoney = invoice.payment_requests?.[0]?.computed_amount_money; // The paid amount
   
   if (!amountMoney) return;
@@ -95,6 +94,7 @@ async function handleInvoicePaymentMade(invoice: any) {
   });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handleSubscriptionUpdated(subscription: any) {
   // Check if canceled
   if (subscription.status === 'CANCELED') {

@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
     const creatorDisplayName = userProfile.displayName || 'Creator';
 
-    // Process each tier to ensure it has a Square Plan ID
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updatedTiers = await Promise.all(tiers.map(async (tier: any) => {
       // If we already have a plan ID and the price hasn't changed (complex to check), we could skip.
       // But simplifying: We always 'get or create' based on Name + Price key.

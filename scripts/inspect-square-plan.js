@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const https = require('https');
 
 const token = process.env.SQUARE_ACCESS_TOKEN;

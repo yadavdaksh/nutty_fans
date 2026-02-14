@@ -16,7 +16,6 @@ import { useEffect, useState } from 'react';
 import { 
   Upload,
   MessageSquare,
-  BarChart3,
   DollarSign,
   Users,
   Eye,
@@ -28,7 +27,6 @@ import {
   X,
   CreditCard,
   AlertCircle,
-  Mail,
   Settings
 } from 'lucide-react';
 import Link from 'next/link';

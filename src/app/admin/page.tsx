@@ -18,7 +18,6 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { startOfMonth, subMonths, endOfMonth } from 'date-fns';
-import { toast } from 'react-hot-toast';
 
 interface SystemActivity {
   text: string;

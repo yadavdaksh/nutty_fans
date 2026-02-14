@@ -160,21 +160,21 @@ export default function LoginPage() {
                       backgroundColor: '#FFFFFF',
                       color: '#101828',
                     }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#9810FA';
-                      e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = '#D1D5DC';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
                     {...register('email', {
                       required: 'Email is required',
                       pattern: {
                         value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                         message: 'Invalid email address',
                       },
+                      onBlur: (e) => {
+                        e.currentTarget.style.borderColor = '#D1D5DC';
+                        e.currentTarget.style.boxShadow = 'none';
+                      },
                     })}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#9810FA';
+                      e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
+                    }}
                   />
                 </div>
                 {errors.email && (
@@ -221,17 +221,17 @@ export default function LoginPage() {
                       backgroundColor: '#FFFFFF',
                       color: '#101828',
                     }}
+                    {...register('password', {
+                      required: 'Password is required',
+                      onBlur: (e) => {
+                        e.currentTarget.style.borderColor = '#D1D5DC';
+                        e.currentTarget.style.boxShadow = 'none';
+                      },
+                    })}
                     onFocus={(e) => {
                       e.currentTarget.style.borderColor = '#9810FA';
                       e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
                     }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = '#D1D5DC';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                    {...register('password', {
-                      required: 'Password is required',
-                    })}
                   />
                 </div>
                 {errors.password && (

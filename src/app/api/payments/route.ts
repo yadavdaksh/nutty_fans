@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { squareClient } from '@/lib/square';
 import { addFunds, getUserProfile, updateUserProfile } from '@/lib/db'; 

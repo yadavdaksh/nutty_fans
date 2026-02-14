@@ -1,20 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import Cookies from 'js-cookie';
 
 export default function AdultDisclaimer() {
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
+  const [show, setShow] = useState(() => {
     // Check if user has already verified age within the last 24 hours
-    const hasVerified = Cookies.get('adult_content_verified');
-    
-    if (!hasVerified) {
-      setShow(true);
+    if (typeof window !== 'undefined') {
+      const hasVerified = Cookies.get('adult_content_verified');
+      return !hasVerified;
     }
-  }, []);
+    return false;
+  });
 
   if (!show) return null;
 

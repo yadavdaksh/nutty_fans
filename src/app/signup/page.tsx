@@ -1,7 +1,7 @@
 'use client';
 
 import { useForm } from 'react-hook-form';
-import { Mail, ArrowRight, Lock, AlertCircle, User, Check, ShieldCheck } from 'lucide-react';
+import { Mail, ArrowRight, Lock, AlertCircle, User, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
@@ -162,17 +162,17 @@ export default function SignupPage() {
                         backgroundColor: '#FFFFFF',
                         color: '#101828',
                       }}
+                      {...register('fullName', {
+                        required: 'Full name is required',
+                        onBlur: (e) => {
+                          e.currentTarget.style.borderColor = '#D1D5DC';
+                          e.currentTarget.style.boxShadow = 'none';
+                        },
+                      })}
                       onFocus={(e) => {
                         e.currentTarget.style.borderColor = '#9810FA';
                         e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
                       }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#D1D5DC';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                      {...register('fullName', {
-                        required: 'Full name is required',
-                      })}
                     />
                   </div>
                   {errors.fullName && (
@@ -204,21 +204,21 @@ export default function SignupPage() {
                         backgroundColor: '#FFFFFF',
                         color: '#101828',
                       }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = '#9810FA';
-                        e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#D1D5DC';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
                       {...register('email', {
                         required: 'Email is required',
                         pattern: {
                           value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                           message: 'Invalid email address',
                         },
+                        onBlur: (e) => {
+                          e.currentTarget.style.borderColor = '#D1D5DC';
+                          e.currentTarget.style.boxShadow = 'none';
+                        },
                       })}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#9810FA';
+                        e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
+                      }}
                     />
                   </div>
                   {errors.email && (
@@ -250,21 +250,21 @@ export default function SignupPage() {
                         backgroundColor: '#FFFFFF',
                         color: '#101828',
                       }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = '#9810FA';
-                        e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#D1D5DC';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
                       {...register('password', {
                         required: 'Password is required',
                         minLength: {
                           value: 6,
                           message: 'Password must be at least 6 characters',
                         },
+                        onBlur: (e) => {
+                          e.currentTarget.style.borderColor = '#D1D5DC';
+                          e.currentTarget.style.boxShadow = 'none';
+                        },
                       })}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#9810FA';
+                        e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
+                      }}
                     />
                   </div>
                   {errors.password && (
@@ -296,21 +296,21 @@ export default function SignupPage() {
                         backgroundColor: '#FFFFFF',
                         color: '#101828',
                       }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = '#9810FA';
-                        e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#D1D5DC';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
                       {...register('confirmPassword', {
                         validate: (val) => {
                           if (watch('password') != val) {
                             return 'Your passwords do no match';
                           }
                         },
+                        onBlur: (e) => {
+                          e.currentTarget.style.borderColor = '#D1D5DC';
+                          e.currentTarget.style.boxShadow = 'none';
+                        },
                       })}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#9810FA';
+                        e.currentTarget.style.boxShadow = '0px 0px 0px 2px rgba(152, 16, 250, 0.2)';
+                      }}
                     />
                   </div>
                   {errors.confirmPassword && (

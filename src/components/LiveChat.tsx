@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useState, FormEvent } from 'react';
+import { useChat } from '@livekit/components-react';
 import { useAuth } from '@/context/AuthContext';
 import { getWalletBalance, processTransaction, recordStreamEarning } from '@/lib/db';
 import { toast } from 'react-hot-toast';

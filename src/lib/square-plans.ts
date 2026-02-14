@@ -32,7 +32,6 @@ export const getOrCreateSubscriptionPlan = async (
 
     if (existingPlan) {
       // Return the first variation ID
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const variationId = existingPlan.subscriptionPlanData?.subscriptionPlanVariations?.[0]?.id;
       if (variationId) return variationId;
       
@@ -75,6 +74,7 @@ export const getOrCreateSubscriptionPlan = async (
                      }
                    }
                  }
+               // eslint-disable-next-line @typescript-eslint/no-explicit-any
                ] as any // Cast because SDK type might not match 'pricing' field perfectly yet
              }
            }

@@ -8,7 +8,6 @@ import {
   DollarSign, 
   TrendingUp, 
   Star, 
-  Sparkles,
   Loader2,
   Check
 } from 'lucide-react';

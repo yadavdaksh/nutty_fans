@@ -916,7 +916,8 @@ export default function SettingsPage() {
 
                          // Update local state
                          const updatedProfile = { ...creatorProfile, subscriptionTiers: updatedTiers };
-                         setCreatorProfile(current => ({ ...current, ...updatedProfile } as any));
+                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                setCreatorProfile((current: any) => ({ ...current, ...updatedProfile } as any));
                          await refreshProfile();
                          alert("Subscription plans saved and synced with Square!");
                       } catch (err) {
