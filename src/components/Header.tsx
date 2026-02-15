@@ -86,8 +86,8 @@ export default function Header() {
         borderBottomColor: '#E5E7EB',
       }}
     >
-      <div className="max-w-7xl mx-auto h-full">
-        <div className="flex items-center justify-between h-full px-4 sm:px-6 lg:px-[104.5px] py-3">
+      <div className={`${isAuthPage ? 'w-full' : 'max-w-7xl mx-auto'} h-full`}>
+        <div className={`flex items-center justify-between h-full py-3 ${isAuthPage ? 'px-6 lg:px-12' : 'px-4 sm:px-6 lg:px-[104.5px]'}`}>
           {/* Left side - Logo and Navigation */}
           <div className="flex items-center h-10">
             {/* Logo - 41.79px x 40px */}
@@ -207,19 +207,25 @@ export default function Header() {
           </nav>
             )}
 
-            {/* Auth Page Navigation */}
-            {isAuthPage && (
-              <div className="flex items-center ml-6">
+
+          </div>
+
+          {/* Right side - Auth Button */}
+          {isAuthPage && (
+            <div className="flex items-center">
                 <Link 
                   href="/" 
-                  className="text-[15.1px] leading-6 font-normal text-[#4a5565] hover:text-[#101828] transition-colors"
-                  style={{ fontFamily: 'Inter, sans-serif' }}
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold transition-all hover:opacity-90 active:scale-95 shadow-md hover:shadow-lg transform"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    background: 'linear-gradient(135deg, rgba(243, 117, 194, 1) 0%, rgba(177, 83, 215, 1) 34%, rgba(77, 47, 178, 1) 68%, rgba(14, 33, 160, 1) 100%)',
+                    color: '#FFFFFF',
+                  }}
                 >
                   Back to Home
-            </Link>
-              </div>
-            )}
-          </div>
+                </Link>
+            </div>
+          )}
 
           {/* Right side - Icons and Profile */}
           {!isAuthPage && (

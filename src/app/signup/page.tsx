@@ -3,6 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { Mail, ArrowRight, Lock, AlertCircle, User, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -80,22 +81,15 @@ export default function SignupPage() {
           }}
         />
         
-        {/* Left side image placeholder */}
-        <div className="hidden lg:block absolute left-0 top-0 w-[649px] h-full">
-          <div className="absolute left-[70px] top-[89px]">
-            <h1 
-              className="text-5xl font-semibold leading-[72px]"
-              style={{ 
-                fontFamily: 'Inter, sans-serif',
-                background: 'linear-gradient(90deg, rgba(173, 70, 255, 1) 0%, rgba(227, 132, 255, 1) 50%, rgba(134, 93, 255, 1) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              Join the Community.
-            </h1>
-          </div>
+        {/* Left side image */}
+        <div className="hidden lg:block absolute left-0 top-0 h-full w-1/2 overflow-hidden">
+          <Image
+            src="/auth-side-image.png"
+            alt="Abstract 3D Shape"
+            fill
+            className="object-cover object-left"
+            priority
+          />
         </div>
 
         {/* Signup Form Card */}
